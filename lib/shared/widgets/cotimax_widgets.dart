@@ -1,0 +1,3091 @@
+import 'dart:async';
+
+import 'package:cotimax/core/constants/app_colors.dart';
+import 'package:cotimax/core/constants/app_spacing.dart';
+import 'package:cotimax/core/routing/route_paths.dart';
+import 'package:cotimax/shared/enums/app_enums.dart';
+import 'package:cotimax/shared/models/domain_models.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
+
+const appNavEntries = <(String label, IconData icon, String path)>[
+  ('Inicio', FontAwesomeIcons.house, RoutePaths.dashboard),
+  ('Clientes', FontAwesomeIcons.users, RoutePaths.clientes),
+  ('Proveedores', FontAwesomeIcons.truckField, RoutePaths.proveedores),
+  ('Productos', FontAwesomeIcons.boxOpen, RoutePaths.productos),
+  ('Materiales', FontAwesomeIcons.cubes, RoutePaths.materiales),
+  ('Cotizaciones', FontAwesomeIcons.fileInvoiceDollar, RoutePaths.cotizaciones),
+  ('Ingresos', FontAwesomeIcons.arrowTrendUp, RoutePaths.ingresos),
+  ('Gastos', FontAwesomeIcons.arrowTrendDown, RoutePaths.gastos),
+  ('Analítica', FontAwesomeIcons.chartLine, RoutePaths.analitica),
+  ('Configuración', FontAwesomeIcons.gear, RoutePaths.configuracion),
+  ('Usuarios', FontAwesomeIcons.userGroup, RoutePaths.usuarios),
+  ('Planes', FontAwesomeIcons.crown, RoutePaths.planes),
+];
+
+const primaryNavIndexes = <int>[0, 1, 2, 3, 4, 5, 6, 7, 8];
+const secondaryNavIndexes = <int>[9, 10, 11];
+const creatablePaths = <String>{
+  RoutePaths.clientes,
+  RoutePaths.proveedores,
+  RoutePaths.productos,
+  RoutePaths.materiales,
+  RoutePaths.cotizaciones,
+  RoutePaths.ingresos,
+  RoutePaths.gastos,
+};
+
+final _mxnFormatter = NumberFormat.currency(
+  locale: 'en_US',
+  symbol: 'MXN ',
+  decimalDigits: 2,
+);
+
+String formatMxn(num value) => _mxnFormatter.format(value);
+
+const _microInteractionDuration = Duration(milliseconds: 180);
+const _microInteractionCurve = Curves.easeOutCubic;
+const TextStyle cotimaxDropdownTextStyle = TextStyle(
+  color: AppColors.textPrimary,
+  fontSize: 13,
+  fontWeight: FontWeight.w700,
+);
+const Icon cotimaxDropdownIcon = Icon(
+  Icons.keyboard_arrow_down_rounded,
+  size: 18,
+  color: AppColors.textSecondary,
+);
+final BorderRadius cotimaxMenuBorderRadius = BorderRadius.circular(
+  AppSpacing.radius + 4,
+);
+
+InputDecoration cotimaxDropdownDecoration({
+  String? hintText,
+  String? helperText,
+  bool isDense = false,
+  EdgeInsetsGeometry? contentPadding,
+}) {
+  return InputDecoration(
+    hintText: hintText,
+    helperText: helperText,
+    isDense: isDense,
+    contentPadding:
+        contentPadding ??
+        const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+  );
+}
+
+TextEditingController seededTextController([String? text]) {
+  final safeText = text ?? '';
+  return TextEditingController.fromValue(
+    TextEditingValue(
+      text: safeText,
+      selection: TextSelection.collapsed(offset: safeText.length),
+    ),
+  );
+}
+
+void assignControllerText(TextEditingController controller, String text) {
+  controller.value = TextEditingValue(
+    text: text,
+    selection: TextSelection.collapsed(offset: text.length),
+  );
+}
+
+void clearControllerText(TextEditingController controller) {
+  assignControllerText(controller, '');
+}
+
+int? parseSequenceNumber(String? value) {
+  final digits = (value ?? '').replaceAll(RegExp(r'[^0-9]'), '');
+  if (digits.isEmpty) return null;
+  return int.tryParse(digits);
+}
+
+String nextSequentialValue(
+  Iterable<String?> values, {
+  int startingAt = 1,
+  int minWidth = 1,
+}) {
+  var maxValue = startingAt - 1;
+  var maxWidth = minWidth;
+
+  for (final raw in values) {
+    final sanitized = (raw ?? '').replaceAll(RegExp(r'[^0-9]'), '');
+    if (sanitized.isEmpty) continue;
+    final parsed = int.tryParse(sanitized);
+    if (parsed == null) continue;
+    if (parsed > maxValue) {
+      maxValue = parsed;
+    }
+    if (sanitized.length > maxWidth) {
+      maxWidth = sanitized.length;
+    }
+  }
+
+  final nextValue = maxValue + 1;
+  return nextValue.toString().padLeft(maxWidth, '0');
+}
+
+bool sequenceValuesMatch(String left, String right) {
+  final leftParsed = parseSequenceNumber(left);
+  final rightParsed = parseSequenceNumber(right);
+  if (leftParsed != null && rightParsed != null) {
+    return leftParsed == rightParsed;
+  }
+  return left.trim().toLowerCase() == right.trim().toLowerCase();
+}
+
+String sanitizeNumericText(String value) => value.replaceAll(',', '').trim();
+
+double? parseNumericText(String value) {
+  return double.tryParse(sanitizeNumericText(value));
+}
+
+String formatNumericValue(
+  num value, {
+  int decimalDigits = 2,
+  bool useGrouping = false,
+}) {
+  final pattern = useGrouping ? '#,##0' : '0';
+  final decimals = decimalDigits > 0 ? '.${'0' * decimalDigits}' : '';
+  return NumberFormat('$pattern$decimals', 'en_US').format(value);
+}
+
+class NumericTextInputFormatter extends TextInputFormatter {
+  const NumericTextInputFormatter({
+    this.maxDecimalDigits = 2,
+    this.useGrouping = false,
+  });
+
+  final int maxDecimalDigits;
+  final bool useGrouping;
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final sanitized = sanitizeNumericText(newValue.text);
+
+    if (sanitized.isEmpty) {
+      return const TextEditingValue(
+        text: '',
+        selection: TextSelection.collapsed(offset: 0),
+      );
+    }
+
+    if (!_isValidNumericText(sanitized)) {
+      return oldValue;
+    }
+
+    final decimalIndex = sanitized.indexOf('.');
+    if (decimalIndex != -1) {
+      final decimals = sanitized.length - decimalIndex - 1;
+      if (decimals > maxDecimalDigits) {
+        return oldValue;
+      }
+    }
+
+    final normalized = _normalizeNumericText(sanitized);
+    final formatted = useGrouping
+        ? _applyGroupingToNumericText(normalized)
+        : normalized;
+
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+
+  bool _isValidNumericText(String value) {
+    return RegExp(r'^\d*\.?\d*$').hasMatch(value);
+  }
+
+  String _normalizeNumericText(String value) {
+    if (value == '.') return '0.';
+
+    final hasDecimal = value.contains('.');
+    final parts = value.split('.');
+    var integerPart = parts.first;
+    final decimalPart = hasDecimal ? parts[1] : '';
+
+    if (integerPart.isEmpty) {
+      integerPart = '0';
+    } else {
+      integerPart = integerPart.replaceFirst(RegExp(r'^0+(?=\d)'), '');
+    }
+
+    if (!hasDecimal) return integerPart;
+    return '$integerPart.$decimalPart';
+  }
+
+  String _applyGroupingToNumericText(String value) {
+    final hasDecimal = value.contains('.');
+    final parts = value.split('.');
+    final integerPart = parts.first;
+    final parsedInteger = int.tryParse(integerPart) ?? 0;
+    final groupedInteger = NumberFormat('#,##0', 'en_US').format(parsedInteger);
+
+    if (!hasDecimal) return groupedInteger;
+    return '$groupedInteger.${parts[1]}';
+  }
+}
+
+bool shouldShowChartLabel(int index, int total, {int maxLabels = 5}) {
+  if (total <= 1) return true;
+  if (index == 0 || index == total - 1) return true;
+  if (total <= maxLabels) return true;
+  final step = (total / (maxLabels - 1)).ceil();
+  return index % step == 0;
+}
+
+Widget rankingMedalIcon(int index, {double size = 14}) {
+  if (index > 2) return const SizedBox.shrink();
+  final colors = [
+    const Color(0xFFD4AF37),
+    const Color(0xFFC0C0C0),
+    const Color(0xFFCD7F32),
+  ];
+  return FaIcon(FontAwesomeIcons.medal, size: size, color: colors[index]);
+}
+
+class AmountBadge extends StatelessWidget {
+  const AmountBadge({required this.amount, required this.positive, super.key});
+
+  final double amount;
+  final bool positive;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = positive ? AppColors.success : AppColors.error;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        formatMxn(amount),
+        style: TextStyle(
+          color: color,
+          fontSize: 12,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+}
+
+class _OpenCommandPaletteIntent extends Intent {
+  const _OpenCommandPaletteIntent();
+}
+
+class AppShell extends StatefulWidget {
+  const AppShell({
+    required this.child,
+    required this.location,
+    required this.title,
+    super.key,
+  });
+
+  final Widget child;
+  final String location;
+  final String title;
+
+  @override
+  State<AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends State<AppShell> {
+  bool _sidebarCollapsed = false;
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  void _openCommandPalette() {
+    showCotimaxCommandPalette(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    final mobile = width < 900;
+    final compact = width < 1180;
+
+    final content = Padding(
+      padding: EdgeInsets.fromLTRB(
+        mobile
+            ? AppSpacing.md
+            : compact
+            ? AppSpacing.md
+            : AppSpacing.lg,
+        AppSpacing.md,
+        mobile
+            ? AppSpacing.md
+            : compact
+            ? AppSpacing.md
+            : AppSpacing.lg,
+        AppSpacing.md,
+      ),
+      child: TweenAnimationBuilder<double>(
+        key: ValueKey(widget.location),
+        tween: Tween(begin: 0.0, end: 1.0),
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+        builder: (context, value, child) {
+          return Opacity(
+            opacity: value,
+            child: Transform.translate(
+              offset: Offset(12 * (1 - value), 0),
+              child: child,
+            ),
+          );
+        },
+        child: widget.child,
+      ),
+    );
+
+    return Shortcuts(
+      shortcuts: const {
+        SingleActivator(LogicalKeyboardKey.keyK, control: true):
+            _OpenCommandPaletteIntent(),
+        SingleActivator(LogicalKeyboardKey.keyK, meta: true):
+            _OpenCommandPaletteIntent(),
+      },
+      child: Actions(
+        actions: {
+          _OpenCommandPaletteIntent: CallbackAction<_OpenCommandPaletteIntent>(
+            onInvoke: (_) {
+              _openCommandPalette();
+              return null;
+            },
+          ),
+        },
+        child: Focus(
+          autofocus: true,
+          child: Scaffold(
+            key: _scaffoldKey,
+            backgroundColor: AppColors.background,
+            drawer: mobile
+                ? Drawer(
+                    width: 290,
+                    child: SidebarNavigation(
+                      activePath: widget.location,
+                      collapsed: false,
+                      mobile: true,
+                    ),
+                  )
+                : null,
+            bottomNavigationBar: mobile
+                ? _MobileBottomNavigation(activePath: widget.location)
+                : null,
+            body: mobile
+                ? Column(
+                    children: [
+                      Topbar(
+                        title: widget.title,
+                        onMenuTap: () =>
+                            _scaffoldKey.currentState?.openDrawer(),
+                        onSearchTap: _openCommandPalette,
+                      ),
+                      Expanded(child: content),
+                    ],
+                  )
+                : Row(
+                    children: [
+                      SidebarNavigation(
+                        activePath: widget.location,
+                        collapsed: _sidebarCollapsed,
+                        onToggleCollapsed: () {
+                          setState(
+                            () => _sidebarCollapsed = !_sidebarCollapsed,
+                          );
+                        },
+                      ),
+                      Expanded(
+                        child: Column(
+                          children: [
+                            Topbar(
+                              title: widget.title,
+                              onSearchTap: _openCommandPalette,
+                            ),
+                            Expanded(child: content),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class SidebarNavigation extends StatelessWidget {
+  const SidebarNavigation({
+    required this.activePath,
+    this.collapsed = false,
+    this.mobile = false,
+    this.onToggleCollapsed,
+    super.key,
+  });
+
+  final String activePath;
+  final bool collapsed;
+  final bool mobile;
+  final VoidCallback? onToggleCollapsed;
+
+  @override
+  Widget build(BuildContext context) {
+    final compact = mobile ? false : collapsed;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+      width: mobile
+          ? double.infinity
+          : compact
+          ? 144
+          : 258,
+      decoration: BoxDecoration(
+        color: AppColors.white.withValues(alpha: 0.96),
+        border: const Border(right: BorderSide(color: AppColors.border)),
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (compact && !mobile)
+                Column(
+                  children: [
+                    Center(
+                      child: Image.asset(
+                        'assets/img/cotimax-logo.png',
+                        width: double.infinity,
+                        height: 64,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Center(
+                      child: IconButton(
+                        onPressed: onToggleCollapsed,
+                        icon: const Icon(
+                          Icons.keyboard_double_arrow_right_rounded,
+                          size: 18,
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+              else
+                Row(
+                  children: [
+                    Expanded(
+                      child: AnimatedAlign(
+                        duration: const Duration(milliseconds: 220),
+                        alignment: compact
+                            ? Alignment.center
+                            : Alignment.centerLeft,
+                        child: Image.asset(
+                          'assets/img/cotimax-logo.png',
+                          height: 38,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ),
+                    if (!mobile)
+                      IconButton(
+                        onPressed: onToggleCollapsed,
+                        icon: Icon(
+                          compact
+                              ? Icons.keyboard_double_arrow_right_rounded
+                              : Icons.keyboard_double_arrow_left_rounded,
+                          size: 18,
+                        ),
+                      ),
+                  ],
+                ),
+              const SizedBox(height: AppSpacing.md),
+              Container(height: 1, color: AppColors.border),
+              const SizedBox(height: AppSpacing.md),
+              if (!compact)
+                const Text(
+                  'COMERCIAL',
+                  style: TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+              if (!compact) const SizedBox(height: 10),
+              Expanded(
+                child: ListView(
+                  children: [
+                    ...primaryNavIndexes.map(
+                      (index) => Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: _NavItem(
+                          entry: appNavEntries[index],
+                          compact: compact,
+                          selected: activePath.startsWith(
+                            appNavEntries[index].$3,
+                          ),
+                          showCreate: creatablePaths.contains(
+                            appNavEntries[index].$3,
+                          ),
+                          closeAfterTap: mobile,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Container(height: 1, color: AppColors.border),
+                    if (!compact) ...[
+                      const SizedBox(height: 12),
+                      const Text(
+                        'ADMINISTRACION',
+                        style: TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                    ],
+                    ...secondaryNavIndexes.map(
+                      (index) => Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: _NavItem(
+                          entry: appNavEntries[index],
+                          compact: compact,
+                          selected: activePath.startsWith(
+                            appNavEntries[index].$3,
+                          ),
+                          showCreate: creatablePaths.contains(
+                            appNavEntries[index].$3,
+                          ),
+                          closeAfterTap: mobile,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(height: 1, color: AppColors.border),
+              const SizedBox(height: AppSpacing.md),
+              compact
+                  ? Center(
+                      child: IconButton(
+                        onPressed: () => context.go(RoutePaths.login),
+                        icon: const FaIcon(
+                          FontAwesomeIcons.arrowRightFromBracket,
+                          size: 14,
+                        ),
+                      ),
+                    )
+                  : Row(
+                      children: [
+                        Container(
+                          height: 34,
+                          width: 34,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Text(
+                            'DN',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Daniel Nuno',
+                                style: TextStyle(
+                                  color: AppColors.textPrimary,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              SizedBox(height: 2),
+                              Text(
+                                'Administrador',
+                                style: TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => context.go(RoutePaths.login),
+                          icon: const FaIcon(
+                            FontAwesomeIcons.arrowRightFromBracket,
+                            size: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class Topbar extends StatelessWidget {
+  const Topbar({
+    required this.title,
+    this.onMenuTap,
+    this.onSearchTap,
+    super.key,
+  });
+
+  final String title;
+  final VoidCallback? onMenuTap;
+  final VoidCallback? onSearchTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    final compact = width < 1180;
+    final mobile = width < 900;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+      height: mobile ? 72 : 84,
+      decoration: BoxDecoration(
+        color: AppColors.white.withValues(alpha: 0.92),
+        border: const Border(bottom: BorderSide(color: AppColors.border)),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.03),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      padding: EdgeInsets.symmetric(
+        horizontal: mobile ? AppSpacing.md : AppSpacing.lg,
+      ),
+      child: Row(
+        children: [
+          if (mobile)
+            IconButton(
+              onPressed: onMenuTap,
+              icon: const Icon(Icons.menu_rounded),
+            ),
+          if (mobile)
+            IconButton(
+              onPressed: onSearchTap,
+              icon: const Icon(Icons.search_rounded),
+            ),
+          Expanded(
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                title,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 22,
+                  height: 1,
+                ),
+              ),
+            ),
+          ),
+          if (!compact)
+            SizedBox(
+              width: 360,
+              child: SearchField(
+                hint: 'Busca clientes, folios, productos o acciones',
+                readOnly: true,
+                onTap: onSearchTap,
+                suffix: const _CommandPaletteShortcutHint(),
+              ),
+            ),
+          const SizedBox(width: AppSpacing.sm),
+          if (!compact)
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 220),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                border: Border.all(color: AppColors.border),
+                borderRadius: BorderRadius.circular(AppSpacing.radius),
+                color: AppColors.background,
+              ),
+              child: const Row(
+                children: [
+                  FaIcon(
+                    FontAwesomeIcons.calendarDays,
+                    size: 13,
+                    color: AppColors.textSecondary,
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    'Vista diaria',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          const SizedBox(width: AppSpacing.sm),
+          if (!mobile) ...[
+            IconButton(
+              onPressed: () {},
+              icon: const FaIcon(FontAwesomeIcons.bell, size: 14),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.accent,
+                foregroundColor: AppColors.white,
+              ),
+              onPressed: () {},
+              icon: const FaIcon(FontAwesomeIcons.gem, size: 14),
+              label: const Text('Actualizar a Pro'),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _CommandPaletteShortcutHint extends StatelessWidget {
+  const _CommandPaletteShortcutHint();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: const Text(
+        'Ctrl/Cmd + K',
+        style: TextStyle(
+          color: AppColors.textSecondary,
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+}
+
+class BreadCrumbs extends StatelessWidget {
+  const BreadCrumbs({required this.items, super.key});
+
+  final List<String> items;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 6,
+      children: [
+        for (var i = 0; i < items.length; i++)
+          Text(
+            i == items.length - 1 ? items[i] : '${items[i]} /',
+            style: TextStyle(
+              color: i == items.length - 1
+                  ? AppColors.textPrimary
+                  : AppColors.textMuted,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class PageHeader extends StatelessWidget {
+  const PageHeader({
+    required this.title,
+    required this.subtitle,
+    this.actions,
+    super.key,
+  });
+
+  final String title;
+  final String subtitle;
+  final List<Widget>? actions;
+
+  @override
+  Widget build(BuildContext context) {
+    final mobile = MediaQuery.sizeOf(context).width < 900;
+    return mobile
+        ? Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              BreadCrumbs(items: ['Inicio', title]),
+              const SizedBox(height: 10),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w800,
+                  height: 1,
+                ),
+              ),
+              if (subtitle.trim().isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+              if (actions != null) ...[
+                const SizedBox(height: 12),
+                Wrap(spacing: 8, runSpacing: 8, children: actions!),
+              ],
+            ],
+          )
+        : Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    BreadCrumbs(items: ['Inicio', title]),
+                    const SizedBox(height: 10),
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                        height: 1,
+                      ),
+                    ),
+                    if (subtitle.trim().isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        subtitle,
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              if (actions != null)
+                Wrap(spacing: 8, runSpacing: 8, children: actions!),
+            ],
+          );
+  }
+}
+
+List<Widget> buildImportExportHeaderActions(
+  BuildContext context, {
+  required String entityLabel,
+}) {
+  return [
+    OutlinedButton.icon(
+      onPressed: () =>
+          ToastHelper.show(context, 'Importar $entityLabel disponible pronto.'),
+      icon: const Icon(Icons.file_upload_outlined),
+      label: const Text('Importar'),
+    ),
+    OutlinedButton.icon(
+      onPressed: () =>
+          ToastHelper.show(context, 'Exportar $entityLabel disponible pronto.'),
+      icon: const Icon(Icons.file_download_outlined),
+      label: const Text('Exportar'),
+    ),
+  ];
+}
+
+class KpiStatCard extends StatelessWidget {
+  const KpiStatCard({
+    required this.label,
+    required this.value,
+    required this.delta,
+    super.key,
+  });
+
+  final String label;
+  final String value;
+  final String delta;
+
+  @override
+  Widget build(BuildContext context) {
+    final positive = delta.startsWith('+');
+    final color = positive ? AppColors.success : AppColors.error;
+
+    return SectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              color: AppColors.textMuted,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const Spacer(),
+          Text(
+            value,
+            style: const TextStyle(
+              fontWeight: FontWeight.w800,
+              fontSize: 24,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Icon(
+                positive ? Icons.north_east : Icons.south_east,
+                size: 14,
+                color: color,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                delta,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class SectionCard extends StatelessWidget {
+  const SectionCard({
+    required this.child,
+    this.title,
+    this.titleIcon,
+    this.trailing,
+    super.key,
+  });
+
+  final Widget child;
+  final String? title;
+  final IconData? titleIcon;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return _MotionSurface(
+      hoverOffset: -2,
+      enablePress: false,
+      child: Card(
+        clipBehavior: Clip.antiAlias,
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (title != null)
+                Row(
+                  children: [
+                    Expanded(
+                      child: Row(
+                        children: [
+                          if (titleIcon != null) ...[
+                            Icon(
+                              titleIcon,
+                              size: 16,
+                              color: AppColors.textPrimary,
+                            ),
+                            const SizedBox(width: 8),
+                          ],
+                          Expanded(
+                            child: Text(
+                              title!,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 17,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (trailing != null) trailing!,
+                  ],
+                ),
+              if (title != null) const SizedBox(height: 14),
+              child,
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MotionSurface extends StatefulWidget {
+  const _MotionSurface({
+    required this.child,
+    this.hoverOffset = -1.5,
+    this.pressedScale = 0.992,
+    this.enablePress = true,
+  });
+
+  final Widget child;
+  final double hoverOffset;
+  final double pressedScale;
+  final bool enablePress;
+
+  @override
+  State<_MotionSurface> createState() => _MotionSurfaceState();
+}
+
+class _MotionSurfaceState extends State<_MotionSurface> {
+  bool _hovered = false;
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final translateY = _hovered
+        ? (_pressed ? widget.hoverOffset / 2 : widget.hoverOffset)
+        : 0.0;
+    final scale = widget.enablePress && _pressed ? widget.pressedScale : 1.0;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) {
+        if (!_hovered && !_pressed) return;
+        setState(() {
+          _hovered = false;
+          _pressed = false;
+        });
+      },
+      child: Listener(
+        onPointerDown: widget.enablePress
+            ? (_) => setState(() => _pressed = true)
+            : null,
+        onPointerUp: widget.enablePress
+            ? (_) => setState(() => _pressed = false)
+            : null,
+        onPointerCancel: widget.enablePress
+            ? (_) => setState(() => _pressed = false)
+            : null,
+        child: AnimatedContainer(
+          duration: _microInteractionDuration,
+          curve: _microInteractionCurve,
+          transformAlignment: Alignment.center,
+          transform: Matrix4.identity()
+            ..translateByDouble(0, translateY, 0, 1)
+            ..scaleByDouble(scale, scale, 1, 1),
+          child: widget.child,
+        ),
+      ),
+    );
+  }
+}
+
+class SearchField extends StatelessWidget {
+  const SearchField({
+    required this.hint,
+    this.controller,
+    this.focusNode,
+    this.onChanged,
+    this.onSubmitted,
+    this.readOnly = false,
+    this.onTap,
+    this.suffix,
+    super.key,
+  });
+
+  final String hint;
+  final TextEditingController? controller;
+  final FocusNode? focusNode;
+  final ValueChanged<String>? onChanged;
+  final ValueChanged<String>? onSubmitted;
+  final bool readOnly;
+  final VoidCallback? onTap;
+  final Widget? suffix;
+
+  @override
+  Widget build(BuildContext context) {
+    final field = TextField(
+      controller: controller,
+      focusNode: focusNode,
+      onChanged: onChanged,
+      onSubmitted: onSubmitted,
+      readOnly: readOnly,
+      onTap: onTap,
+      showCursor: !readOnly,
+      decoration: InputDecoration(
+        prefixIcon: const Padding(
+          padding: EdgeInsets.only(left: 14, right: 10),
+          child: FaIcon(
+            FontAwesomeIcons.magnifyingGlass,
+            size: 14,
+            color: AppColors.textMuted,
+          ),
+        ),
+        hintText: hint,
+        prefixIconConstraints: const BoxConstraints(minWidth: 42),
+        suffixIcon: suffix == null
+            ? null
+            : Padding(padding: const EdgeInsets.only(right: 12), child: suffix),
+        suffixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
+      ),
+    );
+
+    if (!readOnly) return field;
+
+    return _MotionSurface(hoverOffset: -1, pressedScale: 0.995, child: field);
+  }
+}
+
+class FilterBar extends StatelessWidget {
+  const FilterBar({required this.children, super.key});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return SectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: children,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class InlineEmptyMessage extends StatelessWidget {
+  const InlineEmptyMessage({
+    this.message = 'No hay datos que mostrar.',
+    super.key,
+  });
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 28),
+        child: Text(
+          message,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: AppColors.textSecondary,
+            fontWeight: FontWeight.w700,
+            fontSize: 13,
+            height: 1.45,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class EmptyStateWidget extends StatelessWidget {
+  const EmptyStateWidget({
+    required this.title,
+    required this.subtitle,
+    this.action,
+    super.key,
+  });
+
+  final String title;
+  final String subtitle;
+  final Widget? action;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: SizedBox(
+        width: 520,
+        child: SectionCard(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                height: 64,
+                width: 64,
+                decoration: BoxDecoration(
+                  color: AppColors.background,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: const Icon(
+                  Icons.inbox_outlined,
+                  size: 28,
+                  color: AppColors.textMuted,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 18,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: AppColors.textSecondary),
+              ),
+              if (action != null) const SizedBox(height: 12),
+              if (action != null) action!,
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class ErrorStateWidget extends StatelessWidget {
+  const ErrorStateWidget({
+    required this.message,
+    required this.onRetry,
+    super.key,
+  });
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return EmptyStateWidget(
+      title: 'Ocurrio un error',
+      subtitle: message,
+      action: OutlinedButton.icon(
+        onPressed: onRetry,
+        icon: const Icon(Icons.refresh),
+        label: const Text('Reintentar'),
+      ),
+    );
+  }
+}
+
+class LoadingSkeleton extends StatelessWidget {
+  const LoadingSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 760;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                SkeletonBox(
+                  width: compact ? constraints.maxWidth : 300,
+                  height: 52,
+                  radius: 16,
+                ),
+                SkeletonBox(
+                  width: compact ? constraints.maxWidth : 190,
+                  height: 52,
+                  radius: 16,
+                ),
+                SkeletonBox(
+                  width: compact ? constraints.maxWidth : 190,
+                  height: 52,
+                  radius: 16,
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            const SkeletonBox(height: 56, radius: 20),
+            const SizedBox(height: 12),
+            for (var index = 0; index < 5; index++) ...[
+              SkeletonBox(height: index == 0 ? 72 : 58, radius: 18),
+              const SizedBox(height: 10),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
+class SkeletonBox extends StatefulWidget {
+  const SkeletonBox({
+    this.width,
+    required this.height,
+    this.radius = 14,
+    super.key,
+  });
+
+  final double? width;
+  final double height;
+  final double radius;
+
+  @override
+  State<SkeletonBox> createState() => _SkeletonBoxState();
+}
+
+class _SkeletonBoxState extends State<SkeletonBox>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 920),
+  )..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final animation = Tween<double>(
+      begin: 0.46,
+      end: 0.94,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+    return FadeTransition(
+      opacity: animation,
+      child: Container(
+        width: widget.width,
+        height: widget.height,
+        decoration: BoxDecoration(
+          color: AppColors.border,
+          borderRadius: BorderRadius.circular(widget.radius),
+        ),
+      ),
+    );
+  }
+}
+
+class ConfirmDialog extends StatelessWidget {
+  const ConfirmDialog({required this.title, required this.message, super.key});
+
+  final String title;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(title),
+      content: Text(message),
+      actions: [
+        OutlinedButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Cancelar'),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          child: const Text('Confirmar'),
+        ),
+      ],
+    );
+  }
+}
+
+Future<bool> showDeleteConfirmation(
+  BuildContext context, {
+  required String entityLabel,
+}) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (_) => ConfirmDialog(
+      title: 'Eliminar $entityLabel',
+      message: '¿Estás seguro que quieres eliminar este $entityLabel?',
+    ),
+  );
+  return confirmed ?? false;
+}
+
+class ModalBase extends StatelessWidget {
+  const ModalBase({required this.title, required this.child, super.key});
+
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
+    final maxHeight = size.height * 0.955;
+    final minHeight = size.height < 760
+        ? size.height * 0.86
+        : size.height * 0.82;
+    final maxWidth = size.width * 0.965;
+    final minWidth = size.width < 1200 ? size.width * 0.92 : size.width * 0.88;
+    return Dialog(
+      insetPadding: const EdgeInsets.all(12),
+      backgroundColor: AppColors.white,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      clipBehavior: Clip.antiAlias,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          minWidth: minWidth.clamp(340.0, 1280.0).toDouble(),
+          maxWidth: maxWidth.clamp(980.0, 1560.0).toDouble(),
+          minHeight: minHeight.clamp(420.0, 980.0).toDouble(),
+          maxHeight: maxHeight,
+        ),
+        child: ColoredBox(
+          color: AppColors.white,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 18,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    ),
+                    _HoverCircleButton(
+                      onTap: () => Navigator.of(context).pop(),
+                      icon: Icons.close,
+                      baseColor: AppColors.background,
+                      hoverColor: AppColors.accent,
+                      baseIconColor: AppColors.textPrimary,
+                      hoverIconColor: AppColors.white,
+                    ),
+                  ],
+                ),
+              ),
+              Container(height: 1, color: AppColors.border),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+                  child: FocusTraversalGroup(
+                    policy: WidgetOrderTraversalPolicy(),
+                    child: SizedBox.expand(child: child),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class SideDrawerForm extends StatelessWidget {
+  const SideDrawerForm({required this.title, required this.child, super.key});
+
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Drawer(
+      width: 560,
+      child: SafeArea(
+        child: FocusTraversalGroup(
+          policy: WidgetOrderTraversalPolicy(),
+          child: SectionCard(title: title, child: child),
+        ),
+      ),
+    );
+  }
+}
+
+class FormFieldWrapper extends StatelessWidget {
+  const FormFieldWrapper({required this.label, required this.child, super.key});
+
+  final String label;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 12,
+            color: AppColors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: 6),
+        child,
+      ],
+    );
+  }
+}
+
+class CurrencyInput extends StatelessWidget {
+  const CurrencyInput({
+    required this.controller,
+    this.label = 'Monto',
+    super.key,
+  });
+
+  final TextEditingController controller;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return FormFieldWrapper(
+      label: label,
+      child: TextFormField(
+        controller: controller,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        inputFormatters: const [
+          NumericTextInputFormatter(useGrouping: true, maxDecimalDigits: 2),
+        ],
+        decoration: const InputDecoration(prefixText: r'$ '),
+      ),
+    );
+  }
+}
+
+class DatePickerField extends StatelessWidget {
+  const DatePickerField({
+    required this.label,
+    required this.value,
+    required this.onTap,
+    super.key,
+  });
+
+  final String label;
+  final DateTime value;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return FormFieldWrapper(
+      label: label,
+      child: InkWell(
+        onTap: onTap,
+        child: InputDecorator(
+          decoration: const InputDecoration(),
+          child: Text(DateFormat('dd/MM/yyyy').format(value)),
+        ),
+      ),
+    );
+  }
+}
+
+class SelectField<T> extends StatelessWidget {
+  const SelectField({
+    required this.label,
+    required this.value,
+    required this.options,
+    this.onChanged,
+    super.key,
+  });
+
+  final String label;
+  final T value;
+  final List<T> options;
+  final ValueChanged<T?>? onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return FormFieldWrapper(
+      label: label,
+      child: DropdownButtonFormField<T>(
+        initialValue: value,
+        isExpanded: true,
+        menuMaxHeight: 320,
+        borderRadius: cotimaxMenuBorderRadius,
+        dropdownColor: AppColors.white,
+        icon: cotimaxDropdownIcon,
+        style: cotimaxDropdownTextStyle,
+        decoration: cotimaxDropdownDecoration(),
+        items: options
+            .map(
+              (option) => DropdownMenuItem<T>(
+                value: option,
+                child: Text(
+                  option.toString().split('.').last,
+                  overflow: TextOverflow.ellipsis,
+                  style: cotimaxDropdownTextStyle,
+                ),
+              ),
+            )
+            .toList(),
+        onChanged: onChanged,
+      ),
+    );
+  }
+}
+
+class MultiSelectField extends StatelessWidget {
+  const MultiSelectField({
+    required this.label,
+    required this.options,
+    required this.selected,
+    super.key,
+  });
+
+  final String label;
+  final List<String> options;
+  final List<String> selected;
+
+  @override
+  Widget build(BuildContext context) {
+    return FormFieldWrapper(
+      label: label,
+      child: Wrap(
+        spacing: 6,
+        runSpacing: 6,
+        children: options
+            .map(
+              (option) => FilterChip(
+                selected: selected.contains(option),
+                label: Text(option),
+                onSelected: (_) {},
+              ),
+            )
+            .toList(),
+      ),
+    );
+  }
+}
+
+class StatusBadge extends StatelessWidget {
+  const StatusBadge({required this.status, super.key});
+
+  final QuoteStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    final map = {
+      QuoteStatus.borrador: (AppColors.textMuted, 'Borrador'),
+      QuoteStatus.enviada: (AppColors.primary, 'Enviada'),
+      QuoteStatus.aprobada: (AppColors.success, 'Aprobada'),
+      QuoteStatus.rechazada: (AppColors.error, 'Rechazada'),
+    };
+    final style = map[status]!;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+      decoration: BoxDecoration(
+        color: style.$1.withValues(alpha: 0.09),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: style.$1.withValues(alpha: 0.2)),
+      ),
+      child: Text(
+        style.$2,
+        style: TextStyle(
+          color: style.$1,
+          fontWeight: FontWeight.w700,
+          fontSize: 11,
+        ),
+      ),
+    );
+  }
+}
+
+class PlanBadge extends StatelessWidget {
+  const PlanBadge({required this.planName, super.key});
+
+  final String planName;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppColors.accent),
+        color: AppColors.accent.withValues(alpha: 0.09),
+      ),
+      child: Text(
+        planName,
+        style: const TextStyle(
+          color: AppColors.accent,
+          fontWeight: FontWeight.w700,
+          fontSize: 11,
+        ),
+      ),
+    );
+  }
+}
+
+class UsageProgressBar extends StatelessWidget {
+  const UsageProgressBar({
+    required this.label,
+    required this.used,
+    required this.limit,
+    super.key,
+  });
+
+  final String label;
+  final int used;
+  final int limit;
+
+  @override
+  Widget build(BuildContext context) {
+    final ratio = limit <= 0 ? 0.0 : (used / limit).clamp(0.0, 1.0);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '$label: $used/${limit <= 0 ? 'Ilimitado' : limit}',
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 6),
+        LinearProgressIndicator(
+          value: limit <= 0 ? 0 : ratio,
+          minHeight: 9,
+          borderRadius: BorderRadius.circular(100),
+          color: ratio > 0.85 ? AppColors.warning : AppColors.primary,
+          backgroundColor: AppColors.border,
+        ),
+      ],
+    );
+  }
+}
+
+class PdfPreviewCard extends StatelessWidget {
+  const PdfPreviewCard({required this.folio, super.key});
+
+  final String folio;
+
+  @override
+  Widget build(BuildContext context) {
+    return SectionCard(
+      title: 'Previsualizacion PDF',
+      child: Container(
+        height: 230,
+        decoration: BoxDecoration(
+          border: Border.all(color: AppColors.border),
+          borderRadius: BorderRadius.circular(AppSpacing.radius),
+          color: AppColors.background,
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          'Documento $folio',
+          style: const TextStyle(
+            color: AppColors.textSecondary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class ChartCard extends StatelessWidget {
+  const ChartCard({required this.title, required this.child, super.key});
+
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return SectionCard(
+      title: title,
+      child: SizedBox(height: 250, child: child),
+    );
+  }
+}
+
+class RowActionMenu extends StatelessWidget {
+  const RowActionMenu({required this.actions, this.onSelected, super.key});
+
+  final List<PopupMenuEntry<String>> actions;
+  final ValueChanged<String>? onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<String>(
+      itemBuilder: (_) => actions,
+      onSelected: onSelected,
+      tooltip: 'Más acciones',
+      padding: EdgeInsets.zero,
+      position: PopupMenuPosition.under,
+      offset: const Offset(0, 8),
+      color: AppColors.white,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      shadowColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: cotimaxMenuBorderRadius,
+        side: const BorderSide(color: AppColors.border),
+      ),
+      child: Container(
+        width: 34,
+        height: 34,
+        decoration: BoxDecoration(
+          color: AppColors.background,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.border),
+        ),
+        alignment: Alignment.center,
+        child: const Icon(
+          Icons.more_horiz_rounded,
+          size: 18,
+          color: AppColors.textSecondary,
+        ),
+      ),
+    );
+  }
+}
+
+class PaginationWidget extends StatelessWidget {
+  const PaginationWidget({
+    required this.page,
+    required this.totalPages,
+    required this.onChanged,
+    super.key,
+  });
+
+  final int page;
+  final int totalPages;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        IconButton(
+          onPressed: page <= 1 ? null : () => onChanged(page - 1),
+          icon: const Icon(Icons.first_page, size: 18),
+        ),
+        IconButton(
+          onPressed: page <= 1 ? null : () => onChanged(page - 1),
+          icon: const Icon(Icons.chevron_left, size: 18),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          margin: const EdgeInsets.symmetric(horizontal: 8),
+          decoration: BoxDecoration(
+            border: Border.all(color: AppColors.border),
+            borderRadius: BorderRadius.circular(AppSpacing.radius),
+            color: AppColors.white,
+          ),
+          child: Text(
+            'Pagina $page / $totalPages',
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+          ),
+        ),
+        IconButton(
+          onPressed: page >= totalPages ? null : () => onChanged(page + 1),
+          icon: const Icon(Icons.chevron_right, size: 18),
+        ),
+        IconButton(
+          onPressed: page >= totalPages ? null : () => onChanged(totalPages),
+          icon: const Icon(Icons.last_page, size: 18),
+        ),
+      ],
+    );
+  }
+}
+
+class CotimaxDataTable extends StatelessWidget {
+  const CotimaxDataTable({
+    required this.columns,
+    required this.rows,
+    this.title,
+    this.trailing,
+    this.emptyTitle = 'Sin registros para mostrar.',
+    this.emptySubtitle = 'Ajusta el rango o agrega datos para ver actividad.',
+    super.key,
+  });
+
+  final List<DataColumn> columns;
+  final List<DataRow> rows;
+  final String? title;
+  final Widget? trailing;
+  final String emptyTitle;
+  final String emptySubtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return SectionCard(
+      title: title,
+      trailing: trailing,
+      child: rows.isEmpty
+          ? _InlineEmptyTableState(title: emptyTitle, subtitle: emptySubtitle)
+          : LayoutBuilder(
+              builder: (context, constraints) {
+                return ClipRRect(
+                  borderRadius: BorderRadius.circular(AppSpacing.radius),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minWidth: constraints.maxWidth,
+                      ),
+                      child: DataTable(
+                        headingRowHeight: 44,
+                        columns: columns,
+                        rows: rows,
+                        horizontalMargin: 14,
+                        columnSpacing: 24,
+                        dividerThickness: 1,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+    );
+  }
+}
+
+class _InlineEmptyTableState extends StatelessWidget {
+  const _InlineEmptyTableState({required this.title, required this.subtitle});
+
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppSpacing.radius),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: AppColors.white,
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: const Icon(
+              Icons.insights_outlined,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            title,
+            style: const TextStyle(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w800,
+              fontSize: 15,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+              height: 1.45,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NavItem extends StatelessWidget {
+  const _NavItem({
+    required this.entry,
+    required this.compact,
+    required this.selected,
+    required this.showCreate,
+    this.closeAfterTap = false,
+  });
+
+  final (String label, IconData icon, String path) entry;
+  final bool compact;
+  final bool selected;
+  final bool showCreate;
+  final bool closeAfterTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppSpacing.radius),
+        onTap: () {
+          if (closeAfterTap) Navigator.of(context).pop();
+          context.go(entry.$3);
+        },
+        child: AnimatedContainer(
+          duration: _microInteractionDuration,
+          curve: _microInteractionCurve,
+          height: compact ? 48 : 50,
+          padding: EdgeInsets.symmetric(horizontal: compact ? 12 : 14),
+          decoration: BoxDecoration(
+            color: selected
+                ? AppColors.primary
+                : AppColors.white.withValues(alpha: 0.001),
+            borderRadius: BorderRadius.circular(AppSpacing.radius),
+            border: Border.all(
+              color: selected ? AppColors.primary : Colors.transparent,
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: compact
+                ? MainAxisAlignment.center
+                : MainAxisAlignment.start,
+            children: [
+              FaIcon(
+                entry.$2,
+                size: 14,
+                color: selected ? AppColors.white : AppColors.textSecondary,
+              ),
+              if (!compact) ...[
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    entry.$1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: selected ? AppColors.white : AppColors.textPrimary,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+                if (showCreate)
+                  _HoverCircleButton(
+                    onTap: () {
+                      if (closeAfterTap) Navigator.of(context).pop();
+                      context.go('${entry.$3}?create=1');
+                    },
+                    icon: Icons.add,
+                    size: 24,
+                    iconSize: 14,
+                    baseColor: selected
+                        ? AppColors.white.withValues(alpha: 0.16)
+                        : AppColors.background,
+                    hoverColor: selected
+                        ? AppColors.white.withValues(alpha: 0.28)
+                        : AppColors.primary,
+                    baseIconColor: selected
+                        ? AppColors.white
+                        : AppColors.textSecondary,
+                    hoverIconColor: AppColors.white,
+                  ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MobileBottomNavigation extends StatelessWidget {
+  const _MobileBottomNavigation({required this.activePath});
+
+  final String activePath;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      height: 78,
+      decoration: BoxDecoration(
+        color: AppColors.white.withValues(alpha: 0.96),
+        border: const Border(top: BorderSide(color: AppColors.border)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: ListView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          children: primaryNavIndexes.map((index) {
+            final entry = appNavEntries[index];
+            final selected = activePath.startsWith(entry.$3);
+            return Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(10),
+                onTap: () => context.go(entry.$3),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? AppColors.primary.withValues(alpha: 0.10)
+                        : AppColors.background,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: selected ? AppColors.primary : AppColors.border,
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      FaIcon(
+                        entry.$2,
+                        size: 14,
+                        color: selected
+                            ? AppColors.primary
+                            : AppColors.textSecondary,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        entry.$1,
+                        style: TextStyle(
+                          color: selected
+                              ? AppColors.primary
+                              : AppColors.textPrimary,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+}
+
+class _HoverCircleButton extends StatefulWidget {
+  const _HoverCircleButton({
+    required this.onTap,
+    required this.icon,
+    required this.baseColor,
+    required this.hoverColor,
+    required this.baseIconColor,
+    required this.hoverIconColor,
+    this.size = 34,
+    this.iconSize = 18,
+  });
+
+  final VoidCallback onTap;
+  final IconData icon;
+  final Color baseColor;
+  final Color hoverColor;
+  final Color baseIconColor;
+  final Color hoverIconColor;
+  final double size;
+  final double iconSize;
+
+  @override
+  State<_HoverCircleButton> createState() => _HoverCircleButtonState();
+}
+
+class _HoverCircleButtonState extends State<_HoverCircleButton> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      cursor: SystemMouseCursors.click,
+      child: _MotionSurface(
+        hoverOffset: -1.5,
+        pressedScale: 0.94,
+        child: GestureDetector(
+          onTap: widget.onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 140),
+            curve: _microInteractionCurve,
+            width: widget.size,
+            height: widget.size,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: _hovered ? widget.hoverColor : widget.baseColor,
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Icon(
+              widget.icon,
+              size: widget.iconSize,
+              color: _hovered ? widget.hoverIconColor : widget.baseIconColor,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class ToastHelper {
+  static void show(
+    BuildContext context,
+    String message, {
+    ToastVariant variant = ToastVariant.exito,
+  }) {
+    final host = ToastViewport.maybeOf(context) ?? ToastViewportState.current;
+    host?.show(message, variant: variant);
+  }
+
+  static void showSuccess(BuildContext context, String message) {
+    show(context, message, variant: ToastVariant.exito);
+  }
+
+  static void showError(BuildContext context, String message) {
+    show(context, message, variant: ToastVariant.error);
+  }
+
+  static void showWarning(BuildContext context, String message) {
+    show(context, message, variant: ToastVariant.advertencia);
+  }
+}
+
+enum ToastVariant { exito, error, advertencia }
+
+class ToastViewport extends StatefulWidget {
+  const ToastViewport({required this.child, super.key});
+
+  final Widget child;
+
+  static ToastViewportState? maybeOf(BuildContext context) {
+    return context.findAncestorStateOfType<ToastViewportState>();
+  }
+
+  @override
+  State<ToastViewport> createState() => ToastViewportState();
+}
+
+class ToastViewportState extends State<ToastViewport> {
+  static ToastViewportState? current;
+
+  Timer? _dismissTimer;
+  _ToastMessage? _toast;
+  int _nextId = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    current = this;
+  }
+
+  void show(String message, {required ToastVariant variant}) {
+    _dismissTimer?.cancel();
+    setState(() {
+      _toast = _ToastMessage(id: _nextId++, message: message, variant: variant);
+    });
+    _dismissTimer = Timer(const Duration(seconds: 4), dismiss);
+  }
+
+  void dismiss() {
+    if (_toast == null) return;
+    _dismissTimer?.cancel();
+    setState(() {
+      _toast = null;
+    });
+  }
+
+  @override
+  void dispose() {
+    if (identical(current, this)) {
+      current = null;
+    }
+    _dismissTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final media = MediaQuery.of(context);
+    final toastWidth = media.size.width < 520 ? media.size.width - 32 : 420.0;
+    final topInset = media.padding.top + 16;
+
+    return Stack(
+      children: [
+        widget.child,
+        Positioned(
+          top: topInset,
+          right: 16,
+          child: IgnorePointer(
+            ignoring: _toast == null,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 220),
+              reverseDuration: const Duration(milliseconds: 180),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeInCubic,
+              transitionBuilder: (child, animation) {
+                final slide = Tween<Offset>(
+                  begin: const Offset(0.18, 0),
+                  end: Offset.zero,
+                ).animate(animation);
+                return FadeTransition(
+                  opacity: animation,
+                  child: SlideTransition(position: slide, child: child),
+                );
+              },
+              child: _toast == null
+                  ? const SizedBox.shrink(key: ValueKey('toast-empty'))
+                  : _ToastCard(
+                      key: ValueKey(_toast!.id),
+                      width: toastWidth,
+                      message: _toast!.message,
+                      variant: _toast!.variant,
+                      onClose: dismiss,
+                    ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ToastMessage {
+  const _ToastMessage({
+    required this.id,
+    required this.message,
+    required this.variant,
+  });
+
+  final int id;
+  final String message;
+  final ToastVariant variant;
+}
+
+class _ToastCard extends StatelessWidget {
+  const _ToastCard({
+    required this.width,
+    required this.message,
+    required this.variant,
+    required this.onClose,
+    super.key,
+  });
+
+  final double width;
+  final String message;
+  final ToastVariant variant;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    final (background, iconData) = switch (variant) {
+      ToastVariant.exito => (AppColors.success, Icons.check_rounded),
+      ToastVariant.error => (AppColors.error, Icons.close_rounded),
+      ToastVariant.advertencia => (
+        AppColors.warning,
+        Icons.warning_amber_rounded,
+      ),
+    };
+
+    return Material(
+      type: MaterialType.transparency,
+      child: SizedBox(
+        width: width,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: background,
+            borderRadius: BorderRadius.circular(AppSpacing.radius),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: AppColors.white.withValues(alpha: 0.18),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(iconData, color: AppColors.white, size: 18),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      message,
+                      style: const TextStyle(
+                        color: AppColors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                        height: 1.35,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                InkWell(
+                  onTap: onClose,
+                  borderRadius: BorderRadius.circular(999),
+                  child: Padding(
+                    padding: EdgeInsets.all(4),
+                    child: Icon(
+                      Icons.close,
+                      size: 16,
+                      color: AppColors.white.withValues(alpha: 0.92),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+Future<void> showCotimaxCommandPalette(BuildContext context) {
+  return showDialog<void>(
+    context: context,
+    barrierColor: Colors.black.withValues(alpha: 0.34),
+    builder: (_) => _CommandPaletteDialog(originContext: context),
+  );
+}
+
+class _CommandPaletteDialog extends StatefulWidget {
+  const _CommandPaletteDialog({required this.originContext});
+
+  final BuildContext originContext;
+
+  @override
+  State<_CommandPaletteDialog> createState() => _CommandPaletteDialogState();
+}
+
+class _CommandPaletteDialogState extends State<_CommandPaletteDialog> {
+  late final TextEditingController _controller;
+  late final FocusNode _focusNode;
+  late final List<_CommandPaletteEntry> _entries;
+  String _query = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController();
+    _focusNode = FocusNode();
+    _entries = _buildCommandPaletteEntries();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _focusNode.requestFocus();
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final matches = _filterCommandPaletteEntries(_entries, _query);
+    return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 28),
+      backgroundColor: AppColors.white,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      clipBehavior: Clip.antiAlias,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 760, maxHeight: 680),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            border: Border.all(color: AppColors.border),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.textPrimary.withValues(alpha: 0.12),
+                blurRadius: 34,
+                offset: const Offset(0, 20),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            'Búsqueda global',
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 20,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          icon: const Icon(Icons.close_rounded),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    SearchField(
+                      hint:
+                          'Busca clientes, cotizaciones, productos, módulos o acciones',
+                      controller: _controller,
+                      focusNode: _focusNode,
+                      onChanged: (value) => setState(() => _query = value),
+                      onSubmitted: (_) {
+                        if (matches.isEmpty) return;
+                        _selectEntry(matches.first);
+                      },
+                      suffix: const _CommandPaletteShortcutHint(),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Text(
+                          _query.trim().isEmpty
+                              ? 'Sugerencias listas para navegar'
+                              : '${matches.length} resultados relevantes',
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const Spacer(),
+                        const Text(
+                          'Enter abre el primero',
+                          style: TextStyle(
+                            color: AppColors.textMuted,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Container(height: 1, color: AppColors.border),
+              Expanded(
+                child: matches.isEmpty
+                    ? const Padding(
+                        padding: EdgeInsets.all(18),
+                        child: _InlineEmptyTableState(
+                          title: 'No encontramos coincidencias.',
+                          subtitle:
+                              'Prueba con un cliente, un folio, un producto o una acción rápida.',
+                        ),
+                      )
+                    : ListView.separated(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        itemCount: matches.length,
+                        separatorBuilder: (_, __) =>
+                            Container(height: 1, color: AppColors.border),
+                        itemBuilder: (context, index) {
+                          final item = matches[index];
+                          return _CommandPaletteTile(
+                            entry: item,
+                            onTap: () => _selectEntry(item),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _selectEntry(_CommandPaletteEntry entry) {
+    Navigator.of(context).pop();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!widget.originContext.mounted) return;
+      widget.originContext.go(entry.route);
+      if (entry.feedbackMessage != null) {
+        ToastHelper.show(widget.originContext, entry.feedbackMessage!);
+      }
+    });
+  }
+}
+
+class _CommandPaletteTile extends StatelessWidget {
+  const _CommandPaletteTile({required this.entry, required this.onTap});
+
+  final _CommandPaletteEntry entry;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
+          child: Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: entry.color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(entry.icon, color: entry.color, size: 18),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      entry.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Row(
+                      children: [
+                        _CommandPaletteScopeBadge(entry: entry),
+                        if (entry.subtitle.isNotEmpty) ...[
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              entry.subtitle,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: AppColors.textSecondary,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Icon(
+                Icons.arrow_outward_rounded,
+                size: 16,
+                color: AppColors.textMuted,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CommandPaletteScopeBadge extends StatelessWidget {
+  const _CommandPaletteScopeBadge({required this.entry});
+
+  final _CommandPaletteEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      entry.kind.label,
+      style: TextStyle(
+        color: entry.color,
+        fontSize: 11,
+        fontWeight: FontWeight.w800,
+      ),
+    );
+  }
+}
+
+enum _CommandPaletteKind { action, module, cliente, cotizacion, producto }
+
+extension on _CommandPaletteKind {
+  String get label {
+    switch (this) {
+      case _CommandPaletteKind.action:
+        return 'Acción';
+      case _CommandPaletteKind.module:
+        return 'Módulo';
+      case _CommandPaletteKind.cliente:
+        return 'Cliente';
+      case _CommandPaletteKind.cotizacion:
+        return 'Cotización';
+      case _CommandPaletteKind.producto:
+        return 'Producto';
+    }
+  }
+}
+
+class _CommandPaletteEntry {
+  const _CommandPaletteEntry({
+    required this.kind,
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.color,
+    required this.route,
+    required this.searchTerms,
+    required this.priority,
+    this.feedbackMessage,
+    this.pinned = false,
+  });
+
+  final _CommandPaletteKind kind;
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color color;
+  final String route;
+  final List<String> searchTerms;
+  final int priority;
+  final String? feedbackMessage;
+  final bool pinned;
+}
+
+List<_CommandPaletteEntry> _buildCommandPaletteEntries() {
+  final entries = <_CommandPaletteEntry>[
+    ...appNavEntries.map(
+      (entry) => _CommandPaletteEntry(
+        kind: _CommandPaletteKind.module,
+        title: entry.$1,
+        subtitle: 'Abrir módulo ${entry.$1.toLowerCase()}',
+        icon: entry.$2,
+        color: AppColors.primary,
+        route: entry.$3,
+        searchTerms: [entry.$1, entry.$3],
+        priority: 52,
+        pinned: primaryNavIndexes.contains(appNavEntries.indexOf(entry)),
+      ),
+    ),
+    _CommandPaletteEntry(
+      kind: _CommandPaletteKind.action,
+      title: 'Nuevo cliente',
+      subtitle: 'Crear un nuevo cliente desde cualquier vista',
+      icon: FontAwesomeIcons.users,
+      color: AppColors.accent,
+      route: Uri(
+        path: RoutePaths.clientes,
+        queryParameters: const {'create': '1'},
+      ).toString(),
+      searchTerms: const ['nuevo cliente', 'crear cliente', 'cliente'],
+      priority: 100,
+      feedbackMessage: 'Abrimos el flujo para crear un cliente.',
+      pinned: true,
+    ),
+    _CommandPaletteEntry(
+      kind: _CommandPaletteKind.action,
+      title: 'Nueva cotización',
+      subtitle: 'Ir directo al formulario comercial',
+      icon: FontAwesomeIcons.fileInvoiceDollar,
+      color: AppColors.accent,
+      route: Uri(
+        path: RoutePaths.cotizaciones,
+        queryParameters: const {'create': '1'},
+      ).toString(),
+      searchTerms: const ['nueva cotizacion', 'crear cotizacion', 'cotizacion'],
+      priority: 100,
+      feedbackMessage: 'Abrimos el flujo para crear una cotización.',
+      pinned: true,
+    ),
+    _CommandPaletteEntry(
+      kind: _CommandPaletteKind.action,
+      title: 'Nuevo producto',
+      subtitle: 'Agregar un producto o servicio',
+      icon: FontAwesomeIcons.boxOpen,
+      color: AppColors.accent,
+      route: Uri(
+        path: RoutePaths.productos,
+        queryParameters: const {'create': '1'},
+      ).toString(),
+      searchTerms: const ['nuevo producto', 'crear producto', 'servicio'],
+      priority: 98,
+      feedbackMessage: 'Abrimos el flujo para crear un producto.',
+      pinned: true,
+    ),
+    _CommandPaletteEntry(
+      kind: _CommandPaletteKind.action,
+      title: 'Registrar ingreso',
+      subtitle: 'Capturar un cobro nuevo',
+      icon: FontAwesomeIcons.wallet,
+      color: AppColors.success,
+      route: Uri(
+        path: RoutePaths.ingresos,
+        queryParameters: const {'create': '1'},
+      ).toString(),
+      searchTerms: const ['registrar ingreso', 'nuevo ingreso', 'cobro'],
+      priority: 94,
+      feedbackMessage: 'Abrimos el flujo para registrar un ingreso.',
+      pinned: true,
+    ),
+    _CommandPaletteEntry(
+      kind: _CommandPaletteKind.action,
+      title: 'Registrar gasto',
+      subtitle: 'Capturar un gasto nuevo',
+      icon: FontAwesomeIcons.receipt,
+      color: AppColors.warning,
+      route: Uri(
+        path: RoutePaths.gastos,
+        queryParameters: const {'create': '1'},
+      ).toString(),
+      searchTerms: const ['registrar gasto', 'nuevo gasto', 'egreso'],
+      priority: 94,
+      feedbackMessage: 'Abrimos el flujo para registrar un gasto.',
+      pinned: true,
+    ),
+  ];
+  return entries;
+}
+
+List<_CommandPaletteEntry> _filterCommandPaletteEntries(
+  List<_CommandPaletteEntry> entries,
+  String query,
+) {
+  final normalized = query.trim().toLowerCase();
+  if (normalized.isEmpty) {
+    return entries.where((item) => item.pinned).take(10).toList();
+  }
+
+  final matches = <(_CommandPaletteEntry, int)>[];
+  for (final entry in entries) {
+    final score = _commandPaletteScore(entry, normalized);
+    if (score > 0) {
+      matches.add((entry, score));
+    }
+  }
+
+  matches.sort((a, b) {
+    final byScore = b.$2.compareTo(a.$2);
+    if (byScore != 0) return byScore;
+    return a.$1.title.compareTo(b.$1.title);
+  });
+
+  return matches.take(14).map((item) => item.$1).toList();
+}
+
+int _commandPaletteScore(_CommandPaletteEntry entry, String query) {
+  var score = 0;
+  for (final term in entry.searchTerms) {
+    final value = term.toLowerCase();
+    if (value.startsWith(query)) {
+      score = score < 120 ? 120 : score;
+      continue;
+    }
+    if (value.contains(query)) {
+      score = score < 72 ? 72 : score;
+    }
+  }
+  if (score == 0) return 0;
+  return score + entry.priority;
+}
+
+class ImageUploadField extends StatelessWidget {
+  const ImageUploadField({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return FormFieldWrapper(
+      label: 'Logo',
+      child: OutlinedButton.icon(
+        onPressed: () {},
+        icon: const Icon(Icons.upload_file),
+        label: const Text('Subir imagen'),
+      ),
+    );
+  }
+}
+
+class ColorPickerSimple extends StatelessWidget {
+  const ColorPickerSimple({
+    required this.label,
+    required this.value,
+    super.key,
+  });
+
+  final String label;
+  final Color value;
+
+  @override
+  Widget build(BuildContext context) {
+    return FormFieldWrapper(
+      label: label,
+      child: Row(
+        children: [
+          Container(
+            height: 24,
+            width: 24,
+            decoration: BoxDecoration(
+              color: value,
+              border: Border.all(color: AppColors.border),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            '#${value.toARGB32().toRadixString(16).substring(2).toUpperCase()}',
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class SummaryCards extends StatelessWidget {
+  const SummaryCards({required this.items, super.key});
+
+  final List<(String label, String value)> items;
+
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    final columns = width > 1320
+        ? 3
+        : width > 720
+        ? 2
+        : 1;
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: items.length,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: columns,
+        mainAxisExtent: 104,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+      ),
+      itemBuilder: (context, index) {
+        final item = items[index];
+        return SectionCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                item.$1,
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                item.$2,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 22,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class LimitUsageWidget extends StatelessWidget {
+  const LimitUsageWidget({
+    required this.plan,
+    required this.clientes,
+    required this.productos,
+    super.key,
+  });
+
+  final Plan plan;
+  final int clientes;
+  final int productos;
+
+  @override
+  Widget build(BuildContext context) {
+    return SectionCard(
+      title: 'Consumo del plan',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          UsageProgressBar(
+            label: 'Clientes',
+            used: clientes,
+            limit: plan.limiteClientes,
+          ),
+          const SizedBox(height: 12),
+          UsageProgressBar(
+            label: 'Productos',
+            used: productos,
+            limit: plan.limiteProductos,
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.accent,
+              ),
+              onPressed: () {},
+              child: const Text('Upgrade ahora'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

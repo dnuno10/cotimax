@@ -1,0 +1,690 @@
+import 'package:cotimax/core/constants/app_colors.dart';
+import 'package:cotimax/core/routing/route_paths.dart';
+import 'package:cotimax/features/proveedores/application/proveedores_controller.dart';
+import 'package:cotimax/shared/models/domain_models.dart';
+import 'package:cotimax/shared/widgets/cotimax_widgets.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+class ProveedoresPage extends ConsumerStatefulWidget {
+  const ProveedoresPage({super.key});
+
+  @override
+  ConsumerState<ProveedoresPage> createState() => _ProveedoresPageState();
+}
+
+class _ProveedoresPageState extends ConsumerState<ProveedoresPage> {
+  bool _handledCreateRoute = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final proveedoresAsync = ref.watch(proveedoresControllerProvider);
+    final shouldCreate =
+        GoRouterState.of(context).uri.queryParameters['create'] == '1';
+
+    if (!shouldCreate) {
+      _handledCreateRoute = false;
+    } else if (!_handledCreateRoute) {
+      _handledCreateRoute = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!mounted) return;
+        _openForm(context, null);
+        if (mounted) {
+          context.go(RoutePaths.proveedores);
+        }
+      });
+    }
+
+    return ListView(
+      children: [
+        PageHeader(
+          title: 'Proveedores',
+          subtitle: '',
+          actions: [
+            ...buildImportExportHeaderActions(
+              context,
+              entityLabel: 'proveedores',
+            ),
+            ElevatedButton.icon(
+              onPressed: () => _openForm(context, null),
+              icon: const Icon(Icons.add),
+              label: const Text('Nuevo proveedor'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        FilterBar(
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(top: 20),
+              child: SizedBox(
+                width: 320,
+                child: SearchField(
+                  hint: 'Buscar por nombre, empresa, RFC o correo',
+                  onChanged: (value) =>
+                      ref.read(proveedoresSearchProvider.notifier).state =
+                          value,
+                ),
+              ),
+            ),
+            const SizedBox(
+              width: 220,
+              child: SelectField<String>(
+                label: 'Estatus',
+                value: 'Todos',
+                options: ['Todos', 'Activos', 'Inactivos'],
+              ),
+            ),
+            const SizedBox(
+              width: 220,
+              child: SelectField<String>(
+                label: 'Origen',
+                value: 'Todos',
+                options: ['Todos', 'Con empresa', 'Sin empresa'],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        proveedoresAsync.when(
+          loading: LoadingSkeleton.new,
+          error: (_, __) => ErrorStateWidget(
+            message: 'No fue posible cargar proveedores.',
+            onRetry: () => ref.invalidate(proveedoresControllerProvider),
+          ),
+          data: (proveedores) {
+            if (proveedores.isEmpty) {
+              return const SectionCard(child: InlineEmptyMessage());
+            }
+
+            return CotimaxDataTable(
+              columns: const [
+                DataColumn(label: Text('Nombre')),
+                DataColumn(label: Text('Empresa')),
+                DataColumn(label: Text('RFC')),
+                DataColumn(label: Text('Contacto')),
+                DataColumn(label: Text('Teléfono')),
+                DataColumn(label: Text('Correo')),
+                DataColumn(label: Text('Estatus')),
+                DataColumn(label: Text('Actualizado')),
+                DataColumn(label: Text('Acciones')),
+              ],
+              rows: proveedores
+                  .map(
+                    (proveedor) => DataRow(
+                      cells: [
+                        DataCell(Text(proveedor.nombre)),
+                        DataCell(Text(proveedor.empresa)),
+                        DataCell(Text(proveedor.rfc)),
+                        DataCell(Text(proveedor.contacto)),
+                        DataCell(Text(proveedor.telefono)),
+                        DataCell(Text(proveedor.correo)),
+                        DataCell(
+                          Text(proveedor.activo ? 'Activo' : 'Inactivo'),
+                        ),
+                        DataCell(
+                          Text(
+                            '${proveedor.updatedAt.day}/${proveedor.updatedAt.month}/${proveedor.updatedAt.year}',
+                          ),
+                        ),
+                        DataCell(
+                          RowActionMenu(
+                            onSelected: (action) =>
+                                _onRowAction(context, proveedor, action),
+                            actions: [
+                              const PopupMenuItem(
+                                value: 'edit',
+                                child: Text('Editar'),
+                              ),
+                              PopupMenuItem(
+                                value: 'toggle',
+                                child: Text(
+                                  proveedor.activo ? 'Desactivar' : 'Activar',
+                                ),
+                              ),
+                              const PopupMenuItem(
+                                value: 'delete',
+                                child: Text('Eliminar'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                  .toList(),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  void _openForm(BuildContext context, Proveedor? proveedor) {
+    showDialog<void>(
+      context: context,
+      builder: (_) => ModalBase(
+        title: proveedor == null ? 'Nuevo proveedor' : 'Editar proveedor',
+        child: _ProveedorForm(proveedor: proveedor),
+      ),
+    );
+  }
+
+  Future<void> _toggleProveedor(Proveedor proveedor) async {
+    try {
+      await ref.read(proveedoresRepositoryProvider).toggle(proveedor.id);
+      ref.invalidate(proveedoresControllerProvider);
+      if (!mounted) return;
+      ToastHelper.showSuccess(
+        context,
+        proveedor.activo ? 'Proveedor desactivado.' : 'Proveedor activado.',
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ToastHelper.showError(context, 'No se pudo actualizar el proveedor.');
+    }
+  }
+
+  Future<void> _deleteProveedor(Proveedor proveedor) async {
+    final confirmed = await showDeleteConfirmation(
+      context,
+      entityLabel: 'proveedor',
+    );
+    if (!confirmed) return;
+
+    try {
+      await ref.read(proveedoresRepositoryProvider).delete(proveedor.id);
+      ref.invalidate(proveedoresControllerProvider);
+      if (!mounted) return;
+      ToastHelper.showSuccess(context, 'Proveedor eliminado.');
+    } catch (_) {
+      if (!mounted) return;
+      ToastHelper.showError(context, 'No se pudo eliminar el proveedor.');
+    }
+  }
+
+  void _onRowAction(BuildContext context, Proveedor proveedor, String action) {
+    switch (action) {
+      case 'edit':
+        _openForm(context, proveedor);
+        return;
+      case 'toggle':
+        _toggleProveedor(proveedor);
+        return;
+      case 'delete':
+        _deleteProveedor(proveedor);
+        return;
+    }
+  }
+}
+
+class _ProveedorForm extends ConsumerStatefulWidget {
+  const _ProveedorForm({this.proveedor});
+
+  final Proveedor? proveedor;
+
+  @override
+  ConsumerState<_ProveedorForm> createState() => _ProveedorFormState();
+}
+
+class _ProveedorFormState extends ConsumerState<_ProveedorForm> {
+  late final ScrollController _scrollController;
+  late final TextEditingController _empresaController;
+  late final TextEditingController _numeroController;
+  late final TextEditingController _rfcController;
+  late final TextEditingController _sitioWebController;
+  late final TextEditingController _telefonoController;
+  late final TextEditingController _routingController;
+  late final TextEditingController _nombresController;
+  late final TextEditingController _apellidosController;
+  late final TextEditingController _correoController;
+  late final TextEditingController _telefonoContactoController;
+  bool _ivaValido = false;
+  bool _exentoImpuestos = false;
+  bool _activo = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+    final proveedor = widget.proveedor;
+    final contactParts = proveedor?.contacto.trim().split(RegExp(r'\s+')) ?? [];
+    _empresaController = seededTextController(proveedor?.empresa);
+    _numeroController = seededTextController(proveedor?.numero);
+    _rfcController = seededTextController(proveedor?.rfc);
+    _sitioWebController = seededTextController();
+    _telefonoController = seededTextController(proveedor?.telefono ?? '');
+    _routingController = seededTextController();
+    _nombresController = seededTextController(
+      contactParts.isEmpty ? '' : contactParts.first,
+    );
+    _apellidosController = seededTextController(
+      contactParts.length > 1 ? contactParts.skip(1).join(' ') : '',
+    );
+    _correoController = seededTextController(proveedor?.correo);
+    _telefonoContactoController = seededTextController(
+      proveedor?.telefono ?? '',
+    );
+    _activo = proveedor?.activo ?? true;
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    _empresaController.dispose();
+    _numeroController.dispose();
+    _rfcController.dispose();
+    _sitioWebController.dispose();
+    _telefonoController.dispose();
+    _routingController.dispose();
+    _nombresController.dispose();
+    _apellidosController.dispose();
+    _correoController.dispose();
+    _telefonoContactoController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final proveedoresExistentes =
+        ref.watch(proveedoresControllerProvider).valueOrNull ??
+        const <Proveedor>[];
+    final numeroSugerido = nextSequentialValue(
+      proveedoresExistentes
+          .where((item) => item.id != widget.proveedor?.id)
+          .map((item) => item.numero),
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: const [_ProviderTabButton(label: 'Crear', selected: true)],
+        ),
+        const SizedBox(height: 8),
+        Container(height: 1, color: AppColors.border),
+        const SizedBox(height: 10),
+        Expanded(
+          child: FocusTraversalGroup(
+            policy: WidgetOrderTraversalPolicy(),
+            child: Scrollbar(
+              controller: _scrollController,
+              child: SingleChildScrollView(
+                controller: _scrollController,
+                child: _buildCreateTab(numeroSugerido),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Align(
+          alignment: Alignment.centerRight,
+          child: Wrap(
+            spacing: 10,
+            children: [
+              OutlinedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancelar'),
+              ),
+              ElevatedButton.icon(
+                onPressed: _save,
+                icon: Icon(
+                  widget.proveedor == null
+                      ? Icons.add_rounded
+                      : Icons.save_rounded,
+                ),
+                label: Text(
+                  widget.proveedor == null
+                      ? 'Crear proveedor'
+                      : 'Guardar proveedor',
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCreateTab(String numeroSugerido) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final wide = constraints.maxWidth >= 980;
+        final left = _ProviderSection(
+          title: 'Detalles de la empresa',
+          icon: FontAwesomeIcons.building,
+          child: Column(
+            children: [
+              _ProviderFieldRow(
+                label: 'Nombre de la empresa',
+                controller: _empresaController,
+              ),
+              _ProviderFieldRow(
+                label: 'Número de proveedor (automático)',
+                controller: _numeroController,
+                hintText: 'Se asignará automáticamente: $numeroSugerido',
+                helperText:
+                    'Si lo dejas vacío, se asigna el consecutivo $numeroSugerido.',
+              ),
+              _ProviderFieldRow(label: 'CIF/NIF', controller: _rfcController),
+              _ProviderFieldRow(
+                label: 'Sitio web',
+                controller: _sitioWebController,
+              ),
+              _ProviderFieldRow(
+                label: 'Teléfono',
+                controller: _telefonoController,
+              ),
+              _ProviderFieldRow(
+                label: 'Id. de enrutamiento',
+                controller: _routingController,
+              ),
+              _ProviderSwitchRow(
+                label: 'Número de IVA válido',
+                value: _ivaValido,
+                onChanged: (value) => setState(() => _ivaValido = value),
+              ),
+              _ProviderSwitchRow(
+                label: 'Exento de impuestos',
+                value: _exentoImpuestos,
+                onChanged: (value) => setState(() => _exentoImpuestos = value),
+              ),
+              _ProviderSwitchRow(
+                label: 'Proveedor activo',
+                value: _activo,
+                onChanged: (value) => setState(() => _activo = value),
+              ),
+            ],
+          ),
+        );
+
+        final right = Column(
+          children: [
+            _ProviderSection(
+              title: 'Contactos',
+              icon: FontAwesomeIcons.addressBook,
+              trailing: OutlinedButton(
+                onPressed: () {},
+                child: const Text('+ Añadir contacto'),
+              ),
+              child: Column(
+                children: [
+                  _ProviderFieldRow(
+                    label: 'Nombres',
+                    controller: _nombresController,
+                  ),
+                  _ProviderFieldRow(
+                    label: 'Apellidos',
+                    controller: _apellidosController,
+                  ),
+                  _ProviderFieldRow(
+                    label: 'Correo electrónico',
+                    controller: _correoController,
+                  ),
+                  _ProviderFieldRow(
+                    label: 'Teléfono',
+                    controller: _telefonoContactoController,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+
+        if (wide) {
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: left),
+              const SizedBox(width: 10),
+              Expanded(child: right),
+            ],
+          );
+        }
+
+        return Column(children: [left, const SizedBox(height: 10), right]);
+      },
+    );
+  }
+
+  Future<void> _save() async {
+    final now = DateTime.now();
+    final nombres = _nombresController.text.trim();
+    if (nombres.isEmpty) {
+      ToastHelper.showWarning(context, 'Ingresa los nombres del contacto.');
+      return;
+    }
+
+    final proveedoresExistentes =
+        ref.read(proveedoresControllerProvider).valueOrNull ??
+        const <Proveedor>[];
+    final numeroIngresado = _numeroController.text.trim();
+    final numeroDefinitivo = numeroIngresado.isNotEmpty
+        ? numeroIngresado
+        : nextSequentialValue(
+            proveedoresExistentes
+                .where((item) => item.id != widget.proveedor?.id)
+                .map((item) => item.numero),
+          );
+    final numeroDuplicado = proveedoresExistentes.any(
+      (item) =>
+          item.id != widget.proveedor?.id &&
+          item.numero.trim().isNotEmpty &&
+          sequenceValuesMatch(item.numero, numeroDefinitivo),
+    );
+    if (numeroDuplicado) {
+      ToastHelper.showWarning(context, 'El número de proveedor ya existe.');
+      return;
+    }
+
+    final nombreContacto = [
+      nombres,
+      _apellidosController.text.trim(),
+    ].where((part) => part.isNotEmpty).join(' ');
+
+    final proveedor = Proveedor(
+      id: widget.proveedor?.id ?? 'prov-${now.microsecondsSinceEpoch}',
+      numero: numeroDefinitivo,
+      idNumber: widget.proveedor?.idNumber ?? '',
+      nombre: nombreContacto,
+      empresa: _empresaController.text.trim(),
+      rfc: _rfcController.text.trim(),
+      contacto: nombreContacto,
+      telefono: _telefonoController.text.trim(),
+      correo: _correoController.text.trim(),
+      direccion: widget.proveedor?.direccion ?? '',
+      notas: '',
+      activo: _activo,
+      createdAt: widget.proveedor?.createdAt ?? now,
+      updatedAt: now,
+    );
+
+    try {
+      await ref.read(proveedoresRepositoryProvider).upsert(proveedor);
+      ref.invalidate(proveedoresControllerProvider);
+      if (!mounted) return;
+      ToastHelper.showSuccess(
+        context,
+        widget.proveedor == null
+            ? 'Proveedor creado correctamente.'
+            : 'Proveedor actualizado correctamente.',
+      );
+      Navigator.of(context).pop();
+    } catch (_) {
+      if (!mounted) return;
+      ToastHelper.showError(context, 'No se pudo guardar el proveedor.');
+    }
+  }
+}
+
+class _ProviderTabButton extends StatelessWidget {
+  const _ProviderTabButton({required this.label, required this.selected});
+
+  final String label;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: selected ? AppColors.textPrimary : Colors.transparent,
+            width: 2,
+          ),
+        ),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: selected ? AppColors.textPrimary : AppColors.textSecondary,
+          fontWeight: FontWeight.w700,
+          fontSize: 14,
+        ),
+      ),
+    );
+  }
+}
+
+class _ProviderSection extends StatelessWidget {
+  const _ProviderSection({
+    required this.title,
+    required this.icon,
+    required this.child,
+    this.trailing,
+  });
+
+  final String title;
+  final IconData icon;
+  final Widget child;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      FaIcon(icon, size: 14, color: AppColors.textPrimary),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (trailing != null) trailing!,
+              ],
+            ),
+          ),
+          Container(height: 1, color: AppColors.border),
+          Padding(padding: const EdgeInsets.all(16), child: child),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProviderFieldRow extends StatelessWidget {
+  const _ProviderFieldRow({
+    required this.label,
+    required this.controller,
+    this.hintText,
+    this.helperText,
+  });
+
+  final String label;
+  final TextEditingController controller;
+  final String? hintText;
+  final String? helperText;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 165,
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          Expanded(
+            child: TextFormField(
+              controller: controller,
+              textInputAction: TextInputAction.next,
+              onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
+              decoration: InputDecoration(
+                hintText: hintText,
+                helperText: helperText,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProviderSwitchRow extends StatelessWidget {
+  const _ProviderSwitchRow({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String label;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 165,
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          Switch(value: value, onChanged: onChanged),
+        ],
+      ),
+    );
+  }
+}
