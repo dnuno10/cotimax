@@ -76,7 +76,6 @@ class AuthController extends Notifier<AuthState> {
           .read(authRepositoryProvider)
           .verifyOtp(email: email, token: token);
       if (ok) {
-        await ref.read(authRepositoryProvider).ensureWorkspace();
         state = AuthState(isAuthenticated: true, otpEmail: email);
         return true;
       }

@@ -1,3 +1,4 @@
+import 'package:cotimax/core/localization/app_localization.dart';
 import 'package:cotimax/core/routing/route_paths.dart';
 import 'package:cotimax/features/auth/application/auth_controller.dart';
 import 'package:cotimax/features/auth/presentation/login_page.dart';
@@ -14,6 +15,8 @@ import 'package:cotimax/features/planes/presentation/planes_page.dart';
 import 'package:cotimax/features/productos/presentation/productos_page.dart';
 import 'package:cotimax/features/proveedores/presentation/proveedores_page.dart';
 import 'package:cotimax/features/usuarios/presentation/usuarios_page.dart';
+import 'package:cotimax/features/workspace/application/workspace_controller.dart';
+import 'package:cotimax/features/workspace/presentation/workspace_setup_page.dart';
 import 'package:cotimax/shared/widgets/cotimax_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -21,33 +24,82 @@ import 'package:go_router/go_router.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   final auth = ref.watch(authControllerProvider);
+  final workspaceStatus = ref.watch(workspaceStatusProvider);
 
   String pageTitle(String location) {
-    if (location.startsWith(RoutePaths.dashboard)) return 'Dashboard';
-    if (location.startsWith(RoutePaths.clientes)) return 'Clientes';
-    if (location.startsWith(RoutePaths.proveedores)) return 'Proveedores';
-    if (location.startsWith(RoutePaths.productos)) {
-      return 'Productos / Servicios';
+    if (location.startsWith(RoutePaths.dashboard)) {
+      return tr('Inicio', 'Home');
     }
-    if (location.startsWith(RoutePaths.materiales)) return 'Materiales';
-    if (location.startsWith(RoutePaths.cotizaciones)) return 'Cotizaciones';
-    if (location.startsWith(RoutePaths.ingresos)) return 'Ingresos';
-    if (location.startsWith(RoutePaths.gastos)) return 'Gastos';
-    if (location.startsWith(RoutePaths.analitica)) return 'Analítica';
-    if (location.startsWith(RoutePaths.configuracion)) return 'Configuración';
-    if (location.startsWith(RoutePaths.usuarios)) return 'Usuarios';
-    if (location.startsWith(RoutePaths.planes)) return 'Planes';
+    if (location.startsWith(RoutePaths.clientes)) {
+      return tr('Clientes', 'Clients');
+    }
+    if (location.startsWith(RoutePaths.proveedores)) {
+      return tr('Proveedores', 'Suppliers');
+    }
+    if (location.startsWith(RoutePaths.productos)) {
+      return tr('Productos / Servicios', 'Products / Services');
+    }
+    if (location.startsWith(RoutePaths.materiales)) {
+      return tr('Materiales', 'Materials');
+    }
+    if (location.startsWith(RoutePaths.cotizaciones)) {
+      return tr('Cotizaciones', 'Quotes');
+    }
+    if (location.startsWith(RoutePaths.ingresos)) {
+      return tr('Ingresos', 'Income');
+    }
+    if (location.startsWith(RoutePaths.gastos)) {
+      return tr('Gastos', 'Expenses');
+    }
+    if (location.startsWith(RoutePaths.analitica)) {
+      return tr('Analítica', 'Analytics');
+    }
+    if (location.startsWith(RoutePaths.configuracion)) {
+      return tr('Configuración', 'Settings');
+    }
+    if (location.startsWith(RoutePaths.usuarios)) {
+      return tr('Usuarios', 'Users');
+    }
+    if (location.startsWith(RoutePaths.planes)) {
+      return tr('Planes', 'Plans');
+    }
     return 'Cotimax';
   }
 
   return GoRouter(
     initialLocation: RoutePaths.login,
     redirect: (context, state) {
+      final path = state.uri.path;
       final isAuthRoute =
-          state.uri.path == RoutePaths.login ||
-          state.uri.path == RoutePaths.recover;
-      if (!auth.isAuthenticated && !isAuthRoute) return RoutePaths.login;
-      if (auth.isAuthenticated && isAuthRoute) return RoutePaths.dashboard;
+          path == RoutePaths.login || path == RoutePaths.recover;
+      final isWorkspaceSetupRoute = path == RoutePaths.workspaceSetup;
+
+      if (!auth.isAuthenticated && !isAuthRoute && !isWorkspaceSetupRoute) {
+        return RoutePaths.login;
+      }
+
+      if (!auth.isAuthenticated && isWorkspaceSetupRoute) {
+        return RoutePaths.login;
+      }
+
+      if (auth.isAuthenticated && isAuthRoute) {
+        return RoutePaths.workspaceSetup;
+      }
+
+      if (auth.isAuthenticated && !isWorkspaceSetupRoute) {
+        final hasCompany = workspaceStatus.valueOrNull?.hasCompany == true;
+        if (!hasCompany) {
+          return RoutePaths.workspaceSetup;
+        }
+      }
+
+      if (auth.isAuthenticated && isWorkspaceSetupRoute) {
+        final hasCompany = workspaceStatus.valueOrNull?.hasCompany == true;
+        if (hasCompany) {
+          return RoutePaths.dashboard;
+        }
+      }
+
       return null;
     },
     routes: [
@@ -55,6 +107,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.recover,
         builder: (_, __) => const RecoverPage(),
+      ),
+      GoRoute(
+        path: RoutePaths.workspaceSetup,
+        builder: (_, __) => const WorkspaceSetupPage(),
       ),
       ShellRoute(
         builder: (_, state, child) => AppShell(
@@ -114,7 +170,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ],
       ),
     ],
-    errorBuilder: (_, __) =>
-        const Scaffold(body: Center(child: Text('Ruta no encontrada'))),
+    errorBuilder: (_, __) => Scaffold(
+      body: Center(child: Text(tr('Ruta no encontrada', 'Route not found'))),
+    ),
   );
 });

@@ -57,6 +57,16 @@ abstract class ConfiguracionRepository {
   Future<void> updateEmpresa(EmpresaPerfil empresa);
 }
 
+abstract class WorkspaceRepository {
+  Future<WorkspaceStatus> getStatus();
+  Future<void> createInitialCompany({
+    required String nombreEmpresa,
+    String logoUrl = '',
+  });
+  Future<void> joinByInvitationCode(String code);
+  Future<CompanyInvitationCode> getInvitationCode();
+}
+
 abstract class UsuariosRepository {
   Future<List<Usuario>> getAll();
 }
@@ -95,6 +105,12 @@ class SupabaseClientesRepository implements ClientesRepository {
           'telefono': cliente.telefono,
           'correo': cliente.correo,
           'direccion': cliente.direccion,
+          'calle': cliente.calle,
+          'apartamento_suite': cliente.apartamentoSuite,
+          'ciudad': cliente.ciudad,
+          'estado_provincia': cliente.estadoProvincia,
+          'codigo_postal': cliente.codigoPostal,
+          'pais': cliente.pais,
           'notas': cliente.notas,
           'contacto': cliente.contacto,
           'activo': cliente.activo,
@@ -214,6 +230,7 @@ class SupabaseMaterialesRepository implements MaterialesRepository {
           'unidad_medida': material.unidad,
           'costo_unitario': material.costoUnitario,
           'stock_disponible': material.stockDisponible,
+          'proveedor_id': material.proveedorId,
           'proveedor_nombre': material.proveedor,
           'sku': material.sku,
           'activo': material.activo,
@@ -255,7 +272,7 @@ class SupabaseCotizacionesRepository implements CotizacionesRepository {
   Future<void> updateStatus(String id, QuoteStatus status) async {
     await _client.rpc(
       'update_cotizacion_status',
-      params: {'p_id': id, 'p_status': status.name},
+      params: {'p_id': id, 'p_status': status.key},
     );
   }
 
@@ -291,12 +308,12 @@ class SupabaseIngresosRepository implements IngresosRepository {
           'cliente_id': _nullIfEmpty(ingreso.clienteId),
           'cotizacion_id': _nullIfEmpty(ingreso.cotizacionId),
           'monto': ingreso.monto,
-          'metodo_pago': ingreso.metodoPago.name,
+          'metodo_pago': ingreso.metodoPago.key,
           'fecha': ingreso.fecha.toIso8601String(),
           'referencia': ingreso.referencia,
           'notas': ingreso.notas,
           'recurrente': ingreso.recurrente,
-          'recurrencia': ingreso.recurrencia.name,
+          'recurrencia': ingreso.recurrencia.key,
           'dias_semana': ingreso.diasSemana,
           'icon_key': ingreso.iconKey,
         },
@@ -348,7 +365,7 @@ class SupabaseGastosRepository implements GastosRepository {
           'referencia': gasto.referencia,
           'notas': gasto.notas,
           'recurrente': gasto.recurrente,
-          'recurrencia': gasto.recurrencia.name,
+          'recurrencia': gasto.recurrencia.key,
           'dias_semana': gasto.diasSemana,
           'icon_key': gasto.iconKey,
         },
@@ -409,6 +426,51 @@ class SupabaseConfiguracionRepository implements ConfiguracionRepository {
           },
         },
       },
+    );
+  }
+}
+
+class SupabaseWorkspaceRepository implements WorkspaceRepository {
+  const SupabaseWorkspaceRepository(this._client);
+
+  final SupabaseClient _client;
+
+  @override
+  Future<WorkspaceStatus> getStatus() async {
+    final response = await _client.rpc('get_workspace_status');
+    final row = Map<String, dynamic>.from(response as Map);
+    return WorkspaceStatus(
+      hasCompany: _boolFrom(row['has_company']),
+      empresaId: row['empresa_id']?.toString(),
+    );
+  }
+
+  @override
+  Future<void> createInitialCompany({
+    required String nombreEmpresa,
+    String logoUrl = '',
+  }) async {
+    await _client.rpc(
+      'create_empresa_inicial',
+      params: {'p_nombre_comercial': nombreEmpresa, 'p_logo_url': logoUrl},
+    );
+  }
+
+  @override
+  Future<void> joinByInvitationCode(String code) async {
+    await _client.rpc(
+      'join_empresa_by_invitation_code',
+      params: {'p_codigo': code},
+    );
+  }
+
+  @override
+  Future<CompanyInvitationCode> getInvitationCode() async {
+    final response = await _client.rpc('get_empresa_invitation_code');
+    final row = Map<String, dynamic>.from(response as Map);
+    return CompanyInvitationCode(
+      empresaId: row['empresa_id'].toString(),
+      codigo: (row['codigo'] ?? '') as String,
     );
   }
 }
@@ -479,7 +541,7 @@ double _doubleFrom(dynamic value, {double fallback = 0}) {
 T _enumByName<T>(Iterable<T> values, String? raw, T fallback) {
   if (raw == null || raw.isEmpty) return fallback;
   for (final value in values) {
-    if ((value as dynamic).name == raw) return value;
+    if (enumKey(value as Object) == raw) return value;
   }
   return fallback;
 }
@@ -496,6 +558,12 @@ Cliente _clienteFromRow(Map<String, dynamic> row) {
     telefono: (row['telefono'] ?? '') as String,
     correo: (row['correo'] ?? '') as String,
     direccion: (row['direccion'] ?? '') as String,
+    calle: (row['calle'] ?? '') as String,
+    apartamentoSuite: (row['apartamento_suite'] ?? '') as String,
+    ciudad: (row['ciudad'] ?? '') as String,
+    estadoProvincia: (row['estado_provincia'] ?? '') as String,
+    codigoPostal: (row['codigo_postal'] ?? '') as String,
+    pais: (row['pais'] ?? '') as String,
     notas: (row['notas'] ?? '') as String,
     activo: _boolFrom(row['activo'], fallback: true),
     createdAt: _dateTimeFrom(row['created_at']),
@@ -533,6 +601,7 @@ MaterialInsumo _materialFromRow(Map<String, dynamic> row) {
     stockDisponible: _doubleFrom(
       row['stock_disponible'] ?? row['stockDisponible'],
     ),
+    proveedorId: row['proveedor_id'] as String?,
     proveedor: (row['proveedor_nombre'] ?? row['proveedor'] ?? '') as String,
     sku: (row['sku'] ?? '') as String,
     productoIds: const [],
@@ -620,6 +689,7 @@ DetalleCotizacion _detalleCotizacionFromRow(Map<String, dynamic> row) {
     unidad: (row['unidad'] ?? '') as String,
     descuento: _doubleFrom(row['descuento']),
     cantidad: _doubleFrom(row['cantidad']),
+    impuestoPorcentaje: _doubleFrom(row['impuesto_porcentaje']),
     importe: _doubleFrom(row['importe']),
     orden: (row['orden'] as num?)?.toInt() ?? 0,
     createdAt: _dateTimeFrom(row['created_at']),

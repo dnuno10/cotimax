@@ -1,4 +1,5 @@
 import 'package:cotimax/core/constants/app_colors.dart';
+import 'package:cotimax/core/localization/app_localization.dart';
 import 'package:flutter/material.dart';
 
 class FinanceIconOption {
@@ -11,6 +12,20 @@ class FinanceIconOption {
   final String key;
   final String label;
   final IconData icon;
+}
+
+String _displayFinanceIconLabel(FinanceIconOption option) {
+  if (!currentAppLocale().languageCode.toLowerCase().startsWith('en')) {
+    return option.label;
+  }
+  return option.key
+      .split('_')
+      .map(
+        (part) => part.isEmpty
+            ? part
+            : '${part[0].toUpperCase()}${part.substring(1).toLowerCase()}',
+      )
+      .join(' ');
 }
 
 const List<FinanceIconOption> financeIconOptions = [
@@ -540,14 +555,14 @@ class _FinanceIconPickerState extends State<FinanceIconPicker> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    selected.label,
+                    _displayFinanceIconLabel(selected),
                     style: const TextStyle(
                       color: AppColors.textPrimary,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
-                  const Text(
-                    'Abre un dialogo compacto para cambiarlo',
+                  Text(
+                    trText('Abre un dialogo compacto para cambiarlo'),
                     style: TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 12,
@@ -561,7 +576,7 @@ class _FinanceIconPickerState extends State<FinanceIconPicker> {
             OutlinedButton.icon(
               onPressed: () => _openPickerDialog(context),
               icon: const Icon(Icons.grid_view_rounded, size: 16),
-              label: const Text('Elegir'),
+              label: Text(trText('Elegir')),
             ),
           ],
         ),
@@ -611,7 +626,8 @@ class _FinanceIconDialogState extends State<_FinanceIconDialog> {
     final visible = financeIconOptions.where((option) {
       if (_query.isEmpty) return true;
       final query = _query.toLowerCase();
-      return option.label.toLowerCase().contains(query) ||
+      return _displayFinanceIconLabel(option).toLowerCase().contains(query) ||
+          option.label.toLowerCase().contains(query) ||
           option.key.toLowerCase().contains(query);
     }).toList();
 
@@ -633,8 +649,8 @@ class _FinanceIconDialogState extends State<_FinanceIconDialog> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Seleccionar icono',
+                        Text(
+                          trText('Seleccionar icono'),
                           style: TextStyle(
                             color: AppColors.textPrimary,
                             fontSize: 18,
@@ -642,7 +658,10 @@ class _FinanceIconDialogState extends State<_FinanceIconDialog> {
                           ),
                         ),
                         Text(
-                          '${visible.length} iconos disponibles',
+                          tr(
+                            '$visible.length iconos disponibles',
+                            '${visible.length} icons available',
+                          ),
                           style: const TextStyle(
                             color: AppColors.textSecondary,
                             fontSize: 12,
@@ -679,14 +698,14 @@ class _FinanceIconDialogState extends State<_FinanceIconDialog> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            selected.label,
+                            _displayFinanceIconLabel(selected),
                             style: const TextStyle(
                               color: AppColors.textPrimary,
                               fontWeight: FontWeight.w800,
                             ),
                           ),
-                          const Text(
-                            'Toca un icono para seleccionarlo',
+                          Text(
+                            trText('Toca un icono para seleccionarlo'),
                             style: TextStyle(
                               color: AppColors.textSecondary,
                               fontSize: 12,
@@ -703,9 +722,9 @@ class _FinanceIconDialogState extends State<_FinanceIconDialog> {
               TextField(
                 controller: _searchController,
                 onChanged: (value) => setState(() => _query = value.trim()),
-                decoration: const InputDecoration(
-                  hintText: 'Buscar icono por nombre',
-                  prefixIcon: Icon(Icons.search_rounded),
+                decoration: InputDecoration(
+                  hintText: trText('Buscar icono por nombre'),
+                  prefixIcon: const Icon(Icons.search_rounded),
                 ),
               ),
               const SizedBox(height: 12),
@@ -729,7 +748,7 @@ class _FinanceIconDialogState extends State<_FinanceIconDialog> {
                       final option = visible[index];
                       final isSelected = option.key == widget.selectedKey;
                       return Tooltip(
-                        message: option.label,
+                        message: _displayFinanceIconLabel(option),
                         child: InkWell(
                           borderRadius: BorderRadius.circular(10),
                           onTap: () => Navigator.of(context).pop(option.key),

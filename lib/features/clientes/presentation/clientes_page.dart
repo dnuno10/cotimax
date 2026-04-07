@@ -1,4 +1,5 @@
 import 'package:cotimax/core/constants/app_colors.dart';
+import 'package:cotimax/core/localization/app_localization.dart';
 import 'package:cotimax/core/routing/route_paths.dart';
 import 'package:cotimax/features/clientes/application/clientes_controller.dart';
 import 'package:cotimax/shared/models/domain_models.dart';
@@ -7,6 +8,217 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
+const List<({String value, String label})> clientCurrencyOptions = [
+  (value: 'MXN', label: 'MXN - Peso mexicano'),
+  (value: 'USD', label: 'USD - Dólar estadounidense'),
+  (value: 'EUR', label: 'EUR - Euro'),
+  (value: 'GBP', label: 'GBP - Libra esterlina'),
+  (value: 'CAD', label: 'CAD - Dólar canadiense'),
+  (value: 'BRL', label: 'BRL - Real brasileño'),
+  (value: 'ARS', label: 'ARS - Peso argentino'),
+  (value: 'CLP', label: 'CLP - Peso chileno'),
+  (value: 'COP', label: 'COP - Peso colombiano'),
+  (value: 'PEN', label: 'PEN - Sol peruano'),
+  (value: 'UYU', label: 'UYU - Peso uruguayo'),
+  (value: 'PYG', label: 'PYG - Guaraní paraguayo'),
+  (value: 'BOB', label: 'BOB - Boliviano'),
+  (value: 'GTQ', label: 'GTQ - Quetzal guatemalteco'),
+  (value: 'CRC', label: 'CRC - Colón costarricense'),
+  (value: 'DOP', label: 'DOP - Peso dominicano'),
+  (value: 'JPY', label: 'JPY - Yen japonés'),
+  (value: 'CNY', label: 'CNY - Yuan chino'),
+  (value: 'INR', label: 'INR - Rupia india'),
+  (value: 'AUD', label: 'AUD - Dólar australiano'),
+  (value: 'NZD', label: 'NZD - Dólar neozelandés'),
+  (value: 'CHF', label: 'CHF - Franco suizo'),
+  (value: 'SEK', label: 'SEK - Corona sueca'),
+  (value: 'NOK', label: 'NOK - Corona noruega'),
+  (value: 'DKK', label: 'DKK - Corona danesa'),
+  (value: 'SGD', label: 'SGD - Dólar de Singapur'),
+  (value: 'HKD', label: 'HKD - Dólar de Hong Kong'),
+  (value: 'KRW', label: 'KRW - Won surcoreano'),
+  (value: 'ZAR', label: 'ZAR - Rand sudafricano'),
+  (value: 'AED', label: 'AED - Dírham de Emiratos'),
+];
+
+const List<({String value, String label})> clientLanguageOptions = [
+  (value: 'es-MX', label: 'Español'),
+  (value: 'en-US', label: 'Inglés'),
+];
+
+const List<String> clientPaymentTermsOptions = [
+  'Pago inmediato',
+  'Contra entrega',
+  'Anticipo del 50%',
+  'Anticipo del 70%',
+  '7 días',
+  '10 días',
+  '15 días',
+  '20 días',
+  '30 días',
+  '45 días',
+  '60 días',
+  '90 días',
+  'Fin de mes',
+  'Quincenal',
+  'Mensual',
+];
+
+const List<String> clientQuoteValidUntilOptions = [
+  '1 día',
+  '3 días',
+  '5 días',
+  '7 días',
+  '10 días',
+  '15 días',
+  '30 días',
+  '45 días',
+  '60 días',
+  '90 días',
+];
+
+List<String> clientTaskRateOptions(String currencyCode) => [
+  'Sin tasa definida',
+  '100 $currencyCode/h',
+  '150 $currencyCode/h',
+  '200 $currencyCode/h',
+  '250 $currencyCode/h',
+  '300 $currencyCode/h',
+  '400 $currencyCode/h',
+  '500 $currencyCode/h',
+  '750 $currencyCode/h',
+  '1,000 $currencyCode/h',
+  '1,500 $currencyCode/h',
+  '2,000 $currencyCode/h',
+];
+
+const List<String> clientReminderOptions = [
+  'No enviar',
+  'El mismo día',
+  '1 día antes',
+  '3 días antes',
+  '5 días antes',
+  '7 días antes',
+  '10 días antes',
+  '15 días antes',
+  '30 días antes',
+];
+
+const List<String> clientCompanySizeOptions = [
+  '1-5 empleados',
+  '6-20 empleados',
+  '21-50 empleados',
+  '51-100 empleados',
+  '101-250 empleados',
+  '251-500 empleados',
+  '501-1,000 empleados',
+  '1,001-5,000 empleados',
+  '5,001+ empleados',
+];
+
+const List<String> clientIndustryOptions = [
+  'Arquitectura',
+  'Construcción',
+  'Ingeniería civil',
+  'Ingeniería mecánica',
+  'Ingeniería eléctrica',
+  'Ingeniería industrial',
+  'Manufactura',
+  'Maquila',
+  'Automotriz',
+  'Aeroespacial',
+  'Electrónica',
+  'Semiconductores',
+  'Metalmecánica',
+  'Plásticos',
+  'Textil',
+  'Moda',
+  'Calzado',
+  'Muebles',
+  'Carpintería',
+  'Diseño de interiores',
+  'Bienes raíces',
+  'Desarrollo inmobiliario',
+  'Administración de propiedades',
+  'Hotelería',
+  'Restaurantes',
+  'Cafeterías',
+  'Alimentos y bebidas',
+  'Agricultura',
+  'Ganadería',
+  'Pesca',
+  'Minería',
+  'Energía',
+  'Energía solar',
+  'Petróleo y gas',
+  'Tratamiento de agua',
+  'Logística',
+  'Transporte terrestre',
+  'Transporte marítimo',
+  'Transporte aéreo',
+  'Almacenaje',
+  'Comercio mayorista',
+  'Comercio minorista',
+  'E-commerce',
+  'Importación y exportación',
+  'Distribución',
+  'Farmacéutica',
+  'Dispositivos médicos',
+  'Hospitales',
+  'Clínicas',
+  'Laboratorios',
+  'Odontología',
+  'Veterinaria',
+  'Seguros',
+  'Banca',
+  'Fintech',
+  'Contabilidad',
+  'Auditoría',
+  'Legal',
+  'Consultoría de negocios',
+  'Recursos humanos',
+  'Reclutamiento',
+  'Tecnología',
+  'Software',
+  'SaaS',
+  'Ciberseguridad',
+  'Telecomunicaciones',
+  'Marketing digital',
+  'Publicidad',
+  'Medios',
+  'Producción audiovisual',
+  'Fotografía',
+  'Impresión',
+  'Educación',
+  'Capacitación',
+  'Investigación',
+  'ONG',
+  'Gobierno',
+  'Seguridad privada',
+  'Limpieza industrial',
+  'Mantenimiento',
+  'Reparación industrial',
+  'Facility management',
+  'Eventos',
+  'Organización de bodas',
+  'Entretenimiento',
+  'Deportes',
+  'Gimnasios',
+  'Belleza',
+  'Cosmética',
+  'Spa y bienestar',
+  'Turismo',
+  'Call center',
+  'BPO',
+  'Servicio al cliente',
+  'Paquetería',
+  'Reciclaje',
+  'Gestión ambiental',
+  'Decoración',
+  'Papelería y oficina',
+  'Comercio internacional',
+];
 
 class ClientesPage extends ConsumerStatefulWidget {
   const ClientesPage({super.key});
@@ -19,6 +231,7 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
   bool _handledCreateRoute = false;
   late final TextEditingController _searchController;
   String _appliedRouteQuery = '';
+  final Set<String> _selectedClienteIds = <String>{};
 
   @override
   void initState() {
@@ -63,7 +276,7 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
             ElevatedButton.icon(
               onPressed: () => _openForm(context, null),
               icon: const Icon(Icons.add),
-              label: const Text('Nuevo cliente'),
+              label: Text(trText('Nuevo cliente')),
             ),
           ],
         ),
@@ -102,7 +315,8 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
         ),
         const SizedBox(height: 10),
         clientesAsync.when(
-          loading: LoadingSkeleton.new,
+          loading: () =>
+              const LoadingStateWidget(message: 'Cargando clientes...'),
           error: (_, __) => ErrorStateWidget(
             message: 'No fue posible cargar clientes.',
             onRetry: () => ref.invalidate(clientesControllerProvider),
@@ -112,29 +326,88 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
               return const SectionCard(child: InlineEmptyMessage());
             }
 
+            final allSelected = _selectedClienteIds.length == clientes.length;
+            final partiallySelected =
+                _selectedClienteIds.isNotEmpty && !allSelected;
+
             return CotimaxDataTable(
-              columns: const [
-                DataColumn(label: Text('Nombre')),
-                DataColumn(label: Text('Empresa')),
-                DataColumn(label: Text('RFC')),
-                DataColumn(label: Text('Contacto')),
-                DataColumn(label: Text('Teléfono')),
-                DataColumn(label: Text('Correo')),
-                DataColumn(label: Text('Estatus')),
-                DataColumn(label: Text('Actualizado')),
-                DataColumn(label: Text('Acciones')),
+              toolbar: _selectedClienteIds.isEmpty
+                  ? null
+                  : TableSelectionToolbar(
+                      count: _selectedClienteIds.length,
+                      entityLabel: 'cliente',
+                      onEdit: _selectedClienteIds.length == 1
+                          ? () {
+                              final cliente = clientes.firstWhere(
+                                (item) => item.id == _selectedClienteIds.first,
+                              );
+                              _openForm(context, cliente);
+                            }
+                          : null,
+                      onDelete: _deleteSelectedClientes,
+                      onClear: () =>
+                          setState(() => _selectedClienteIds.clear()),
+                    ),
+              columns: [
+                DataColumn(
+                  label: Checkbox(
+                    value: allSelected
+                        ? true
+                        : partiallySelected
+                        ? null
+                        : false,
+                    tristate: true,
+                    onChanged: (value) {
+                      setState(() {
+                        if (value ?? false) {
+                          _selectedClienteIds
+                            ..clear()
+                            ..addAll(clientes.map((item) => item.id));
+                        } else {
+                          _selectedClienteIds.clear();
+                        }
+                      });
+                    },
+                  ),
+                ),
+                DataColumn(label: Text(trText('Nombre'))),
+                DataColumn(label: Text(trText('Empresa'))),
+                DataColumn(label: Text(trText('RFC'))),
+                DataColumn(label: Text(trText('Contacto'))),
+                DataColumn(label: Text(trText('Teléfono'))),
+                DataColumn(label: Text(trText('Correo'))),
+                DataColumn(label: Text(trText('Estatus'))),
+                DataColumn(label: Text(trText('Actualizado'))),
+                DataColumn(label: Text(trText('Acciones'))),
               ],
               rows: clientes
                   .map(
                     (cliente) => DataRow(
+                      selected: _selectedClienteIds.contains(cliente.id),
                       cells: [
+                        DataCell(
+                          Checkbox(
+                            value: _selectedClienteIds.contains(cliente.id),
+                            onChanged: (value) {
+                              setState(() {
+                                if (value ?? false) {
+                                  _selectedClienteIds.add(cliente.id);
+                                } else {
+                                  _selectedClienteIds.remove(cliente.id);
+                                }
+                              });
+                            },
+                          ),
+                        ),
                         DataCell(Text(cliente.nombre)),
                         DataCell(Text(cliente.empresa)),
                         DataCell(Text(cliente.rfc)),
                         DataCell(Text(cliente.contacto)),
                         DataCell(Text(cliente.telefono)),
                         DataCell(Text(cliente.correo)),
-                        DataCell(Text(cliente.activo ? 'Activo' : 'Inactivo')),
+                        DataCell(
+                          Text(trText(cliente.activo ? 'Activo' : 'Inactivo')),
+                        ),
                         DataCell(
                           Text(
                             '${cliente.updatedAt.day}/${cliente.updatedAt.month}/${cliente.updatedAt.year}',
@@ -145,19 +418,21 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
                             onSelected: (action) =>
                                 _onRowAction(context, cliente, action),
                             actions: [
-                              const PopupMenuItem(
+                              PopupMenuItem(
                                 value: 'edit',
-                                child: Text('Editar'),
+                                child: Text(trText('Editar')),
                               ),
                               PopupMenuItem(
                                 value: 'toggle',
                                 child: Text(
-                                  cliente.activo ? 'Desactivar' : 'Activar',
+                                  trText(
+                                    cliente.activo ? 'Desactivar' : 'Activar',
+                                  ),
                                 ),
                               ),
-                              const PopupMenuItem(
+                              PopupMenuItem(
                                 value: 'delete',
-                                child: Text('Eliminar'),
+                                child: Text(trText('Eliminar')),
                               ),
                             ],
                           ),
@@ -202,18 +477,59 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
     final confirmed = await showDeleteConfirmation(
       context,
       entityLabel: 'cliente',
+      onConfirmAsync: () async {
+        try {
+          await ref.read(clientesRepositoryProvider).delete(cliente.id);
+          ref.invalidate(clientesControllerProvider);
+          if (!mounted) return;
+          ToastHelper.showSuccess(context, 'Cliente eliminado.');
+        } catch (_) {
+          if (!mounted) rethrow;
+          ToastHelper.showError(context, 'No se pudo eliminar el cliente.');
+          rethrow;
+        }
+      },
     );
     if (!confirmed) return;
+  }
 
-    try {
-      await ref.read(clientesRepositoryProvider).delete(cliente.id);
-      ref.invalidate(clientesControllerProvider);
-      if (!mounted) return;
-      ToastHelper.showSuccess(context, 'Cliente eliminado.');
-    } catch (_) {
-      if (!mounted) return;
-      ToastHelper.showError(context, 'No se pudo eliminar el cliente.');
-    }
+  Future<void> _deleteSelectedClientes() async {
+    final count = _selectedClienteIds.length;
+    if (count == 0) return;
+
+    final confirmed = await showDeleteConfirmation(
+      context,
+      entityLabel: count == 1 ? 'cliente' : 'clientes seleccionados',
+      title: count == 1 ? 'Eliminar cliente' : 'Eliminar clientes',
+      message: count == 1
+          ? '¿Estás seguro que quieres eliminar este cliente?'
+          : '¿Estás seguro que quieres eliminar los $count clientes seleccionados?',
+      onConfirmAsync: () async {
+        try {
+          final ids = _selectedClienteIds.toList();
+          for (final id in ids) {
+            await ref.read(clientesRepositoryProvider).delete(id);
+          }
+          ref.invalidate(clientesControllerProvider);
+          if (!mounted) return;
+          setState(() => _selectedClienteIds.clear());
+          ToastHelper.showSuccess(
+            context,
+            count == 1
+                ? 'Cliente eliminado.'
+                : '$count clientes eliminados correctamente.',
+          );
+        } catch (_) {
+          if (!mounted) rethrow;
+          ToastHelper.showError(
+            context,
+            'No se pudieron eliminar los clientes.',
+          );
+          rethrow;
+        }
+      },
+    );
+    if (!confirmed) return;
   }
 
   void _onRowAction(BuildContext context, Cliente cliente, String action) {
@@ -272,6 +588,7 @@ class _ClienteFormState extends ConsumerState<_ClienteForm> {
   late final TextEditingController _codigoPostalController;
   late final TextEditingController _paisController;
   late final TextEditingController _notasController;
+  bool _isSaving = false;
   bool _ivaValido = false;
   bool _exentoImpuestos = false;
   bool _activo = true;
@@ -297,12 +614,18 @@ class _ClienteFormState extends ConsumerState<_ClienteForm> {
     );
     _correoController = seededTextController(cliente?.correo);
     _telefonoContactoController = seededTextController(cliente?.telefono);
-    _calleController = seededTextController(cliente?.direccion);
-    _apartamentoController = seededTextController();
-    _ciudadController = seededTextController();
-    _estadoController = seededTextController();
-    _codigoPostalController = seededTextController();
-    _paisController = seededTextController();
+    _calleController = seededTextController(
+      cliente == null
+          ? ''
+          : cliente.calle.isNotEmpty
+          ? cliente.calle
+          : cliente.direccion,
+    );
+    _apartamentoController = seededTextController(cliente?.apartamentoSuite);
+    _ciudadController = seededTextController(cliente?.ciudad);
+    _estadoController = seededTextController(cliente?.estadoProvincia);
+    _codigoPostalController = seededTextController(cliente?.codigoPostal);
+    _paisController = seededTextController(cliente?.pais);
     _notasController = seededTextController(cliente?.notas);
     _activo = cliente?.activo ?? true;
   }
@@ -411,16 +734,22 @@ class _ClienteFormState extends ConsumerState<_ClienteForm> {
             spacing: 10,
             children: [
               OutlinedButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Cancelar'),
+                onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
+                child: Text(trText('Cancelar')),
               ),
               ElevatedButton.icon(
-                onPressed: _save,
-                icon: Icon(
-                  widget.cliente == null
-                      ? Icons.add_rounded
-                      : Icons.save_rounded,
-                ),
+                onPressed: _isSaving ? null : _save,
+                icon: _isSaving
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(
+                        widget.cliente == null
+                            ? Icons.add_rounded
+                            : Icons.save_rounded,
+                      ),
                 label: Text(
                   widget.cliente == null ? 'Crear cliente' : 'Guardar cliente',
                 ),
@@ -433,6 +762,7 @@ class _ClienteFormState extends ConsumerState<_ClienteForm> {
   }
 
   Future<void> _save() async {
+    if (_isSaving) return;
     final nombres = _nombresController.text.trim();
     if (nombres.isEmpty) {
       ToastHelper.showWarning(context, 'Ingresa los nombres del contacto.');
@@ -488,12 +818,19 @@ class _ClienteFormState extends ConsumerState<_ClienteForm> {
           : _telefonoContactoController.text.trim(),
       correo: _correoController.text.trim(),
       direccion: direccion,
+      calle: _calleController.text.trim(),
+      apartamentoSuite: _apartamentoController.text.trim(),
+      ciudad: _ciudadController.text.trim(),
+      estadoProvincia: _estadoController.text.trim(),
+      codigoPostal: _codigoPostalController.text.trim(),
+      pais: _paisController.text.trim(),
       notas: _notasController.text.trim(),
       activo: _activo,
       createdAt: widget.cliente?.createdAt ?? now,
       updatedAt: now,
     );
 
+    setState(() => _isSaving = true);
     try {
       await ref.read(clientesRepositoryProvider).upsert(cliente);
       ref.invalidate(clientesControllerProvider);
@@ -508,6 +845,10 @@ class _ClienteFormState extends ConsumerState<_ClienteForm> {
     } catch (_) {
       if (!mounted) return;
       ToastHelper.showError(context, 'No se pudo guardar el cliente.');
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
     }
   }
 }
@@ -580,7 +921,10 @@ class _ClientCreateTab extends StatelessWidget {
               _ClientFieldRow(
                 label: 'Número de cliente (automático)',
                 controller: numeroController,
-                hintText: 'Se asignará automáticamente: $numeroSugerido',
+                hintText: tr(
+                  'Se asignará automáticamente: $numeroSugerido',
+                  'It will be assigned automatically: $numeroSugerido',
+                ),
                 helperText:
                     'Si lo dejas vacío, se asigna el consecutivo $numeroSugerido.',
               ),
@@ -623,7 +967,7 @@ class _ClientCreateTab extends StatelessWidget {
               icon: FontAwesomeIcons.addressBook,
               trailing: OutlinedButton(
                 onPressed: () {},
-                child: const Text('+ Añadir contacto'),
+                child: Text(trText('+ Añadir contacto')),
               ),
               child: Column(
                 children: [
@@ -696,24 +1040,85 @@ class _ClientCreateTab extends StatelessWidget {
   }
 }
 
-class _ClientConfigTab extends StatelessWidget {
+class _ClientConfigTab extends StatefulWidget {
   const _ClientConfigTab({required this.notasController});
 
   final TextEditingController notasController;
 
   @override
+  State<_ClientConfigTab> createState() => _ClientConfigTabState();
+}
+
+class _ClientConfigTabState extends State<_ClientConfigTab> {
+  String _moneda = clientCurrencyOptions.first.value;
+  String _idioma = clientLanguageOptions.first.value;
+  String _terminosPago = clientPaymentTermsOptions.first;
+  String _cotizacionValidaHasta = clientQuoteValidUntilOptions[3];
+  String _tasaTarea = 'Sin tasa definida';
+  String _recordatorios = clientReminderOptions.first;
+  String _tamanoEmpresa = clientCompanySizeOptions.first;
+  String _industria = clientIndustryOptions.first;
+
+  @override
   Widget build(BuildContext context) {
+    final taskRateOptions = clientTaskRateOptions(currentCurrencyCode());
+    final selectedTaskRate = taskRateOptions.contains(_tasaTarea)
+        ? _tasaTarea
+        : taskRateOptions.first;
     final configSection = _ClientSection(
       title: 'Configuración',
       icon: FontAwesomeIcons.sliders,
       child: Column(
-        children: const [
-          _ClientFieldRow(label: 'Moneda', dropdown: true),
-          _ClientFieldRow(label: 'Idioma', dropdown: true),
-          _ClientFieldRow(label: 'Términos de pago', dropdown: true),
-          _ClientFieldRow(label: 'Cotización válida hasta', dropdown: true),
-          _ClientFieldRow(label: 'Tasa de tarea'),
-          _ClientFieldRow(label: 'Enviar recordatorios', dropdown: true),
+        children: [
+          _ClientDropdownRow(
+            label: 'Moneda',
+            value: _moneda,
+            options: clientCurrencyOptions,
+            onChanged: (value) => setState(() => _moneda = value),
+          ),
+          _ClientDropdownRow(
+            label: 'Idioma',
+            value: _idioma,
+            options: clientLanguageOptions,
+            onChanged: (value) => setState(() => _idioma = value),
+          ),
+          _ClientDropdownRow(
+            label: 'Términos de pago',
+            value: _terminosPago,
+            options: [
+              for (final option in clientPaymentTermsOptions)
+                (value: option, label: option),
+            ],
+            onChanged: (value) => setState(() => _terminosPago = value),
+          ),
+          _ClientDropdownRow(
+            label: 'Cotización válida hasta',
+            value: _cotizacionValidaHasta,
+            options: [
+              for (final option in clientQuoteValidUntilOptions)
+                (value: option, label: option),
+            ],
+            onChanged: (value) =>
+                setState(() => _cotizacionValidaHasta = value),
+          ),
+          _ClientDropdownRow(
+            label: 'Tasa de tarea',
+            value: selectedTaskRate,
+            options: [
+              for (final option in taskRateOptions)
+                (value: option, label: option),
+            ],
+            onChanged: (value) => setState(() => _tasaTarea = value),
+          ),
+          _ClientDropdownRow(
+            label: 'Enviar recordatorios',
+            value: _recordatorios,
+            options: [
+              for (final option in clientReminderOptions)
+                (value: option, label: option),
+            ],
+            onChanged: (value) => setState(() => _recordatorios = value),
+          ),
         ],
       ),
     );
@@ -722,9 +1127,25 @@ class _ClientConfigTab extends StatelessWidget {
       title: 'Clasificar',
       icon: FontAwesomeIcons.tags,
       child: Column(
-        children: const [
-          _ClientFieldRow(label: 'Tamaño de la empresa', dropdown: true),
-          _ClientFieldRow(label: 'Industria', dropdown: true),
+        children: [
+          _ClientDropdownRow(
+            label: 'Tamaño de la empresa',
+            value: _tamanoEmpresa,
+            options: [
+              for (final option in clientCompanySizeOptions)
+                (value: option, label: option),
+            ],
+            onChanged: (value) => setState(() => _tamanoEmpresa = value),
+          ),
+          _ClientDropdownRow(
+            label: 'Industria',
+            value: _industria,
+            options: [
+              for (final option in clientIndustryOptions)
+                (value: option, label: option),
+            ],
+            onChanged: (value) => setState(() => _industria = value),
+          ),
         ],
       ),
     );
@@ -759,7 +1180,7 @@ class _ClientConfigTab extends StatelessWidget {
                 children: [
                   _ClientFieldRow(
                     label: 'Notas',
-                    controller: notasController,
+                    controller: widget.notasController,
                     maxLines: 8,
                   ),
                 ],
@@ -844,7 +1265,7 @@ class _ClientSection extends StatelessWidget {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          title,
+                          trText(title),
                           style: const TextStyle(
                             color: AppColors.textPrimary,
                             fontSize: 16,
@@ -871,7 +1292,6 @@ class _ClientFieldRow extends StatelessWidget {
   const _ClientFieldRow({
     required this.label,
     this.controller,
-    this.dropdown = false,
     this.maxLines = 1,
     this.hintText,
     this.helperText,
@@ -879,7 +1299,6 @@ class _ClientFieldRow extends StatelessWidget {
 
   final String label;
   final TextEditingController? controller;
-  final bool dropdown;
   final int maxLines;
   final String? hintText;
   final String? helperText;
@@ -898,7 +1317,7 @@ class _ClientFieldRow extends StatelessWidget {
             child: Padding(
               padding: EdgeInsets.only(top: maxLines > 1 ? 12 : 0),
               child: Text(
-                label,
+                trText(label),
                 style: const TextStyle(
                   color: AppColors.textSecondary,
                   fontSize: 13,
@@ -918,12 +1337,74 @@ class _ClientFieldRow extends StatelessWidget {
                   ? null
                   : (_) => FocusScope.of(context).nextFocus(),
               decoration: InputDecoration(
-                hintText: hintText ?? '',
-                helperText: helperText,
-                suffixIcon: dropdown
-                    ? const Icon(Icons.keyboard_arrow_down)
-                    : null,
+                hintText: hintText == null ? '' : trText(hintText!),
+                helperText: helperText == null ? null : trText(helperText!),
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ClientDropdownRow extends StatelessWidget {
+  const _ClientDropdownRow({
+    required this.label,
+    required this.value,
+    required this.options,
+    required this.onChanged,
+  });
+
+  final String label;
+  final String value;
+  final List<({String value, String label})> options;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 165,
+            child: Text(
+              trText(label),
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          Expanded(
+            child: DropdownButtonFormField<String>(
+              initialValue: value,
+              isExpanded: true,
+              menuMaxHeight: 320,
+              borderRadius: cotimaxMenuBorderRadius,
+              dropdownColor: AppColors.white,
+              icon: cotimaxDropdownIcon,
+              style: cotimaxDropdownTextStyle,
+              decoration: cotimaxDropdownDecoration(),
+              items: options
+                  .map(
+                    (option) => DropdownMenuItem<String>(
+                      value: option.value,
+                      child: Text(
+                        trText(option.label),
+                        overflow: TextOverflow.ellipsis,
+                        style: cotimaxDropdownTextStyle,
+                      ),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (newValue) {
+                if (newValue == null) return;
+                onChanged(newValue);
+              },
             ),
           ),
         ],
@@ -952,7 +1433,7 @@ class _ClientSwitchRow extends StatelessWidget {
           SizedBox(
             width: 165,
             child: Text(
-              label,
+              trText(label),
               style: const TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 13,

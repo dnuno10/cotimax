@@ -1,5 +1,6 @@
 import 'package:cotimax/core/constants/app_colors.dart';
 import 'package:cotimax/core/constants/app_spacing.dart';
+import 'package:cotimax/core/localization/app_localization.dart';
 import 'package:cotimax/core/routing/route_paths.dart';
 import 'package:cotimax/features/auth/application/auth_controller.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -51,7 +52,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       }
       if (next.isAuthenticated) {
         ToastHelper.showSuccess(context, 'Sesión iniciada correctamente.');
-        context.go(RoutePaths.dashboard);
+        context.go(RoutePaths.workspaceSetup);
       }
     });
 
@@ -343,7 +344,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                 onPressed: auth.isLoading
                                     ? null
                                     : () => _submit(resend: true),
-                                child: const Text('Reenviar código'),
+                                child: Text(trText('Reenviar código')),
                               ),
                             ),
                             const SizedBox(height: 10),
@@ -351,7 +352,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                               width: double.infinity,
                               child: OutlinedButton(
                                 onPressed: auth.isLoading ? null : _changeEmail,
-                                child: const Text('Cambiar correo'),
+                                child: Text(trText('Cambiar correo')),
                               ),
                             ),
                           ],
@@ -363,10 +364,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                               spacing: 6,
                               runSpacing: 4,
                               children: [
-                                const Text(
-                                  'Al continuar aceptas nuestros',
+                                Text(
+                                  trText('Al continuar aceptas nuestros'),
                                   textAlign: TextAlign.center,
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     color: AppColors.textSecondary,
                                     fontWeight: FontWeight.w600,
                                     fontSize: 12,
@@ -380,11 +381,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                     tapTargetSize:
                                         MaterialTapTargetSize.shrinkWrap,
                                   ),
-                                  child: const Text('Términos y condiciones'),
+                                  child: Text(trText('Términos y condiciones')),
                                 ),
-                                const Text(
-                                  'y',
-                                  style: TextStyle(
+                                Text(
+                                  trText('y'),
+                                  style: const TextStyle(
                                     color: AppColors.textSecondary,
                                     fontWeight: FontWeight.w600,
                                     fontSize: 12,
@@ -398,7 +399,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                     tapTargetSize:
                                         MaterialTapTargetSize.shrinkWrap,
                                   ),
-                                  child: const Text('Politica de privacidad'),
+                                  child: Text(trText('Politica de privacidad')),
                                 ),
                               ],
                             ),

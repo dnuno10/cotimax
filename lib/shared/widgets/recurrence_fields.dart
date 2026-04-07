@@ -1,4 +1,5 @@
 import 'package:cotimax/core/constants/app_colors.dart';
+import 'package:cotimax/core/localization/app_localization.dart';
 import 'package:cotimax/shared/enums/app_enums.dart';
 import 'package:cotimax/shared/widgets/cotimax_widgets.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -24,9 +25,9 @@ const List<WeekdayOption> weekdayOptions = [
 String weekdaySummary(Iterable<int> values) {
   final labels = weekdayOptions
       .where((option) => values.contains(option.value))
-      .map((option) => option.label)
+      .map((option) => trText(option.label))
       .toList();
-  if (labels.isEmpty) return 'Sin dias seleccionados';
+  if (labels.isEmpty) return trText('Sin dias seleccionados');
   return labels.join(', ');
 }
 
@@ -73,7 +74,7 @@ class RecurrenceConfigurationCard extends StatelessWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        title,
+                        trText(title),
                         style: const TextStyle(
                           color: AppColors.textPrimary,
                           fontWeight: FontWeight.w800,
@@ -89,9 +90,11 @@ class RecurrenceConfigurationCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            isRecurring
-                ? 'Activa una regla para generar el movimiento de forma recurrente.'
-                : 'Desactiva esta opcion si el movimiento solo ocurre una vez.',
+            trText(
+              isRecurring
+                  ? 'Activa una regla para generar el movimiento de forma recurrente.'
+                  : 'Desactiva esta opcion si el movimiento solo ocurre una vez.',
+            ),
             style: const TextStyle(
               color: AppColors.textSecondary,
               fontSize: 12,
@@ -117,7 +120,7 @@ class RecurrenceConfigurationCard extends StatelessWidget {
                       (option) => DropdownMenuItem(
                         value: option,
                         child: Text(
-                          option.label,
+                          trText(option.label),
                           overflow: TextOverflow.ellipsis,
                           style: cotimaxDropdownTextStyle,
                         ),
@@ -138,7 +141,7 @@ class RecurrenceConfigurationCard extends StatelessWidget {
                       .map(
                         (option) => FilterChip(
                           selected: selectedWeekdays.contains(option.value),
-                          label: Text(option.label),
+                          label: Text(trText(option.label)),
                           onSelected: (_) => onToggleWeekday(option.value),
                         ),
                       )

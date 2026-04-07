@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:cotimax/core/constants/app_colors.dart';
+import 'package:cotimax/core/localization/app_localization.dart';
 import 'package:cotimax/core/routing/route_paths.dart';
 import 'package:cotimax/features/clientes/application/clientes_controller.dart';
 import 'package:cotimax/features/cotizaciones/application/cotizaciones_controller.dart';
@@ -30,6 +31,7 @@ class _IngresosPageState extends ConsumerState<IngresosPage> {
   bool _showProjection = false;
   _ProjectionOption _selectedProjection = incomeProjectionOptions[2];
   DateTimeRange? _selectedDateRange;
+  final Set<String> _selectedIngresoIds = <String>{};
 
   Future<void> _pickDateRange(List<Ingreso> ingresos) async {
     if (ingresos.isEmpty) return;
@@ -52,9 +54,9 @@ class _IngresosPageState extends ConsumerState<IngresosPage> {
       lastDate: lastDate,
       initialDateRange: initialRange,
       currentDate: lastDate,
-      helpText: 'Selecciona el rango',
-      saveText: 'Aplicar',
-      locale: const Locale('es', 'MX'),
+      helpText: trText('Selecciona el rango'),
+      saveText: trText('Aplicar'),
+      locale: currentAppLocale(),
     );
     if (picked == null) return;
     setState(() => _selectedDateRange = picked);
@@ -81,15 +83,43 @@ class _IngresosPageState extends ConsumerState<IngresosPage> {
 
     return ingresosAsync.when(
       loading: () => ListView(
-        children: const [
-          PageHeader(title: 'Ingresos', subtitle: ''),
+        children: [
+          PageHeader(
+            title: 'Ingresos',
+            subtitle: '',
+            actions: [
+              ...buildImportExportHeaderActions(
+                context,
+                entityLabel: 'ingresos',
+              ),
+              ElevatedButton.icon(
+                onPressed: () => _openForm(context),
+                icon: const Icon(Icons.add),
+                label: Text(trText('Nuevo ingreso')),
+              ),
+            ],
+          ),
           SizedBox(height: 12),
-          LoadingSkeleton(),
+          const LoadingStateWidget(message: 'Cargando ingresos...'),
         ],
       ),
       error: (_, __) => ListView(
         children: [
-          const PageHeader(title: 'Ingresos', subtitle: ''),
+          PageHeader(
+            title: 'Ingresos',
+            subtitle: '',
+            actions: [
+              ...buildImportExportHeaderActions(
+                context,
+                entityLabel: 'ingresos',
+              ),
+              ElevatedButton.icon(
+                onPressed: () => _openForm(context),
+                icon: const Icon(Icons.add),
+                label: Text(trText('Nuevo ingreso')),
+              ),
+            ],
+          ),
           const SizedBox(height: 12),
           ErrorStateWidget(
             message: 'No se pudieron cargar ingresos.',
@@ -100,10 +130,33 @@ class _IngresosPageState extends ConsumerState<IngresosPage> {
       data: (ingresos) {
         if (ingresos.isEmpty) {
           return ListView(
-            children: const [
-              PageHeader(title: 'Ingresos', subtitle: ''),
+            children: [
+              PageHeader(
+                title: 'Ingresos',
+                subtitle: '',
+                actions: [
+                  ...buildImportExportHeaderActions(
+                    context,
+                    entityLabel: 'ingresos',
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () => _openForm(context),
+                    icon: const Icon(Icons.add),
+                    label: Text(trText('Nuevo ingreso')),
+                  ),
+                ],
+              ),
               SizedBox(height: 12),
-              SectionCard(child: InlineEmptyMessage()),
+              EmptyStateWidget(
+                title: 'Todavía no hay ingresos',
+                subtitle:
+                    'Registra tu primer ingreso para comenzar a ver resultados.',
+                action: ElevatedButton.icon(
+                  onPressed: () => _openForm(context),
+                  icon: const Icon(Icons.add),
+                  label: Text(trText('Nuevo ingreso')),
+                ),
+              ),
             ],
           );
         }
@@ -153,11 +206,11 @@ class _IngresosPageState extends ConsumerState<IngresosPage> {
             ? projectedSerie.total
             : totalIngresos;
         final rango = _selectedDateRange == null
-            ? 'Ultimas 8 semanas'
+            ? trText('Ultimas 8 semanas')
             : _formatDateRange(activeRange);
         final baseLabel = _selectedDateRange == null
-            ? 'Base ultimas 8 semanas'
-            : 'Base $rango';
+            ? trText('Base ultimas 8 semanas')
+            : tr('Base $rango', 'Base $rango');
         final rankingClientes = _incomeByClient(ingresos, clientes);
         final rankingProductos = _incomeByProduct(
           detallesCatalogo,
@@ -178,7 +231,7 @@ class _IngresosPageState extends ConsumerState<IngresosPage> {
                 ElevatedButton.icon(
                   onPressed: () => _openForm(context),
                   icon: const Icon(Icons.add),
-                  label: const Text('Nuevo ingreso'),
+                  label: Text(trText('Nuevo ingreso')),
                 ),
               ],
             ),
@@ -197,8 +250,8 @@ class _IngresosPageState extends ConsumerState<IngresosPage> {
                         children: [
                           Text(
                             _showProjection
-                                ? 'Escenario proyectado'
-                                : 'Historico real',
+                                ? trText('Escenario proyectado')
+                                : trText('Historico real'),
                             style: const TextStyle(
                               color: AppColors.textSecondary,
                               fontSize: 11,
@@ -408,75 +461,145 @@ class _IngresosPageState extends ConsumerState<IngresosPage> {
               ],
             ),
             const SizedBox(height: 12),
-            CotimaxDataTable(
-              columns: const [
-                DataColumn(label: Text('Cliente')),
-                DataColumn(label: Text('Cotización')),
-                DataColumn(label: Text('Monto')),
-                DataColumn(label: Text('Metodo de pago')),
-                DataColumn(label: Text('Fecha')),
-                DataColumn(label: Text('Referencia')),
-                DataColumn(label: Text('Notas')),
-                DataColumn(label: Text('Acciones')),
-              ],
-              rows: ingresos
-                  .map(
-                    (item) => DataRow(
-                      cells: [
-                        DataCell(
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              FinanceIconAvatar(
-                                iconKey: item.iconKey,
-                                size: 28,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                clientes[item.clienteId]?.nombre ??
-                                    item.clienteId,
-                              ),
-                            ],
-                          ),
+            Builder(
+              builder: (context) {
+                final allSelected =
+                    _selectedIngresoIds.length == ingresos.length;
+                final partiallySelected =
+                    _selectedIngresoIds.isNotEmpty && !allSelected;
+
+                return CotimaxDataTable(
+                  toolbar: _selectedIngresoIds.isEmpty
+                      ? null
+                      : TableSelectionToolbar(
+                          count: _selectedIngresoIds.length,
+                          entityLabel: 'ingreso',
+                          onEdit: _selectedIngresoIds.length == 1
+                              ? () {
+                                  final ingreso = ingresos.firstWhere(
+                                    (item) =>
+                                        item.id == _selectedIngresoIds.first,
+                                  );
+                                  _openForm(context, ingreso);
+                                }
+                              : null,
+                          onDelete: _deleteSelectedIngresos,
+                          onClear: () =>
+                              setState(() => _selectedIngresoIds.clear()),
                         ),
-                        DataCell(
-                          Text(
-                            cotizaciones[item.cotizacionId]?.folio ??
-                                item.cotizacionId,
-                          ),
-                        ),
-                        DataCell(
-                          AmountBadge(amount: item.monto, positive: true),
-                        ),
-                        DataCell(Text(_paymentMethodLabel(item.metodoPago))),
-                        DataCell(
-                          Text(DateFormat('dd/MM/yyyy').format(item.fecha)),
-                        ),
-                        DataCell(Text(item.referencia)),
-                        DataCell(Text(item.notas)),
-                        DataCell(
-                          RowActionMenu(
-                            onSelected: (action) => _onRowAction(
-                              context,
-                              item: item,
-                              action: action,
-                            ),
-                            actions: const [
-                              PopupMenuItem(
-                                value: 'edit',
-                                child: Text('Editar'),
-                              ),
-                              PopupMenuItem(
-                                value: 'delete',
-                                child: Text('Eliminar'),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                  columns: [
+                    DataColumn(
+                      label: Checkbox(
+                        value: allSelected
+                            ? true
+                            : partiallySelected
+                            ? null
+                            : false,
+                        tristate: true,
+                        onChanged: (value) {
+                          setState(() {
+                            if (value ?? false) {
+                              _selectedIngresoIds
+                                ..clear()
+                                ..addAll(ingresos.map((item) => item.id));
+                            } else {
+                              _selectedIngresoIds.clear();
+                            }
+                          });
+                        },
+                      ),
                     ),
-                  )
-                  .toList(),
+                    DataColumn(label: Text(trText('Cliente'))),
+                    DataColumn(label: Text(trText('Cotización'))),
+                    DataColumn(label: Text(trText('Monto'))),
+                    DataColumn(label: Text(trText('Metodo de pago'))),
+                    DataColumn(label: Text(trText('Fecha'))),
+                    DataColumn(label: Text(trText('Referencia'))),
+                    DataColumn(label: Text(trText('Notas'))),
+                    DataColumn(label: Text(trText('Acciones'))),
+                  ],
+                  rows: ingresos
+                      .map(
+                        (item) => DataRow(
+                          selected: _selectedIngresoIds.contains(item.id),
+                          cells: [
+                            DataCell(
+                              Checkbox(
+                                value: _selectedIngresoIds.contains(item.id),
+                                onChanged: (value) {
+                                  setState(() {
+                                    if (value ?? false) {
+                                      _selectedIngresoIds.add(item.id);
+                                    } else {
+                                      _selectedIngresoIds.remove(item.id);
+                                    }
+                                  });
+                                },
+                              ),
+                            ),
+                            DataCell(
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  FinanceIconAvatar(
+                                    iconKey: item.iconKey,
+                                    size: 28,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    clientes[item.clienteId]?.nombre ??
+                                        item.clienteId,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            DataCell(
+                              Text(
+                                cotizaciones[item.cotizacionId]?.folio ??
+                                    item.cotizacionId,
+                              ),
+                            ),
+                            DataCell(
+                              AmountBadge(amount: item.monto, positive: true),
+                            ),
+                            DataCell(
+                              Text(_paymentMethodLabel(item.metodoPago)),
+                            ),
+                            DataCell(
+                              Text(
+                                DateFormat(
+                                  'dd/MM/yyyy',
+                                  currentIntlLocale(),
+                                ).format(item.fecha),
+                              ),
+                            ),
+                            DataCell(Text(item.referencia)),
+                            DataCell(Text(item.notas)),
+                            DataCell(
+                              RowActionMenu(
+                                onSelected: (action) => _onRowAction(
+                                  context,
+                                  item: item,
+                                  action: action,
+                                ),
+                                actions: [
+                                  PopupMenuItem(
+                                    value: 'edit',
+                                    child: Text(trText('Editar')),
+                                  ),
+                                  PopupMenuItem(
+                                    value: 'delete',
+                                    child: Text(trText('Eliminar')),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                      .toList(),
+                );
+              },
             ),
           ],
         );
@@ -508,19 +631,60 @@ class _IngresosPageState extends ConsumerState<IngresosPage> {
       final confirmed = await showDeleteConfirmation(
         context,
         entityLabel: 'ingreso',
+        onConfirmAsync: () async {
+          try {
+            await ref.read(ingresosRepositoryProvider).delete(item.id);
+            if (!context.mounted) return;
+            ref.invalidate(ingresosControllerProvider);
+            ToastHelper.showSuccess(context, 'Ingreso eliminado.');
+          } catch (_) {
+            if (!context.mounted) rethrow;
+            ToastHelper.showError(context, 'No se pudo eliminar el ingreso.');
+            rethrow;
+          }
+        },
       );
       if (!confirmed) return;
-
-      try {
-        await ref.read(ingresosRepositoryProvider).delete(item.id);
-        if (!context.mounted) return;
-        ref.invalidate(ingresosControllerProvider);
-        ToastHelper.showSuccess(context, 'Ingreso eliminado.');
-      } catch (_) {
-        if (!context.mounted) return;
-        ToastHelper.showError(context, 'No se pudo eliminar el ingreso.');
-      }
     }
+  }
+
+  Future<void> _deleteSelectedIngresos() async {
+    final count = _selectedIngresoIds.length;
+    if (count == 0) return;
+
+    final confirmed = await showDeleteConfirmation(
+      context,
+      entityLabel: count == 1 ? 'ingreso' : 'ingresos seleccionados',
+      title: count == 1 ? 'Eliminar ingreso' : 'Eliminar ingresos',
+      message: count == 1
+          ? '¿Estás seguro que quieres eliminar este ingreso?'
+          : '¿Estás seguro que quieres eliminar los $count ingresos seleccionados?',
+      onConfirmAsync: () async {
+        try {
+          final ids = _selectedIngresoIds.toList();
+          for (final id in ids) {
+            await ref.read(ingresosRepositoryProvider).delete(id);
+          }
+          if (!mounted) return;
+          ref.invalidate(ingresosControllerProvider);
+          setState(() => _selectedIngresoIds.clear());
+          ToastHelper.showSuccess(
+            context,
+            count == 1
+                ? 'Ingreso eliminado.'
+                : '$count ingresos eliminados correctamente.',
+          );
+        } catch (_) {
+          if (!mounted) rethrow;
+          ToastHelper.showError(
+            context,
+            'No se pudieron eliminar los ingresos.',
+          );
+          rethrow;
+        }
+      },
+    );
+    if (!confirmed) return;
   }
 }
 
@@ -546,6 +710,7 @@ class _IngresoFormState extends ConsumerState<_IngresoForm> {
   RecurrenceFrequency _recurrencia = RecurrenceFrequency.ninguna;
   final Set<int> _diasSemana = <int>{};
   String _iconKey = 'wallet';
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -618,8 +783,8 @@ class _IngresoFormState extends ConsumerState<_IngresoForm> {
                             label: 'Cliente',
                             child: TextField(
                               controller: _clienteController,
-                              decoration: const InputDecoration(
-                                hintText: 'Cliente relacionado',
+                              decoration: InputDecoration(
+                                hintText: trText('Cliente relacionado'),
                               ),
                             ),
                           ),
@@ -627,8 +792,8 @@ class _IngresoFormState extends ConsumerState<_IngresoForm> {
                             label: 'Cotización',
                             child: TextField(
                               controller: _cotizacionController,
-                              decoration: const InputDecoration(
-                                hintText: 'Folio o ID de cotización',
+                              decoration: InputDecoration(
+                                hintText: trText('Folio o ID de cotización'),
                               ),
                             ),
                           ),
@@ -655,7 +820,7 @@ class _IngresoFormState extends ConsumerState<_IngresoForm> {
                                     (method) => DropdownMenuItem(
                                       value: method,
                                       child: Text(
-                                        method.label,
+                                        trText(method.label),
                                         overflow: TextOverflow.ellipsis,
                                         style: cotimaxDropdownTextStyle,
                                       ),
@@ -683,8 +848,8 @@ class _IngresoFormState extends ConsumerState<_IngresoForm> {
                             label: 'Fecha',
                             child: TextField(
                               controller: _fechaController,
-                              decoration: const InputDecoration(
-                                hintText: 'AAAA-MM-DD',
+                              decoration: InputDecoration(
+                                hintText: trText('AAAA-MM-DD'),
                               ),
                             ),
                           ),
@@ -692,8 +857,8 @@ class _IngresoFormState extends ConsumerState<_IngresoForm> {
                             label: 'Referencia',
                             child: TextField(
                               controller: _referenciaController,
-                              decoration: const InputDecoration(
-                                hintText: 'Folio o referencia bancaria',
+                              decoration: InputDecoration(
+                                hintText: trText('Folio o referencia bancaria'),
                               ),
                             ),
                           ),
@@ -704,8 +869,8 @@ class _IngresoFormState extends ConsumerState<_IngresoForm> {
                           child: TextField(
                             controller: _notasController,
                             maxLines: 4,
-                            decoration: const InputDecoration(
-                              hintText: 'Comentarios adicionales',
+                            decoration: InputDecoration(
+                              hintText: trText('Comentarios adicionales'),
                             ),
                           ),
                         ),
@@ -759,14 +924,22 @@ class _IngresoFormState extends ConsumerState<_IngresoForm> {
             spacing: 10,
             children: [
               OutlinedButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Cancelar'),
+                onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
+                child: Text(trText('Cancelar')),
               ),
               ElevatedButton.icon(
-                onPressed: _save,
-                icon: Icon(
-                  widget.item == null ? Icons.add_rounded : Icons.save_rounded,
-                ),
+                onPressed: _isSaving ? null : _save,
+                icon: _isSaving
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(
+                        widget.item == null
+                            ? Icons.add_rounded
+                            : Icons.save_rounded,
+                      ),
                 label: Text(
                   widget.item == null ? 'Registrar ingreso' : 'Guardar ingreso',
                 ),
@@ -779,6 +952,7 @@ class _IngresoFormState extends ConsumerState<_IngresoForm> {
   }
 
   Future<void> _save() async {
+    if (_isSaving) return;
     final now = DateTime.now();
     final item = Ingreso(
       id: widget.item?.id ?? 'ing-${now.microsecondsSinceEpoch}',
@@ -803,6 +977,7 @@ class _IngresoFormState extends ConsumerState<_IngresoForm> {
       updatedAt: now,
     );
 
+    setState(() => _isSaving = true);
     try {
       await ref.read(ingresosRepositoryProvider).upsert(item);
       ref.invalidate(ingresosControllerProvider);
@@ -817,6 +992,10 @@ class _IngresoFormState extends ConsumerState<_IngresoForm> {
     } catch (_) {
       if (!mounted) return;
       ToastHelper.showError(context, 'No se pudo guardar el ingreso.');
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
     }
   }
 }
@@ -884,7 +1063,7 @@ class _ChartMetaItem extends StatelessWidget {
         Icon(icon, size: 15, color: accent),
         const SizedBox(width: 6),
         Text(
-          label,
+          trText(label),
           style: const TextStyle(
             color: AppColors.textPrimary,
             fontSize: 12,
@@ -962,7 +1141,7 @@ class _ProjectionToolbar extends StatelessWidget {
                 .map(
                   (option) => PopupMenuItem<_ProjectionOption>(
                     value: option,
-                    child: Text(option.label),
+                    child: Text(trText(option.label)),
                   ),
                 )
                 .toList(),
@@ -999,7 +1178,7 @@ class _DateRangeButton extends StatelessWidget {
       ),
       icon: Icon(Icons.date_range_rounded, size: 16, color: accent),
       label: Text(
-        label,
+        trText(label),
         style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
       ),
     );
@@ -1033,7 +1212,7 @@ class _ProjectionModeButton extends StatelessWidget {
       ),
       icon: Icon(icon, size: 16),
       label: Text(
-        label,
+        trText(label),
         style: TextStyle(
           fontSize: 13,
           fontWeight: active ? FontWeight.w800 : FontWeight.w700,
@@ -1065,7 +1244,7 @@ class _ProjectionResetButton extends StatelessWidget {
         foregroundColor: accent,
       ),
       child: Text(
-        label,
+        trText(label),
         style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
       ),
     );
@@ -1084,7 +1263,7 @@ class _ProjectionOptionButton extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          label,
+          trText(label),
           style: TextStyle(
             color: accent,
             fontWeight: FontWeight.w800,
@@ -1319,7 +1498,7 @@ LineChartData _incomeChartData({
     final values = <double>[];
     for (var index = 0; index < totalDays; index++) {
       final currentDay = start.add(Duration(days: index));
-      labels.add(DateFormat('dd MMM').format(currentDay));
+      labels.add(DateFormat('dd MMM', currentIntlLocale()).format(currentDay));
       values.add(
         ingresos
             .where((item) => DateUtils.isSameDay(item.fecha, currentDay))
@@ -1336,7 +1515,7 @@ LineChartData _incomeChartData({
     for (var index = 0; index < weekCount; index++) {
       final weekStart = start.add(Duration(days: index * 7));
       final weekEnd = weekStart.add(const Duration(days: 6));
-      labels.add(DateFormat('dd MMM').format(weekStart));
+      labels.add(DateFormat('dd MMM', currentIntlLocale()).format(weekStart));
       values.add(
         ingresos
             .where(
@@ -1357,7 +1536,7 @@ LineChartData _incomeChartData({
 
   while (!currentMonth.isAfter(lastMonth)) {
     final nextMonth = DateTime(currentMonth.year, currentMonth.month + 1);
-    labels.add(DateFormat('MMM yy').format(currentMonth));
+    labels.add(DateFormat('MMM yy', currentIntlLocale()).format(currentMonth));
     values.add(
       ingresos
           .where(
@@ -1401,7 +1580,7 @@ _ProjectedChartData _buildProjectedIncomeWeeks(
         .max(0, _weightedAverage(source) * (1 + (trend * 0.18)))
         .toDouble();
     source.add(projected);
-    labels.add(DateFormat('dd MMM').format(currentWeek));
+    labels.add(DateFormat('dd MMM', currentIntlLocale()).format(currentWeek));
     values.add(projected.toDouble());
   }
 
@@ -1429,7 +1608,7 @@ _ProjectedChartData _buildProjectedIncomeMonths(
         .max(0, _weightedAverage(source) * (1 + (trend * 0.35)))
         .toDouble();
     source.add(projected);
-    labels.add(DateFormat('MMM yy').format(currentMonth));
+    labels.add(DateFormat('MMM yy', currentIntlLocale()).format(currentMonth));
     values.add(projected.toDouble());
   }
 
@@ -1453,7 +1632,7 @@ _ProjectedChartData _buildHistoricalIncomeWeeks(
       Duration(days: (weeks - 1 - index) * 7),
     );
     final weekEnd = weekStart.add(const Duration(days: 6));
-    labels.add(DateFormat('dd MMM').format(weekStart));
+    labels.add(DateFormat('dd MMM', currentIntlLocale()).format(weekStart));
     values.add(
       ingresos
           .where(
@@ -1475,18 +1654,35 @@ _ProjectedChartData _buildHistoricalIncomeMonths(
   List<Ingreso> ingresos, {
   required int months,
 }) {
-  final now = DateTime.now();
+  if (ingresos.isEmpty) {
+    final currentMonth = DateTime(DateTime.now().year, DateTime.now().month);
+    return _ProjectedChartData(
+      labels: [DateFormat('MMM yy', currentIntlLocale()).format(currentMonth)],
+      values: const [0],
+      total: 0,
+    );
+  }
+
+  final monthTotals = <DateTime, double>{};
+  for (final item in ingresos) {
+    final key = DateTime(item.fecha.year, item.fecha.month);
+    monthTotals.update(
+      key,
+      (value) => value + item.monto,
+      ifAbsent: () => item.monto,
+    );
+  }
+
+  final orderedMonths = monthTotals.keys.toList()..sort();
+  final visibleMonths = orderedMonths.length > months
+      ? orderedMonths.sublist(orderedMonths.length - months)
+      : orderedMonths;
   final labels = <String>[];
   final values = <double>[];
 
-  for (var index = 0; index < months; index++) {
-    final monthKey = DateTime(now.year, now.month - (months - 1 - index));
-    labels.add(DateFormat('MMM yy').format(monthKey));
-    values.add(
-      ingresos
-          .where((item) => _sameMonth(item.fecha, monthKey))
-          .fold<double>(0, (sum, item) => sum + item.monto),
-    );
+  for (final monthKey in visibleMonths) {
+    labels.add(DateFormat('MMM yy', currentIntlLocale()).format(monthKey));
+    values.add(monthTotals[monthKey] ?? 0);
   }
 
   return _ProjectedChartData(
@@ -1541,7 +1737,7 @@ List<Ingreso> _filterIngresosByRange(
 }
 
 String _formatDateRange(DateTimeRange range) {
-  final formatter = DateFormat('dd MMM yyyy');
+  final formatter = DateFormat('dd MMM yyyy', currentIntlLocale());
   return '${formatter.format(range.start)} - ${formatter.format(range.end)}';
 }
 

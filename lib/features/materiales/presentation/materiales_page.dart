@@ -1,7 +1,9 @@
 import 'package:cotimax/core/constants/app_colors.dart';
+import 'package:cotimax/core/localization/app_localization.dart';
 import 'package:cotimax/core/routing/route_paths.dart';
 import 'package:cotimax/features/materiales/application/materiales_controller.dart';
 import 'package:cotimax/features/productos/application/productos_controller.dart';
+import 'package:cotimax/features/proveedores/application/proveedores_controller.dart';
 import 'package:cotimax/shared/models/domain_models.dart';
 import 'package:cotimax/shared/widgets/cotimax_widgets.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -10,6 +12,107 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+
+class _LocalizedChoice {
+  const _LocalizedChoice({required this.canonical, required this.english});
+
+  final String canonical;
+  final String english;
+}
+
+const List<_LocalizedChoice> _materialTypeChoices = [
+  _LocalizedChoice(canonical: 'Materia prima', english: 'Raw material'),
+  _LocalizedChoice(canonical: 'Material base', english: 'Base material'),
+  _LocalizedChoice(
+    canonical: 'Material auxiliar',
+    english: 'Auxiliary material',
+  ),
+  _LocalizedChoice(canonical: 'Consumible', english: 'Consumable'),
+  _LocalizedChoice(canonical: 'Empaque', english: 'Packaging'),
+  _LocalizedChoice(canonical: 'Embalaje', english: 'Packing'),
+  _LocalizedChoice(canonical: 'Componente', english: 'Component'),
+  _LocalizedChoice(canonical: 'Refacción', english: 'Spare part'),
+  _LocalizedChoice(canonical: 'Insumo químico', english: 'Chemical input'),
+  _LocalizedChoice(canonical: 'Insumo textil', english: 'Textile input'),
+  _LocalizedChoice(canonical: 'Insumo eléctrico', english: 'Electrical input'),
+  _LocalizedChoice(
+    canonical: 'Insumo electrónico',
+    english: 'Electronic input',
+  ),
+  _LocalizedChoice(canonical: 'Insumo metálico', english: 'Metal input'),
+  _LocalizedChoice(canonical: 'Insumo plástico', english: 'Plastic input'),
+  _LocalizedChoice(canonical: 'Insumo de madera', english: 'Wood input'),
+  _LocalizedChoice(canonical: 'Insumo de vidrio', english: 'Glass input'),
+  _LocalizedChoice(canonical: 'Adhesivo', english: 'Adhesive'),
+  _LocalizedChoice(canonical: 'Pintura', english: 'Paint'),
+  _LocalizedChoice(canonical: 'Recubrimiento', english: 'Coating'),
+  _LocalizedChoice(canonical: 'Solvente', english: 'Solvent'),
+  _LocalizedChoice(canonical: 'Lubricante', english: 'Lubricant'),
+  _LocalizedChoice(canonical: 'Etiqueta', english: 'Label'),
+  _LocalizedChoice(canonical: 'Accesorio', english: 'Accessory'),
+  _LocalizedChoice(canonical: 'Herraje', english: 'Hardware'),
+  _LocalizedChoice(canonical: 'Tornillería', english: 'Fasteners'),
+  _LocalizedChoice(canonical: 'Cableado', english: 'Wiring'),
+  _LocalizedChoice(canonical: 'Aislante', english: 'Insulation'),
+  _LocalizedChoice(canonical: 'Otro', english: 'Other'),
+];
+
+const List<_LocalizedChoice> _materialUnitChoices = [
+  _LocalizedChoice(canonical: 'pieza', english: 'piece'),
+  _LocalizedChoice(canonical: 'caja', english: 'box'),
+  _LocalizedChoice(canonical: 'paquete', english: 'package'),
+  _LocalizedChoice(canonical: 'bolsa', english: 'bag'),
+  _LocalizedChoice(canonical: 'rollo', english: 'roll'),
+  _LocalizedChoice(canonical: 'hoja', english: 'sheet'),
+  _LocalizedChoice(canonical: 'pliego', english: 'large sheet'),
+  _LocalizedChoice(canonical: 'juego', english: 'set'),
+  _LocalizedChoice(canonical: 'kit', english: 'kit'),
+  _LocalizedChoice(canonical: 'par', english: 'pair'),
+  _LocalizedChoice(canonical: 'docena', english: 'dozen'),
+  _LocalizedChoice(canonical: 'ciento', english: 'hundred'),
+  _LocalizedChoice(canonical: 'millar', english: 'thousand'),
+  _LocalizedChoice(canonical: 'metro', english: 'meter'),
+  _LocalizedChoice(canonical: 'centímetro', english: 'centimeter'),
+  _LocalizedChoice(canonical: 'milímetro', english: 'millimeter'),
+  _LocalizedChoice(canonical: 'kilómetro', english: 'kilometer'),
+  _LocalizedChoice(canonical: 'metro cuadrado', english: 'square meter'),
+  _LocalizedChoice(canonical: 'metro cúbico', english: 'cubic meter'),
+  _LocalizedChoice(canonical: 'litro', english: 'liter'),
+  _LocalizedChoice(canonical: 'mililitro', english: 'milliliter'),
+  _LocalizedChoice(canonical: 'galón', english: 'gallon'),
+  _LocalizedChoice(canonical: 'kilogramo', english: 'kilogram'),
+  _LocalizedChoice(canonical: 'gramo', english: 'gram'),
+  _LocalizedChoice(canonical: 'miligramo', english: 'milligram'),
+  _LocalizedChoice(canonical: 'tonelada', english: 'ton'),
+  _LocalizedChoice(canonical: 'onza', english: 'ounce'),
+  _LocalizedChoice(canonical: 'libra', english: 'pound'),
+  _LocalizedChoice(canonical: 'yarda', english: 'yard'),
+  _LocalizedChoice(canonical: 'pie', english: 'foot'),
+  _LocalizedChoice(canonical: 'pulgada', english: 'inch'),
+  _LocalizedChoice(canonical: 'tambor', english: 'drum'),
+  _LocalizedChoice(canonical: 'tarima', english: 'pallet'),
+  _LocalizedChoice(canonical: 'contenedor', english: 'container'),
+  _LocalizedChoice(canonical: 'bote', english: 'can'),
+  _LocalizedChoice(canonical: 'frasco', english: 'jar'),
+  _LocalizedChoice(canonical: 'tubo', english: 'tube'),
+  _LocalizedChoice(canonical: 'Otra', english: 'Other'),
+];
+
+bool _matchesLocalizedChoice(String raw, _LocalizedChoice choice) {
+  final normalized = raw.trim().toLowerCase();
+  return normalized == choice.canonical.toLowerCase() ||
+      normalized == choice.english.toLowerCase();
+}
+
+String? _matchLocalizedChoice(String? raw, List<_LocalizedChoice> choices) {
+  if (raw == null || raw.trim().isEmpty) return null;
+  for (final choice in choices) {
+    if (_matchesLocalizedChoice(raw, choice)) {
+      return choice.canonical;
+    }
+  }
+  return null;
+}
 
 class MaterialesPage extends ConsumerStatefulWidget {
   const MaterialesPage({super.key});
@@ -20,6 +123,9 @@ class MaterialesPage extends ConsumerStatefulWidget {
 
 class _MaterialesPageState extends ConsumerState<MaterialesPage> {
   bool _handledCreateRoute = false;
+  final Set<String> _selectedMaterialIds = <String>{};
+  String _tipoFilter = 'Todos';
+  String _activoFilter = 'Todos';
 
   @override
   Widget build(BuildContext context) {
@@ -53,7 +159,7 @@ class _MaterialesPageState extends ConsumerState<MaterialesPage> {
             ElevatedButton.icon(
               onPressed: () => _openForm(context, null),
               icon: const Icon(Icons.add),
-              label: const Text('Nuevo material'),
+              label: Text(trText('Nuevo material')),
             ),
           ],
         ),
@@ -71,33 +177,35 @@ class _MaterialesPageState extends ConsumerState<MaterialesPage> {
                 ),
               ),
             ),
-            const SizedBox(
+            SizedBox(
               width: 220,
               child: SelectField<String>(
                 label: 'Tipo',
-                value: 'Todos',
+                value: _tipoFilter,
                 options: [
                   'Todos',
-                  'Materia prima',
-                  'Consumible',
-                  'Empaque',
-                  'Componente',
+                  ..._materialTypeChoices.map((choice) => choice.canonical),
                 ],
+                onChanged: (value) =>
+                    setState(() => _tipoFilter = value ?? 'Todos'),
               ),
             ),
-            const SizedBox(
+            SizedBox(
               width: 220,
               child: SelectField<String>(
                 label: 'Activo',
-                value: 'Todos',
+                value: _activoFilter,
                 options: ['Todos', 'Activos', 'Inactivos'],
+                onChanged: (value) =>
+                    setState(() => _activoFilter = value ?? 'Todos'),
               ),
             ),
           ],
         ),
         const SizedBox(height: 10),
         materialesAsync.when(
-          loading: LoadingSkeleton.new,
+          loading: () =>
+              const LoadingStateWidget(message: 'Cargando materiales...'),
           error: (_, __) => ErrorStateWidget(
             message: 'No fue posible cargar materiales.',
             onRetry: () => ref.invalidate(materialesControllerProvider),
@@ -106,31 +214,122 @@ class _MaterialesPageState extends ConsumerState<MaterialesPage> {
             final productosCatalogo =
                 ref.watch(productosControllerProvider).valueOrNull ??
                 const <ProductoServicio>[];
-            if (materiales.isEmpty) {
-              return const SectionCard(child: InlineEmptyMessage());
+            final materialesFiltrados = materiales.where((material) {
+              final matchesTipo = _tipoFilter == 'Todos'
+                  ? true
+                  : _tipoFilter == 'Otro'
+                  ? _matchLocalizedChoice(
+                          material.tipo,
+                          _materialTypeChoices
+                              .where((choice) => choice.canonical != 'Otro')
+                              .toList(),
+                        ) ==
+                        null
+                  : _matchesLocalizedChoice(
+                      material.tipo,
+                      _materialTypeChoices.firstWhere(
+                        (choice) => choice.canonical == _tipoFilter,
+                      ),
+                    );
+              final matchesActivo = _activoFilter == 'Todos'
+                  ? true
+                  : _activoFilter == 'Activos'
+                  ? material.activo
+                  : !material.activo;
+              return matchesTipo && matchesActivo;
+            }).toList();
+
+            if (materialesFiltrados.isEmpty) {
+              return const SectionCard(
+                child: InlineEmptyMessage(
+                  message:
+                      'No hay materiales que coincidan con los filtros actuales.',
+                ),
+              );
             }
 
             final productosMap = {
               for (final producto in productosCatalogo) producto.id: producto,
             };
 
+            final allSelected =
+                _selectedMaterialIds.length == materialesFiltrados.length;
+            final partiallySelected =
+                _selectedMaterialIds.isNotEmpty && !allSelected;
+
             return CotimaxDataTable(
-              columns: const [
-                DataColumn(label: Text('Nombre')),
-                DataColumn(label: Text('Tipo')),
-                DataColumn(label: Text('Unidad')),
-                DataColumn(label: Text('Costo')),
-                DataColumn(label: Text('Stock')),
-                DataColumn(label: Text('Proveedor')),
-                DataColumn(label: Text('Productos')),
-                DataColumn(label: Text('Actualizado')),
-                DataColumn(label: Text('Activo')),
-                DataColumn(label: Text('Acciones')),
+              toolbar: _selectedMaterialIds.isEmpty
+                  ? null
+                  : TableSelectionToolbar(
+                      count: _selectedMaterialIds.length,
+                      entityLabel: 'material',
+                      pluralLabel: 'materiales',
+                      onEdit: _selectedMaterialIds.length == 1
+                          ? () {
+                              final material = materiales.firstWhere(
+                                (item) => item.id == _selectedMaterialIds.first,
+                              );
+                              _openForm(context, material);
+                            }
+                          : null,
+                      onDelete: _deleteSelectedMateriales,
+                      onClear: () =>
+                          setState(() => _selectedMaterialIds.clear()),
+                    ),
+              columns: [
+                DataColumn(
+                  label: Checkbox(
+                    value: allSelected
+                        ? true
+                        : partiallySelected
+                        ? null
+                        : false,
+                    tristate: true,
+                    onChanged: (value) {
+                      setState(() {
+                        if (value ?? false) {
+                          _selectedMaterialIds
+                            ..clear()
+                            ..addAll(
+                              materialesFiltrados.map((item) => item.id),
+                            );
+                        } else {
+                          _selectedMaterialIds.clear();
+                        }
+                      });
+                    },
+                  ),
+                ),
+                DataColumn(label: Text(trText('Nombre'))),
+                DataColumn(label: Text(trText('Tipo'))),
+                DataColumn(label: Text(trText('Unidad'))),
+                DataColumn(label: Text(trText('Costo'))),
+                DataColumn(label: Text(trText('Stock'))),
+                DataColumn(label: Text(trText('Proveedor'))),
+                DataColumn(label: Text(trText('Productos'))),
+                DataColumn(label: Text(trText('Actualizado'))),
+                DataColumn(label: Text(trText('Activo'))),
+                DataColumn(label: Text(trText('Acciones'))),
               ],
-              rows: materiales
+              rows: materialesFiltrados
                   .map(
                     (material) => DataRow(
+                      selected: _selectedMaterialIds.contains(material.id),
                       cells: [
+                        DataCell(
+                          Checkbox(
+                            value: _selectedMaterialIds.contains(material.id),
+                            onChanged: (value) {
+                              setState(() {
+                                if (value ?? false) {
+                                  _selectedMaterialIds.add(material.id);
+                                } else {
+                                  _selectedMaterialIds.remove(material.id);
+                                }
+                              });
+                            },
+                          ),
+                        ),
                         DataCell(
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -148,13 +347,9 @@ class _MaterialesPageState extends ConsumerState<MaterialesPage> {
                             ],
                           ),
                         ),
-                        DataCell(Text(material.tipo)),
-                        DataCell(Text(material.unidad)),
-                        DataCell(
-                          Text(
-                            '\$${material.costoUnitario.toStringAsFixed(2)}',
-                          ),
-                        ),
+                        DataCell(Text(trText(material.tipo))),
+                        DataCell(Text(trText(material.unidad))),
+                        DataCell(Text(formatMoney(material.costoUnitario))),
                         DataCell(
                           Text(material.stockDisponible.toStringAsFixed(0)),
                         ),
@@ -166,21 +361,24 @@ class _MaterialesPageState extends ConsumerState<MaterialesPage> {
                         ),
                         DataCell(
                           Text(
-                            DateFormat('dd/MM/yyyy').format(material.updatedAt),
+                            DateFormat(
+                              'dd/MM/yyyy',
+                              currentIntlLocale(),
+                            ).format(material.updatedAt),
                           ),
                         ),
-                        DataCell(Text(material.activo ? 'Si' : 'No')),
+                        DataCell(Text(trText(material.activo ? 'Si' : 'No'))),
                         DataCell(
                           RowActionMenu(
                             actions: [
                               PopupMenuItem(
                                 value: 'edit',
-                                child: const Text('Editar'),
+                                child: Text(trText('Editar')),
                                 onTap: () => _openForm(context, material),
                               ),
                               PopupMenuItem(
                                 value: 'delete',
-                                child: const Text('Eliminar'),
+                                child: Text(trText('Eliminar')),
                                 onTap: () => _deleteMaterial(material.id),
                               ),
                             ],
@@ -211,18 +409,59 @@ class _MaterialesPageState extends ConsumerState<MaterialesPage> {
     final confirmed = await showDeleteConfirmation(
       context,
       entityLabel: 'material',
+      onConfirmAsync: () async {
+        try {
+          await ref.read(materialesRepositoryProvider).delete(id);
+          ref.invalidate(materialesControllerProvider);
+          if (!mounted) return;
+          ToastHelper.showSuccess(context, 'Material eliminado.');
+        } catch (_) {
+          if (!mounted) rethrow;
+          ToastHelper.showError(context, 'No se pudo eliminar el material.');
+          rethrow;
+        }
+      },
     );
     if (!confirmed) return;
+  }
 
-    try {
-      await ref.read(materialesRepositoryProvider).delete(id);
-      ref.invalidate(materialesControllerProvider);
-      if (!mounted) return;
-      ToastHelper.showSuccess(context, 'Material eliminado.');
-    } catch (_) {
-      if (!mounted) return;
-      ToastHelper.showError(context, 'No se pudo eliminar el material.');
-    }
+  Future<void> _deleteSelectedMateriales() async {
+    final count = _selectedMaterialIds.length;
+    if (count == 0) return;
+
+    final confirmed = await showDeleteConfirmation(
+      context,
+      entityLabel: count == 1 ? 'material' : 'materiales seleccionados',
+      title: count == 1 ? 'Eliminar material' : 'Eliminar materiales',
+      message: count == 1
+          ? '¿Estás seguro que quieres eliminar este material?'
+          : '¿Estás seguro que quieres eliminar los $count materiales seleccionados?',
+      onConfirmAsync: () async {
+        try {
+          final ids = _selectedMaterialIds.toList();
+          for (final id in ids) {
+            await ref.read(materialesRepositoryProvider).delete(id);
+          }
+          ref.invalidate(materialesControllerProvider);
+          if (!mounted) return;
+          setState(() => _selectedMaterialIds.clear());
+          ToastHelper.showSuccess(
+            context,
+            count == 1
+                ? 'Material eliminado.'
+                : '$count materiales eliminados correctamente.',
+          );
+        } catch (_) {
+          if (!mounted) rethrow;
+          ToastHelper.showError(
+            context,
+            'No se pudieron eliminar los materiales.',
+          );
+          rethrow;
+        }
+      },
+    );
+    if (!confirmed) return;
   }
 
   String _productLabels(
@@ -248,16 +487,19 @@ class _MaterialFormState extends ConsumerState<_MaterialForm> {
   int _tabIndex = 0;
   late final TextEditingController _nombreController;
   late final TextEditingController _descripcionController;
-  late final TextEditingController _tipoController;
-  late final TextEditingController _unidadController;
+  late final TextEditingController _tipoOtroController;
+  late final TextEditingController _unidadOtraController;
   late final TextEditingController _costoController;
   late final TextEditingController _stockController;
-  late final TextEditingController _proveedorController;
   late final TextEditingController _skuController;
   late final TextEditingController _productosSearchController;
   bool _activo = true;
   late final Set<String> _productoIds;
+  late String _selectedTipo;
+  late String _selectedUnidad;
+  String? _selectedProveedorId;
   String _productosQuery = '';
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -266,8 +508,23 @@ class _MaterialFormState extends ConsumerState<_MaterialForm> {
     final material = widget.material;
     _nombreController = seededTextController(material?.nombre);
     _descripcionController = seededTextController(material?.descripcion ?? '');
-    _tipoController = seededTextController(material?.tipo ?? 'Materia prima');
-    _unidadController = seededTextController(material?.unidad ?? 'pieza');
+    final initialTipo = _matchLocalizedChoice(
+      material?.tipo,
+      _materialTypeChoices,
+    );
+    final initialUnidad = _matchLocalizedChoice(
+      material?.unidad,
+      _materialUnitChoices,
+    );
+    _selectedTipo =
+        initialTipo ?? (material == null ? 'Materia prima' : 'Otro');
+    _selectedUnidad = initialUnidad ?? (material == null ? 'pieza' : 'Otra');
+    _tipoOtroController = seededTextController(
+      initialTipo == null && material != null ? material.tipo : '',
+    );
+    _unidadOtraController = seededTextController(
+      initialUnidad == null && material != null ? material.unidad : '',
+    );
     _costoController = seededTextController(
       material == null
           ? ''
@@ -282,11 +539,11 @@ class _MaterialFormState extends ConsumerState<_MaterialForm> {
           ? ''
           : formatNumericValue(material.stockDisponible, decimalDigits: 0),
     );
-    _proveedorController = seededTextController(material?.proveedor ?? '');
     _skuController = seededTextController(material?.sku);
     _productosSearchController = seededTextController();
     _activo = material?.activo ?? true;
     _productoIds = {...?material?.productoIds};
+    _selectedProveedorId = material?.proveedorId;
   }
 
   @override
@@ -294,11 +551,10 @@ class _MaterialFormState extends ConsumerState<_MaterialForm> {
     _scrollController.dispose();
     _nombreController.dispose();
     _descripcionController.dispose();
-    _tipoController.dispose();
-    _unidadController.dispose();
+    _tipoOtroController.dispose();
+    _unidadOtraController.dispose();
     _costoController.dispose();
     _stockController.dispose();
-    _proveedorController.dispose();
     _skuController.dispose();
     _productosSearchController.dispose();
     super.dispose();
@@ -345,16 +601,22 @@ class _MaterialFormState extends ConsumerState<_MaterialForm> {
             spacing: 10,
             children: [
               OutlinedButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Cancelar'),
+                onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
+                child: Text(trText('Cancelar')),
               ),
               ElevatedButton.icon(
-                onPressed: _save,
-                icon: Icon(
-                  widget.material == null
-                      ? Icons.add_rounded
-                      : Icons.save_rounded,
-                ),
+                onPressed: _isSaving ? null : _save,
+                icon: _isSaving
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(
+                        widget.material == null
+                            ? Icons.add_rounded
+                            : Icons.save_rounded,
+                      ),
                 label: Text(
                   widget.material == null
                       ? 'Crear material'
@@ -369,6 +631,7 @@ class _MaterialFormState extends ConsumerState<_MaterialForm> {
   }
 
   Widget _buildCreateTab() {
+    final proveedoresAsync = ref.watch(proveedoresControllerProvider);
     return _MaterialSection(
       title: widget.material == null ? 'Nuevo material' : 'Editar material',
       icon: FontAwesomeIcons.cubes,
@@ -382,18 +645,72 @@ class _MaterialFormState extends ConsumerState<_MaterialForm> {
           ),
           _MaterialFieldRow(
             label: 'Tipo',
-            controller: _tipoController,
-            dropdown: true,
+            child: DropdownButtonFormField<String>(
+              initialValue: _selectedTipo,
+              isExpanded: true,
+              menuMaxHeight: 360,
+              borderRadius: cotimaxMenuBorderRadius,
+              dropdownColor: AppColors.white,
+              icon: cotimaxDropdownIcon,
+              style: cotimaxDropdownTextStyle,
+              decoration: cotimaxDropdownDecoration(),
+              items: _materialTypeChoices
+                  .map(
+                    (choice) => DropdownMenuItem<String>(
+                      value: choice.canonical,
+                      child: Text(
+                        tr(choice.canonical, choice.english),
+                        overflow: TextOverflow.ellipsis,
+                        style: cotimaxDropdownTextStyle,
+                      ),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (value) =>
+                  setState(() => _selectedTipo = value ?? 'Materia prima'),
+            ),
           ),
+          if (_selectedTipo == 'Otro')
+            _MaterialFieldRow(
+              label: 'Especifica el tipo de material',
+              controller: _tipoOtroController,
+            ),
           _MaterialFieldRow(
             label: 'Unidad de medida',
-            controller: _unidadController,
-            dropdown: true,
+            child: DropdownButtonFormField<String>(
+              initialValue: _selectedUnidad,
+              isExpanded: true,
+              menuMaxHeight: 360,
+              borderRadius: cotimaxMenuBorderRadius,
+              dropdownColor: AppColors.white,
+              icon: cotimaxDropdownIcon,
+              style: cotimaxDropdownTextStyle,
+              decoration: cotimaxDropdownDecoration(),
+              items: _materialUnitChoices
+                  .map(
+                    (choice) => DropdownMenuItem<String>(
+                      value: choice.canonical,
+                      child: Text(
+                        tr(choice.canonical, choice.english),
+                        overflow: TextOverflow.ellipsis,
+                        style: cotimaxDropdownTextStyle,
+                      ),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (value) =>
+                  setState(() => _selectedUnidad = value ?? 'pieza'),
+            ),
           ),
+          if (_selectedUnidad == 'Otra')
+            _MaterialFieldRow(
+              label: 'Especifica la unidad de medida',
+              controller: _unidadOtraController,
+            ),
           _MaterialFieldRow(
             label: 'Costo unitario por unidad',
             controller: _costoController,
-            suffixText: 'MXN',
+            suffixText: currentCurrencyCode(),
             helper: 'Captura el costo de una sola unidad de medida.',
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: const [
@@ -408,9 +725,87 @@ class _MaterialFormState extends ConsumerState<_MaterialForm> {
               NumericTextInputFormatter(maxDecimalDigits: 2),
             ],
           ),
-          _MaterialFieldRow(
-            label: 'Proveedor',
-            controller: _proveedorController,
+          proveedoresAsync.when(
+            loading: () => const _MaterialFieldRow(
+              label: 'Proveedor',
+              child: SizedBox(
+                height: 20,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+              ),
+            ),
+            error: (_, __) => _MaterialFieldRow(
+              label: 'Proveedor',
+              child: EmptyFieldState(
+                hintText: 'No fue posible cargar proveedores.',
+                message:
+                    'Puedes dejar este campo vacío o intentar cargar los proveedores nuevamente.',
+                buttonLabel: 'Agregar proveedor',
+                onPressed: _goToCreateProvider,
+              ),
+            ),
+            data: (proveedores) {
+              if (proveedores.isEmpty) {
+                return _MaterialFieldRow(
+                  label: 'Proveedor',
+                  child: EmptyFieldState(
+                    hintText: 'No hay proveedores registrados.',
+                    message:
+                        'Puedes dejar este campo vacío o registrar un proveedor para vincularlo a este material.',
+                    buttonLabel: 'Agregar proveedor',
+                    onPressed: _goToCreateProvider,
+                  ),
+                );
+              }
+
+              final resolvedProveedorId = _resolveProveedorId(proveedores);
+              return _MaterialFieldRow(
+                label: 'Proveedor',
+                child: DropdownButtonFormField<String>(
+                  initialValue: resolvedProveedorId ?? '',
+                  isExpanded: true,
+                  menuMaxHeight: 320,
+                  borderRadius: cotimaxMenuBorderRadius,
+                  dropdownColor: AppColors.white,
+                  icon: cotimaxDropdownIcon,
+                  style: cotimaxDropdownTextStyle,
+                  decoration: cotimaxDropdownDecoration(
+                    helperText: 'Campo opcional.',
+                  ),
+                  items: [
+                    DropdownMenuItem<String>(
+                      value: '',
+                      child: Text(
+                        tr('Sin proveedor', 'No supplier'),
+                        overflow: TextOverflow.ellipsis,
+                        style: cotimaxDropdownTextStyle,
+                      ),
+                    ),
+                    ...proveedores.map(
+                      (proveedor) => DropdownMenuItem<String>(
+                        value: proveedor.id,
+                        child: Text(
+                          proveedor.nombre.trim().isEmpty
+                              ? proveedor.empresa
+                              : proveedor.nombre,
+                          overflow: TextOverflow.ellipsis,
+                          style: cotimaxDropdownTextStyle,
+                        ),
+                      ),
+                    ),
+                  ],
+                  onChanged: (value) => setState(() {
+                    _selectedProveedorId = value ?? '';
+                  }),
+                ),
+              );
+            },
           ),
           _MaterialFieldRow(label: 'SKU', controller: _skuController),
           _MaterialSwitchRow(
@@ -427,6 +822,19 @@ class _MaterialFormState extends ConsumerState<_MaterialForm> {
     final productosCatalogo =
         ref.watch(productosControllerProvider).valueOrNull ??
         const <ProductoServicio>[];
+    if (productosCatalogo.isEmpty) {
+      return _MaterialSection(
+        title: 'Relacion con productos',
+        icon: FontAwesomeIcons.boxOpen,
+        child: EmptyFieldState(
+          hintText: trText('No hay productos registrados.'),
+          message: 'No hay datos para relacionar este material con productos.',
+          buttonLabel: 'Agregar producto',
+          onPressed: _goToCreateProduct,
+        ),
+      );
+    }
+
     final productos = productosCatalogo.where((producto) {
       if (_productosQuery.isEmpty) return true;
       final query = _productosQuery.toLowerCase();
@@ -503,21 +911,88 @@ class _MaterialFormState extends ConsumerState<_MaterialForm> {
     );
   }
 
+  void _goToCreateProduct() {
+    context.go('${RoutePaths.productos}?create=1');
+  }
+
+  void _goToCreateProvider() {
+    context.go('${RoutePaths.proveedores}?create=1');
+  }
+
+  String? _resolveProveedorId(List<Proveedor> proveedores) {
+    if (_selectedProveedorId != null && _selectedProveedorId!.isEmpty) {
+      return null;
+    }
+    if (_selectedProveedorId != null &&
+        proveedores.any((proveedor) => proveedor.id == _selectedProveedorId)) {
+      return _selectedProveedorId;
+    }
+    final existingName = widget.material?.proveedor.trim() ?? '';
+    if (existingName.isEmpty) return null;
+    for (final proveedor in proveedores) {
+      final providerName =
+          (proveedor.nombre.trim().isEmpty
+                  ? proveedor.empresa
+                  : proveedor.nombre)
+              .trim()
+              .toLowerCase();
+      if (providerName == existingName.toLowerCase()) {
+        return proveedor.id;
+      }
+    }
+    return null;
+  }
+
   Future<void> _save() async {
+    if (_isSaving) return;
+    if (_selectedTipo == 'Otro' && _tipoOtroController.text.trim().isEmpty) {
+      ToastHelper.showError(
+        context,
+        tr('Especifica el tipo de material.', 'Specify the material type.'),
+      );
+      return;
+    }
+    if (_selectedUnidad == 'Otra' &&
+        _unidadOtraController.text.trim().isEmpty) {
+      ToastHelper.showError(
+        context,
+        tr('Especifica la unidad de medida.', 'Specify the unit of measure.'),
+      );
+      return;
+    }
+
     final now = DateTime.now();
+    final proveedores =
+        ref.read(proveedoresControllerProvider).valueOrNull ??
+        const <Proveedor>[];
+    final resolvedProveedorId = _resolveProveedorId(proveedores);
+    Proveedor? proveedor;
+    if (resolvedProveedorId != null) {
+      for (final item in proveedores) {
+        if (item.id == resolvedProveedorId) {
+          proveedor = item;
+          break;
+        }
+      }
+    }
     final material = MaterialInsumo(
       id: widget.material?.id ?? 'mat-${now.microsecondsSinceEpoch}',
       nombre: _nombreController.text.trim(),
       descripcion: _descripcionController.text.trim(),
-      tipo: _tipoController.text.trim().isEmpty
-          ? 'Materia prima'
-          : _tipoController.text.trim(),
-      unidad: _unidadController.text.trim().isEmpty
-          ? 'pieza'
-          : _unidadController.text.trim(),
+      tipo: _selectedTipo == 'Otro'
+          ? _tipoOtroController.text.trim()
+          : _selectedTipo,
+      unidad: _selectedUnidad == 'Otra'
+          ? _unidadOtraController.text.trim()
+          : _selectedUnidad,
       costoUnitario: parseNumericText(_costoController.text) ?? 0,
       stockDisponible: parseNumericText(_stockController.text) ?? 0,
-      proveedor: _proveedorController.text.trim(),
+      proveedorId: resolvedProveedorId,
+      proveedor: proveedor == null
+          ? ''
+          : (proveedor.nombre.trim().isEmpty
+                ? proveedor.empresa
+                : proveedor.nombre),
       sku: _skuController.text.trim(),
       productoIds: _productoIds.toList(),
       activo: _activo,
@@ -525,6 +1000,7 @@ class _MaterialFormState extends ConsumerState<_MaterialForm> {
       updatedAt: now,
     );
 
+    setState(() => _isSaving = true);
     try {
       await ref.read(materialesRepositoryProvider).upsert(material);
       ref.invalidate(materialesControllerProvider);
@@ -539,6 +1015,10 @@ class _MaterialFormState extends ConsumerState<_MaterialForm> {
     } catch (_) {
       if (!mounted) return;
       ToastHelper.showError(context, 'No se pudo guardar el material.');
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
     }
   }
 }
@@ -613,7 +1093,7 @@ class _MaterialSection extends StatelessWidget {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          title,
+                          trText(title),
                           style: const TextStyle(
                             color: AppColors.textPrimary,
                             fontSize: 16,
@@ -638,8 +1118,8 @@ class _MaterialSection extends StatelessWidget {
 class _MaterialFieldRow extends StatelessWidget {
   const _MaterialFieldRow({
     required this.label,
-    required this.controller,
-    this.dropdown = false,
+    this.controller,
+    this.child,
     this.maxLines = 1,
     this.suffixText,
     this.helper,
@@ -648,8 +1128,8 @@ class _MaterialFieldRow extends StatelessWidget {
   });
 
   final String label;
-  final TextEditingController controller;
-  final bool dropdown;
+  final TextEditingController? controller;
+  final Widget? child;
   final int maxLines;
   final String? suffixText;
   final String? helper;
@@ -670,7 +1150,7 @@ class _MaterialFieldRow extends StatelessWidget {
             child: Padding(
               padding: EdgeInsets.only(top: maxLines > 1 ? 12 : 0),
               child: Text(
-                label,
+                trText(label),
                 style: const TextStyle(
                   color: AppColors.textSecondary,
                   fontSize: 13,
@@ -680,19 +1160,18 @@ class _MaterialFieldRow extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: TextFormField(
-              controller: controller,
-              maxLines: maxLines,
-              keyboardType: keyboardType,
-              inputFormatters: inputFormatters,
-              decoration: InputDecoration(
-                suffixText: suffixText,
-                helperText: helper,
-                suffixIcon: dropdown
-                    ? const Icon(Icons.keyboard_arrow_down)
-                    : null,
-              ),
-            ),
+            child:
+                child ??
+                TextFormField(
+                  controller: controller,
+                  maxLines: maxLines,
+                  keyboardType: keyboardType,
+                  inputFormatters: inputFormatters,
+                  decoration: InputDecoration(
+                    suffixText: suffixText == null ? null : trText(suffixText!),
+                    helperText: helper == null ? null : trText(helper!),
+                  ),
+                ),
           ),
         ],
       ),

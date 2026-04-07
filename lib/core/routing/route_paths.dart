@@ -1,6 +1,7 @@
 class RoutePaths {
   static const login = '/login';
   static const recover = '/recover';
+  static const workspaceSetup = '/workspace-setup';
   static const dashboard = '/dashboard';
   static const clientes = '/clientes';
   static const proveedores = '/proveedores';

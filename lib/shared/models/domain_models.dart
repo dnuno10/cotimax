@@ -12,6 +12,12 @@ class Cliente {
     required this.telefono,
     required this.correo,
     required this.direccion,
+    required this.calle,
+    required this.apartamentoSuite,
+    required this.ciudad,
+    required this.estadoProvincia,
+    required this.codigoPostal,
+    required this.pais,
     required this.notas,
     required this.activo,
     required this.createdAt,
@@ -28,6 +34,12 @@ class Cliente {
   final String telefono;
   final String correo;
   final String direccion;
+  final String calle;
+  final String apartamentoSuite;
+  final String ciudad;
+  final String estadoProvincia;
+  final String codigoPostal;
+  final String pais;
   final String notas;
   final bool activo;
   final DateTime createdAt;
@@ -51,6 +63,12 @@ class Cliente {
       telefono: telefono,
       correo: correo,
       direccion: direccion,
+      calle: calle,
+      apartamentoSuite: apartamentoSuite,
+      ciudad: ciudad,
+      estadoProvincia: estadoProvincia,
+      codigoPostal: codigoPostal,
+      pais: pais,
       notas: notas,
       activo: activo ?? this.activo,
       createdAt: createdAt,
@@ -145,6 +163,7 @@ class MaterialInsumo {
     required this.unidad,
     required this.costoUnitario,
     required this.stockDisponible,
+    this.proveedorId,
     required this.proveedor,
     required this.sku,
     required this.productoIds,
@@ -160,6 +179,7 @@ class MaterialInsumo {
   final String unidad;
   final double costoUnitario;
   final double stockDisponible;
+  final String? proveedorId;
   final String proveedor;
   final String sku;
   final List<String> productoIds;
@@ -174,6 +194,7 @@ class MaterialInsumo {
     String? unidad,
     double? costoUnitario,
     double? stockDisponible,
+    String? proveedorId,
     String? proveedor,
     String? sku,
     List<String>? productoIds,
@@ -188,6 +209,7 @@ class MaterialInsumo {
       unidad: unidad ?? this.unidad,
       costoUnitario: costoUnitario ?? this.costoUnitario,
       stockDisponible: stockDisponible ?? this.stockDisponible,
+      proveedorId: proveedorId ?? this.proveedorId,
       proveedor: proveedor ?? this.proveedor,
       sku: sku ?? this.sku,
       productoIds: productoIds ?? this.productoIds,
@@ -312,6 +334,7 @@ class DetalleCotizacion {
     required this.unidad,
     required this.descuento,
     required this.cantidad,
+    required this.impuestoPorcentaje,
     required this.importe,
     required this.orden,
     required this.createdAt,
@@ -327,6 +350,7 @@ class DetalleCotizacion {
   final String unidad;
   final double descuento;
   final double cantidad;
+  final double impuestoPorcentaje;
   final double importe;
   final int orden;
   final DateTime createdAt;
@@ -601,6 +625,20 @@ class ConfiguracionImpuestos {
       tasaPredeterminada: tasaPredeterminada ?? this.tasaPredeterminada,
     );
   }
+}
+
+class WorkspaceStatus {
+  const WorkspaceStatus({required this.hasCompany, this.empresaId});
+
+  final bool hasCompany;
+  final String? empresaId;
+}
+
+class CompanyInvitationCode {
+  const CompanyInvitationCode({required this.empresaId, required this.codigo});
+
+  final String empresaId;
+  final String codigo;
 }
 
 class Usuario {

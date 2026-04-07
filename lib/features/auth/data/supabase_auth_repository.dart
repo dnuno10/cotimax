@@ -22,11 +22,6 @@ class SupabaseAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<void> ensureWorkspace() async {
-    await _client.rpc('ensure_user_workspace');
-  }
-
-  @override
   Future<void> signOut() async {
     await _client.auth.signOut();
   }

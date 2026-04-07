@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:cotimax/core/constants/app_colors.dart';
+import 'package:cotimax/core/localization/app_localization.dart';
 import 'package:cotimax/core/routing/route_paths.dart';
 import 'package:cotimax/features/gastos/application/gastos_controller.dart';
 import 'package:cotimax/features/ingresos/application/ingresos_controller.dart';
@@ -28,6 +29,7 @@ class _GastosPageState extends ConsumerState<GastosPage> {
   bool _showProjection = false;
   _ProjectionOption _selectedProjection = expenseProjectionOptions[2];
   DateTimeRange? _selectedDateRange;
+  final Set<String> _selectedGastoIds = <String>{};
 
   Future<void> _pickDateRange(List<Gasto> gastos) async {
     if (gastos.isEmpty) return;
@@ -50,9 +52,9 @@ class _GastosPageState extends ConsumerState<GastosPage> {
       lastDate: lastDate,
       initialDateRange: initialRange,
       currentDate: lastDate,
-      helpText: 'Selecciona el rango',
-      saveText: 'Aplicar',
-      locale: const Locale('es', 'MX'),
+      helpText: trText('Selecciona el rango'),
+      saveText: trText('Aplicar'),
+      locale: currentAppLocale(),
     );
     if (picked == null) return;
     setState(() => _selectedDateRange = picked);
@@ -80,15 +82,37 @@ class _GastosPageState extends ConsumerState<GastosPage> {
 
     return gastosAsync.when(
       loading: () => ListView(
-        children: const [
-          PageHeader(title: 'Gastos', subtitle: ''),
+        children: [
+          PageHeader(
+            title: 'Gastos',
+            subtitle: '',
+            actions: [
+              ...buildImportExportHeaderActions(context, entityLabel: 'gastos'),
+              ElevatedButton.icon(
+                onPressed: () => _openForm(context),
+                icon: const Icon(Icons.add),
+                label: Text(trText('Nuevo gasto')),
+              ),
+            ],
+          ),
           SizedBox(height: 12),
-          LoadingSkeleton(),
+          const LoadingStateWidget(message: 'Cargando gastos...'),
         ],
       ),
       error: (_, __) => ListView(
         children: [
-          const PageHeader(title: 'Gastos', subtitle: ''),
+          PageHeader(
+            title: 'Gastos',
+            subtitle: '',
+            actions: [
+              ...buildImportExportHeaderActions(context, entityLabel: 'gastos'),
+              ElevatedButton.icon(
+                onPressed: () => _openForm(context),
+                icon: const Icon(Icons.add),
+                label: Text(trText('Nuevo gasto')),
+              ),
+            ],
+          ),
           const SizedBox(height: 12),
           ErrorStateWidget(
             message: 'No se pudieron cargar gastos.',
@@ -99,10 +123,33 @@ class _GastosPageState extends ConsumerState<GastosPage> {
       data: (gastos) {
         if (gastos.isEmpty) {
           return ListView(
-            children: const [
-              PageHeader(title: 'Gastos', subtitle: ''),
+            children: [
+              PageHeader(
+                title: 'Gastos',
+                subtitle: '',
+                actions: [
+                  ...buildImportExportHeaderActions(
+                    context,
+                    entityLabel: 'gastos',
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () => _openForm(context),
+                    icon: const Icon(Icons.add),
+                    label: Text(trText('Nuevo gasto')),
+                  ),
+                ],
+              ),
               SizedBox(height: 12),
-              SectionCard(child: InlineEmptyMessage()),
+              EmptyStateWidget(
+                title: 'Todavía no hay gastos',
+                subtitle:
+                    'Registra tu primer gasto para comenzar a ver resultados.',
+                action: ElevatedButton.icon(
+                  onPressed: () => _openForm(context),
+                  icon: const Icon(Icons.add),
+                  label: Text(trText('Nuevo gasto')),
+                ),
+              ),
             ],
           );
         }
@@ -156,11 +203,11 @@ class _GastosPageState extends ConsumerState<GastosPage> {
         final chartLabels = _showProjection ? projectedSerie.labels : serie.$2;
         final chartTotal = _showProjection ? projectedSerie.total : totalGastos;
         final rango = _selectedDateRange == null
-            ? 'Ultimas 8 semanas'
+            ? trText('Ultimas 8 semanas')
             : _formatDateRange(activeRange);
         final baseLabel = _selectedDateRange == null
-            ? 'Base ultimas 8 semanas'
-            : 'Base $rango';
+            ? trText('Base ultimas 8 semanas')
+            : tr('Base $rango', 'Base $rango');
         final rankingCategorias = _expenseByCategory(gastos, categorias);
         final rankingProveedores = _expenseByProvider(gastos);
 
@@ -177,7 +224,7 @@ class _GastosPageState extends ConsumerState<GastosPage> {
                 ElevatedButton.icon(
                   onPressed: () => _openForm(context),
                   icon: const Icon(Icons.add),
-                  label: const Text('Nuevo gasto'),
+                  label: Text(trText('Nuevo gasto')),
                 ),
               ],
             ),
@@ -196,8 +243,8 @@ class _GastosPageState extends ConsumerState<GastosPage> {
                         children: [
                           Text(
                             _showProjection
-                                ? 'Escenario proyectado'
-                                : 'Historico real',
+                                ? trText('Escenario proyectado')
+                                : trText('Historico real'),
                             style: const TextStyle(
                               color: AppColors.textSecondary,
                               fontSize: 11,
@@ -321,7 +368,10 @@ class _GastosPageState extends ConsumerState<GastosPage> {
                   const SizedBox(height: 10),
                   if (_showProjection) ...[
                     Text(
-                      'Base recurrente estimada: ${formatMxn(_selectedProjection.isWeekly ? _weeklyRecurringExpenseEstimate(recurrentes) : _monthlyRecurringExpenseEstimate(recurrentes))} por ${_selectedProjection.isWeekly ? 'semana' : 'mes'}.',
+                      tr(
+                        'Base recurrente estimada: ${formatMxn(_selectedProjection.isWeekly ? _weeklyRecurringExpenseEstimate(recurrentes) : _monthlyRecurringExpenseEstimate(recurrentes))} por ${_selectedProjection.isWeekly ? 'semana' : 'mes'}.',
+                        'Estimated recurring base: ${formatMxn(_selectedProjection.isWeekly ? _weeklyRecurringExpenseEstimate(recurrentes) : _monthlyRecurringExpenseEstimate(recurrentes))} per ${_selectedProjection.isWeekly ? 'week' : 'month'}.',
+                      ),
                       style: const TextStyle(
                         color: AppColors.textPrimary,
                         fontWeight: FontWeight.w600,
@@ -331,7 +381,7 @@ class _GastosPageState extends ConsumerState<GastosPage> {
                     ),
                   ] else ...[
                     Text(
-                      'Estado financiero: $salud',
+                      '${trText('Estado financiero')}: ${trText(salud)}',
                       style: TextStyle(
                         color: margen >= 35
                             ? AppColors.success
@@ -344,7 +394,7 @@ class _GastosPageState extends ConsumerState<GastosPage> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Margen actual: ${margen.toStringAsFixed(1)}%. ${margen >= 20 ? 'El gasto se mantiene bajo control.' : 'Conviene revisar gastos para recuperar margen.'}',
+                      '${trText('Margen actual')}: ${margen.toStringAsFixed(1)}%. ${trText(margen >= 20 ? 'El gasto se mantiene bajo control.' : 'Conviene revisar gastos para recuperar margen.')}',
                       style: const TextStyle(
                         color: AppColors.textPrimary,
                         fontWeight: FontWeight.w600,
@@ -382,7 +432,7 @@ class _GastosPageState extends ConsumerState<GastosPage> {
                           title: 'Gastos recurrentes',
                           child: recurrentesAsync.when(
                             loading: LoadingSkeleton.new,
-                            error: (_, __) => const Text('Error'),
+                            error: (_, __) => Text(trText('Error')),
                             data: (rows) => Column(
                               children: rows
                                   .map(
@@ -423,7 +473,7 @@ class _GastosPageState extends ConsumerState<GastosPage> {
                       title: 'Gastos recurrentes',
                       child: recurrentesAsync.when(
                         loading: LoadingSkeleton.new,
-                        error: (_, __) => const Text('Error'),
+                        error: (_, __) => Text(trText('Error')),
                         data: (rows) => Column(
                           children: rows
                               .map(
@@ -485,70 +535,137 @@ class _GastosPageState extends ConsumerState<GastosPage> {
               ],
             ),
             const SizedBox(height: 10),
-            CotimaxDataTable(
-              columns: const [
-                DataColumn(label: Text('Categoria')),
-                DataColumn(label: Text('Monto')),
-                DataColumn(label: Text('Fecha')),
-                DataColumn(label: Text('Proveedor')),
-                DataColumn(label: Text('Referencia')),
-                DataColumn(label: Text('Descripcion')),
-                DataColumn(label: Text('Notas')),
-                DataColumn(label: Text('Acciones')),
-              ],
-              rows: gastos
-                  .map(
-                    (item) => DataRow(
-                      cells: [
-                        DataCell(
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              FinanceIconAvatar(
-                                iconKey: item.iconKey,
-                                size: 28,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                categorias[item.gastoCategoriaId]?.nombre ??
-                                    item.gastoCategoriaId,
-                              ),
-                            ],
-                          ),
+            Builder(
+              builder: (context) {
+                final allSelected = _selectedGastoIds.length == gastos.length;
+                final partiallySelected =
+                    _selectedGastoIds.isNotEmpty && !allSelected;
+
+                return CotimaxDataTable(
+                  toolbar: _selectedGastoIds.isEmpty
+                      ? null
+                      : TableSelectionToolbar(
+                          count: _selectedGastoIds.length,
+                          entityLabel: 'gasto',
+                          onEdit: _selectedGastoIds.length == 1
+                              ? () {
+                                  final gasto = gastos.firstWhere(
+                                    (item) =>
+                                        item.id == _selectedGastoIds.first,
+                                  );
+                                  _openForm(context, gasto);
+                                }
+                              : null,
+                          onDelete: _deleteSelectedGastos,
+                          onClear: () =>
+                              setState(() => _selectedGastoIds.clear()),
                         ),
-                        DataCell(
-                          AmountBadge(amount: item.monto, positive: false),
-                        ),
-                        DataCell(
-                          Text(DateFormat('dd/MM/yyyy').format(item.fecha)),
-                        ),
-                        DataCell(Text(item.proveedor)),
-                        DataCell(Text(item.referencia)),
-                        DataCell(Text(item.descripcion)),
-                        DataCell(Text(item.notas)),
-                        DataCell(
-                          RowActionMenu(
-                            onSelected: (action) => _onRowAction(
-                              context,
-                              item: item,
-                              action: action,
-                            ),
-                            actions: const [
-                              PopupMenuItem(
-                                value: 'edit',
-                                child: Text('Editar'),
-                              ),
-                              PopupMenuItem(
-                                value: 'delete',
-                                child: Text('Eliminar'),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                  columns: [
+                    DataColumn(
+                      label: Checkbox(
+                        value: allSelected
+                            ? true
+                            : partiallySelected
+                            ? null
+                            : false,
+                        tristate: true,
+                        onChanged: (value) {
+                          setState(() {
+                            if (value ?? false) {
+                              _selectedGastoIds
+                                ..clear()
+                                ..addAll(gastos.map((item) => item.id));
+                            } else {
+                              _selectedGastoIds.clear();
+                            }
+                          });
+                        },
+                      ),
                     ),
-                  )
-                  .toList(),
+                    DataColumn(label: Text(trText('Categoria'))),
+                    DataColumn(label: Text(trText('Monto'))),
+                    DataColumn(label: Text(trText('Fecha'))),
+                    DataColumn(label: Text(trText('Proveedor'))),
+                    DataColumn(label: Text(trText('Referencia'))),
+                    DataColumn(label: Text(trText('Descripcion'))),
+                    DataColumn(label: Text(trText('Notas'))),
+                    DataColumn(label: Text(trText('Acciones'))),
+                  ],
+                  rows: gastos
+                      .map(
+                        (item) => DataRow(
+                          selected: _selectedGastoIds.contains(item.id),
+                          cells: [
+                            DataCell(
+                              Checkbox(
+                                value: _selectedGastoIds.contains(item.id),
+                                onChanged: (value) {
+                                  setState(() {
+                                    if (value ?? false) {
+                                      _selectedGastoIds.add(item.id);
+                                    } else {
+                                      _selectedGastoIds.remove(item.id);
+                                    }
+                                  });
+                                },
+                              ),
+                            ),
+                            DataCell(
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  FinanceIconAvatar(
+                                    iconKey: item.iconKey,
+                                    size: 28,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    categorias[item.gastoCategoriaId]?.nombre ??
+                                        item.gastoCategoriaId,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            DataCell(
+                              AmountBadge(amount: item.monto, positive: false),
+                            ),
+                            DataCell(
+                              Text(
+                                DateFormat(
+                                  'dd/MM/yyyy',
+                                  currentIntlLocale(),
+                                ).format(item.fecha),
+                              ),
+                            ),
+                            DataCell(Text(item.proveedor)),
+                            DataCell(Text(item.referencia)),
+                            DataCell(Text(item.descripcion)),
+                            DataCell(Text(item.notas)),
+                            DataCell(
+                              RowActionMenu(
+                                onSelected: (action) => _onRowAction(
+                                  context,
+                                  item: item,
+                                  action: action,
+                                ),
+                                actions: [
+                                  PopupMenuItem(
+                                    value: 'edit',
+                                    child: Text(trText('Editar')),
+                                  ),
+                                  PopupMenuItem(
+                                    value: 'delete',
+                                    child: Text(trText('Eliminar')),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                      .toList(),
+                );
+              },
             ),
           ],
         );
@@ -580,19 +697,57 @@ class _GastosPageState extends ConsumerState<GastosPage> {
       final confirmed = await showDeleteConfirmation(
         context,
         entityLabel: 'gasto',
+        onConfirmAsync: () async {
+          try {
+            await ref.read(gastosRepositoryProvider).delete(item.id);
+            if (!context.mounted) return;
+            ref.invalidate(gastosControllerProvider);
+            ToastHelper.showSuccess(context, 'Gasto eliminado.');
+          } catch (_) {
+            if (!context.mounted) rethrow;
+            ToastHelper.showError(context, 'No se pudo eliminar el gasto.');
+            rethrow;
+          }
+        },
       );
       if (!confirmed) return;
-
-      try {
-        await ref.read(gastosRepositoryProvider).delete(item.id);
-        if (!context.mounted) return;
-        ref.invalidate(gastosControllerProvider);
-        ToastHelper.showSuccess(context, 'Gasto eliminado.');
-      } catch (_) {
-        if (!context.mounted) return;
-        ToastHelper.showError(context, 'No se pudo eliminar el gasto.');
-      }
     }
+  }
+
+  Future<void> _deleteSelectedGastos() async {
+    final count = _selectedGastoIds.length;
+    if (count == 0) return;
+
+    final confirmed = await showDeleteConfirmation(
+      context,
+      entityLabel: count == 1 ? 'gasto' : 'gastos seleccionados',
+      title: count == 1 ? 'Eliminar gasto' : 'Eliminar gastos',
+      message: count == 1
+          ? '¿Estás seguro que quieres eliminar este gasto?'
+          : '¿Estás seguro que quieres eliminar los $count gastos seleccionados?',
+      onConfirmAsync: () async {
+        try {
+          final ids = _selectedGastoIds.toList();
+          for (final id in ids) {
+            await ref.read(gastosRepositoryProvider).delete(id);
+          }
+          if (!mounted) return;
+          ref.invalidate(gastosControllerProvider);
+          setState(() => _selectedGastoIds.clear());
+          ToastHelper.showSuccess(
+            context,
+            count == 1
+                ? 'Gasto eliminado.'
+                : '$count gastos eliminados correctamente.',
+          );
+        } catch (_) {
+          if (!mounted) rethrow;
+          ToastHelper.showError(context, 'No se pudieron eliminar los gastos.');
+          rethrow;
+        }
+      },
+    );
+    if (!confirmed) return;
   }
 }
 
@@ -618,6 +773,7 @@ class _GastoFormState extends ConsumerState<_GastoForm> {
   RecurrenceFrequency _recurrencia = RecurrenceFrequency.ninguna;
   final Set<int> _diasSemana = <int>{};
   String _iconKey = 'shopping_cart';
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -689,8 +845,8 @@ class _GastoFormState extends ConsumerState<_GastoForm> {
                             label: 'Categoria',
                             child: TextField(
                               controller: _categoriaController,
-                              decoration: const InputDecoration(
-                                hintText: 'Categoria del gasto',
+                              decoration: InputDecoration(
+                                hintText: trText('Categoria del gasto'),
                               ),
                             ),
                           ),
@@ -713,8 +869,8 @@ class _GastoFormState extends ConsumerState<_GastoForm> {
                             label: 'Fecha',
                             child: TextField(
                               controller: _fechaController,
-                              decoration: const InputDecoration(
-                                hintText: 'AAAA-MM-DD',
+                              decoration: InputDecoration(
+                                hintText: trText('AAAA-MM-DD'),
                               ),
                             ),
                           ),
@@ -722,8 +878,8 @@ class _GastoFormState extends ConsumerState<_GastoForm> {
                             label: 'Proveedor',
                             child: TextField(
                               controller: _proveedorController,
-                              decoration: const InputDecoration(
-                                hintText: 'Proveedor o beneficiario',
+                              decoration: InputDecoration(
+                                hintText: trText('Proveedor o beneficiario'),
                               ),
                             ),
                           ),
@@ -734,8 +890,8 @@ class _GastoFormState extends ConsumerState<_GastoForm> {
                             label: 'Referencia',
                             child: TextField(
                               controller: _referenciaController,
-                              decoration: const InputDecoration(
-                                hintText: 'Folio o referencia',
+                              decoration: InputDecoration(
+                                hintText: trText('Folio o referencia'),
                               ),
                             ),
                           ),
@@ -743,8 +899,8 @@ class _GastoFormState extends ConsumerState<_GastoForm> {
                             label: 'Descripcion',
                             child: TextField(
                               controller: _descripcionController,
-                              decoration: const InputDecoration(
-                                hintText: 'Descripcion breve',
+                              decoration: InputDecoration(
+                                hintText: trText('Descripcion breve'),
                               ),
                             ),
                           ),
@@ -755,8 +911,8 @@ class _GastoFormState extends ConsumerState<_GastoForm> {
                           child: TextField(
                             controller: _notasController,
                             maxLines: 4,
-                            decoration: const InputDecoration(
-                              hintText: 'Notas internas del gasto',
+                            decoration: InputDecoration(
+                              hintText: trText('Notas internas del gasto'),
                             ),
                           ),
                         ),
@@ -810,14 +966,22 @@ class _GastoFormState extends ConsumerState<_GastoForm> {
             spacing: 10,
             children: [
               OutlinedButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Cancelar'),
+                onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
+                child: Text(trText('Cancelar')),
               ),
               ElevatedButton.icon(
-                onPressed: _save,
-                icon: Icon(
-                  widget.item == null ? Icons.add_rounded : Icons.save_rounded,
-                ),
+                onPressed: _isSaving ? null : _save,
+                icon: _isSaving
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(
+                        widget.item == null
+                            ? Icons.add_rounded
+                            : Icons.save_rounded,
+                      ),
                 label: Text(
                   widget.item == null ? 'Registrar gasto' : 'Guardar gasto',
                 ),
@@ -830,6 +994,7 @@ class _GastoFormState extends ConsumerState<_GastoForm> {
   }
 
   Future<void> _save() async {
+    if (_isSaving) return;
     final now = DateTime.now();
     final item = Gasto(
       id: widget.item?.id ?? 'gas-${now.microsecondsSinceEpoch}',
@@ -854,6 +1019,7 @@ class _GastoFormState extends ConsumerState<_GastoForm> {
       updatedAt: now,
     );
 
+    setState(() => _isSaving = true);
     try {
       await ref.read(gastosRepositoryProvider).upsert(item);
       ref.invalidate(gastosControllerProvider);
@@ -869,6 +1035,10 @@ class _GastoFormState extends ConsumerState<_GastoForm> {
     } catch (_) {
       if (!mounted) return;
       ToastHelper.showError(context, 'No se pudo guardar el gasto.');
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
     }
   }
 }
@@ -907,7 +1077,7 @@ class _RangeLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Text(
-      label,
+      trText(label),
       style: const TextStyle(
         color: AppColors.textSecondary,
         fontSize: 11,
@@ -936,7 +1106,7 @@ class _ChartMetaItem extends StatelessWidget {
         Icon(icon, size: 15, color: accent),
         const SizedBox(width: 6),
         Text(
-          label,
+          trText(label),
           style: const TextStyle(
             color: AppColors.textPrimary,
             fontSize: 12,
@@ -1014,7 +1184,7 @@ class _ProjectionToolbar extends StatelessWidget {
                 .map(
                   (option) => PopupMenuItem<_ProjectionOption>(
                     value: option,
-                    child: Text(option.label),
+                    child: Text(trText(option.label)),
                   ),
                 )
                 .toList(),
@@ -1051,7 +1221,7 @@ class _DateRangeButton extends StatelessWidget {
       ),
       icon: Icon(Icons.date_range_rounded, size: 16, color: accent),
       label: Text(
-        label,
+        trText(label),
         style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
       ),
     );
@@ -1085,7 +1255,7 @@ class _ProjectionModeButton extends StatelessWidget {
       ),
       icon: Icon(icon, size: 16),
       label: Text(
-        label,
+        trText(label),
         style: TextStyle(
           fontSize: 13,
           fontWeight: active ? FontWeight.w800 : FontWeight.w700,
@@ -1117,7 +1287,7 @@ class _ProjectionResetButton extends StatelessWidget {
         foregroundColor: accent,
       ),
       child: Text(
-        label,
+        trText(label),
         style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
       ),
     );
@@ -1136,7 +1306,7 @@ class _ProjectionOptionButton extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          label,
+          trText(label),
           style: TextStyle(
             color: accent,
             fontWeight: FontWeight.w800,
@@ -1459,7 +1629,7 @@ LineChartData _expenseLineChartData({
     final values = <double>[];
     for (var index = 0; index < totalDays; index++) {
       final currentDay = start.add(Duration(days: index));
-      labels.add(DateFormat('dd MMM').format(currentDay));
+      labels.add(DateFormat('dd MMM', currentIntlLocale()).format(currentDay));
       values.add(
         gastos
             .where((item) => DateUtils.isSameDay(item.fecha, currentDay))
@@ -1476,7 +1646,7 @@ LineChartData _expenseLineChartData({
     for (var index = 0; index < weekCount; index++) {
       final weekStart = start.add(Duration(days: index * 7));
       final weekEnd = weekStart.add(const Duration(days: 6));
-      labels.add(DateFormat('dd MMM').format(weekStart));
+      labels.add(DateFormat('dd MMM', currentIntlLocale()).format(weekStart));
       values.add(
         gastos
             .where(
@@ -1497,7 +1667,7 @@ LineChartData _expenseLineChartData({
 
   while (!currentMonth.isAfter(lastMonth)) {
     final nextMonth = DateTime(currentMonth.year, currentMonth.month + 1);
-    labels.add(DateFormat('MMM yy').format(currentMonth));
+    labels.add(DateFormat('MMM yy', currentIntlLocale()).format(currentMonth));
     values.add(
       gastos
           .where(
@@ -1545,7 +1715,7 @@ _ProjectedChartData _buildProjectedExpenseWeeks(
       _weightedAverage(source) * (1 + (trend * 0.14)),
     );
     source.add(projected);
-    labels.add(DateFormat('dd MMM').format(currentWeek));
+    labels.add(DateFormat('dd MMM', currentIntlLocale()).format(currentWeek));
     values.add(projected.toDouble());
   }
 
@@ -1576,7 +1746,7 @@ _ProjectedChartData _buildProjectedExpenseMonths(
       _weightedAverage(source) * (1 + (trend * 0.25)),
     );
     source.add(projected);
-    labels.add(DateFormat('MMM yy').format(currentMonth));
+    labels.add(DateFormat('MMM yy', currentIntlLocale()).format(currentMonth));
     values.add(projected.toDouble());
   }
 
@@ -1600,7 +1770,7 @@ _ProjectedChartData _buildHistoricalExpenseWeeks(
       Duration(days: (weeks - 1 - index) * 7),
     );
     final weekEnd = weekStart.add(const Duration(days: 6));
-    labels.add(DateFormat('dd MMM').format(weekStart));
+    labels.add(DateFormat('dd MMM', currentIntlLocale()).format(weekStart));
     values.add(
       gastos
           .where(
@@ -1622,18 +1792,35 @@ _ProjectedChartData _buildHistoricalExpenseMonths(
   List<Gasto> gastos, {
   required int months,
 }) {
-  final now = DateTime.now();
+  if (gastos.isEmpty) {
+    final currentMonth = DateTime(DateTime.now().year, DateTime.now().month);
+    return _ProjectedChartData(
+      labels: [DateFormat('MMM yy', currentIntlLocale()).format(currentMonth)],
+      values: const [0],
+      total: 0,
+    );
+  }
+
+  final monthTotals = <DateTime, double>{};
+  for (final item in gastos) {
+    final key = DateTime(item.fecha.year, item.fecha.month);
+    monthTotals.update(
+      key,
+      (value) => value + item.monto,
+      ifAbsent: () => item.monto,
+    );
+  }
+
+  final orderedMonths = monthTotals.keys.toList()..sort();
+  final visibleMonths = orderedMonths.length > months
+      ? orderedMonths.sublist(orderedMonths.length - months)
+      : orderedMonths;
   final labels = <String>[];
   final values = <double>[];
 
-  for (var index = 0; index < months; index++) {
-    final monthKey = DateTime(now.year, now.month - (months - 1 - index));
-    labels.add(DateFormat('MMM yy').format(monthKey));
-    values.add(
-      gastos
-          .where((item) => _sameMonth(item.fecha, monthKey))
-          .fold<double>(0, (sum, item) => sum + item.monto),
-    );
+  for (final monthKey in visibleMonths) {
+    labels.add(DateFormat('MMM yy', currentIntlLocale()).format(monthKey));
+    values.add(monthTotals[monthKey] ?? 0);
   }
 
   return _ProjectedChartData(
@@ -1704,7 +1891,7 @@ List<Gasto> _filterGastosByRange(List<Gasto> gastos, DateTimeRange? range) {
 }
 
 String _formatDateRange(DateTimeRange range) {
-  final formatter = DateFormat('dd MMM yyyy');
+  final formatter = DateFormat('dd MMM yyyy', currentIntlLocale());
   return '${formatter.format(range.start)} - ${formatter.format(range.end)}';
 }
 

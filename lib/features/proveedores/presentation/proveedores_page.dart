@@ -1,4 +1,5 @@
 import 'package:cotimax/core/constants/app_colors.dart';
+import 'package:cotimax/core/localization/app_localization.dart';
 import 'package:cotimax/core/routing/route_paths.dart';
 import 'package:cotimax/features/proveedores/application/proveedores_controller.dart';
 import 'package:cotimax/shared/models/domain_models.dart';
@@ -17,6 +18,7 @@ class ProveedoresPage extends ConsumerStatefulWidget {
 
 class _ProveedoresPageState extends ConsumerState<ProveedoresPage> {
   bool _handledCreateRoute = false;
+  final Set<String> _selectedProveedorIds = <String>{};
 
   @override
   Widget build(BuildContext context) {
@@ -50,7 +52,7 @@ class _ProveedoresPageState extends ConsumerState<ProveedoresPage> {
             ElevatedButton.icon(
               onPressed: () => _openForm(context, null),
               icon: const Icon(Icons.add),
-              label: const Text('Nuevo proveedor'),
+              label: Text(trText('Nuevo proveedor')),
             ),
           ],
         ),
@@ -89,7 +91,8 @@ class _ProveedoresPageState extends ConsumerState<ProveedoresPage> {
         ),
         const SizedBox(height: 10),
         proveedoresAsync.when(
-          loading: LoadingSkeleton.new,
+          loading: () =>
+              const LoadingStateWidget(message: 'Cargando proveedores...'),
           error: (_, __) => ErrorStateWidget(
             message: 'No fue posible cargar proveedores.',
             onRetry: () => ref.invalidate(proveedoresControllerProvider),
@@ -99,22 +102,81 @@ class _ProveedoresPageState extends ConsumerState<ProveedoresPage> {
               return const SectionCard(child: InlineEmptyMessage());
             }
 
+            final allSelected =
+                _selectedProveedorIds.length == proveedores.length;
+            final partiallySelected =
+                _selectedProveedorIds.isNotEmpty && !allSelected;
+
             return CotimaxDataTable(
-              columns: const [
-                DataColumn(label: Text('Nombre')),
-                DataColumn(label: Text('Empresa')),
-                DataColumn(label: Text('RFC')),
-                DataColumn(label: Text('Contacto')),
-                DataColumn(label: Text('Teléfono')),
-                DataColumn(label: Text('Correo')),
-                DataColumn(label: Text('Estatus')),
-                DataColumn(label: Text('Actualizado')),
-                DataColumn(label: Text('Acciones')),
+              toolbar: _selectedProveedorIds.isEmpty
+                  ? null
+                  : TableSelectionToolbar(
+                      count: _selectedProveedorIds.length,
+                      entityLabel: 'proveedor',
+                      onEdit: _selectedProveedorIds.length == 1
+                          ? () {
+                              final proveedor = proveedores.firstWhere(
+                                (item) =>
+                                    item.id == _selectedProveedorIds.first,
+                              );
+                              _openForm(context, proveedor);
+                            }
+                          : null,
+                      onDelete: _deleteSelectedProveedores,
+                      onClear: () =>
+                          setState(() => _selectedProveedorIds.clear()),
+                    ),
+              columns: [
+                DataColumn(
+                  label: Checkbox(
+                    value: allSelected
+                        ? true
+                        : partiallySelected
+                        ? null
+                        : false,
+                    tristate: true,
+                    onChanged: (value) {
+                      setState(() {
+                        if (value ?? false) {
+                          _selectedProveedorIds
+                            ..clear()
+                            ..addAll(proveedores.map((item) => item.id));
+                        } else {
+                          _selectedProveedorIds.clear();
+                        }
+                      });
+                    },
+                  ),
+                ),
+                DataColumn(label: Text(trText('Nombre'))),
+                DataColumn(label: Text(trText('Empresa'))),
+                DataColumn(label: Text(trText('RFC'))),
+                DataColumn(label: Text(trText('Contacto'))),
+                DataColumn(label: Text(trText('Teléfono'))),
+                DataColumn(label: Text(trText('Correo'))),
+                DataColumn(label: Text(trText('Estatus'))),
+                DataColumn(label: Text(trText('Actualizado'))),
+                DataColumn(label: Text(trText('Acciones'))),
               ],
               rows: proveedores
                   .map(
                     (proveedor) => DataRow(
+                      selected: _selectedProveedorIds.contains(proveedor.id),
                       cells: [
+                        DataCell(
+                          Checkbox(
+                            value: _selectedProveedorIds.contains(proveedor.id),
+                            onChanged: (value) {
+                              setState(() {
+                                if (value ?? false) {
+                                  _selectedProveedorIds.add(proveedor.id);
+                                } else {
+                                  _selectedProveedorIds.remove(proveedor.id);
+                                }
+                              });
+                            },
+                          ),
+                        ),
                         DataCell(Text(proveedor.nombre)),
                         DataCell(Text(proveedor.empresa)),
                         DataCell(Text(proveedor.rfc)),
@@ -122,7 +184,9 @@ class _ProveedoresPageState extends ConsumerState<ProveedoresPage> {
                         DataCell(Text(proveedor.telefono)),
                         DataCell(Text(proveedor.correo)),
                         DataCell(
-                          Text(proveedor.activo ? 'Activo' : 'Inactivo'),
+                          Text(
+                            trText(proveedor.activo ? 'Activo' : 'Inactivo'),
+                          ),
                         ),
                         DataCell(
                           Text(
@@ -134,19 +198,21 @@ class _ProveedoresPageState extends ConsumerState<ProveedoresPage> {
                             onSelected: (action) =>
                                 _onRowAction(context, proveedor, action),
                             actions: [
-                              const PopupMenuItem(
+                              PopupMenuItem(
                                 value: 'edit',
-                                child: Text('Editar'),
+                                child: Text(trText('Editar')),
                               ),
                               PopupMenuItem(
                                 value: 'toggle',
                                 child: Text(
-                                  proveedor.activo ? 'Desactivar' : 'Activar',
+                                  trText(
+                                    proveedor.activo ? 'Desactivar' : 'Activar',
+                                  ),
                                 ),
                               ),
-                              const PopupMenuItem(
+                              PopupMenuItem(
                                 value: 'delete',
-                                child: Text('Eliminar'),
+                                child: Text(trText('Eliminar')),
                               ),
                             ],
                           ),
@@ -191,18 +257,59 @@ class _ProveedoresPageState extends ConsumerState<ProveedoresPage> {
     final confirmed = await showDeleteConfirmation(
       context,
       entityLabel: 'proveedor',
+      onConfirmAsync: () async {
+        try {
+          await ref.read(proveedoresRepositoryProvider).delete(proveedor.id);
+          ref.invalidate(proveedoresControllerProvider);
+          if (!mounted) return;
+          ToastHelper.showSuccess(context, 'Proveedor eliminado.');
+        } catch (_) {
+          if (!mounted) rethrow;
+          ToastHelper.showError(context, 'No se pudo eliminar el proveedor.');
+          rethrow;
+        }
+      },
     );
     if (!confirmed) return;
+  }
 
-    try {
-      await ref.read(proveedoresRepositoryProvider).delete(proveedor.id);
-      ref.invalidate(proveedoresControllerProvider);
-      if (!mounted) return;
-      ToastHelper.showSuccess(context, 'Proveedor eliminado.');
-    } catch (_) {
-      if (!mounted) return;
-      ToastHelper.showError(context, 'No se pudo eliminar el proveedor.');
-    }
+  Future<void> _deleteSelectedProveedores() async {
+    final count = _selectedProveedorIds.length;
+    if (count == 0) return;
+
+    final confirmed = await showDeleteConfirmation(
+      context,
+      entityLabel: count == 1 ? 'proveedor' : 'proveedores seleccionados',
+      title: count == 1 ? 'Eliminar proveedor' : 'Eliminar proveedores',
+      message: count == 1
+          ? '¿Estás seguro que quieres eliminar este proveedor?'
+          : '¿Estás seguro que quieres eliminar los $count proveedores seleccionados?',
+      onConfirmAsync: () async {
+        try {
+          final ids = _selectedProveedorIds.toList();
+          for (final id in ids) {
+            await ref.read(proveedoresRepositoryProvider).delete(id);
+          }
+          ref.invalidate(proveedoresControllerProvider);
+          if (!mounted) return;
+          setState(() => _selectedProveedorIds.clear());
+          ToastHelper.showSuccess(
+            context,
+            count == 1
+                ? 'Proveedor eliminado.'
+                : '$count proveedores eliminados correctamente.',
+          );
+        } catch (_) {
+          if (!mounted) rethrow;
+          ToastHelper.showError(
+            context,
+            'No se pudieron eliminar los proveedores.',
+          );
+          rethrow;
+        }
+      },
+    );
+    if (!confirmed) return;
   }
 
   void _onRowAction(BuildContext context, Proveedor proveedor, String action) {
@@ -241,6 +348,7 @@ class _ProveedorFormState extends ConsumerState<_ProveedorForm> {
   late final TextEditingController _apellidosController;
   late final TextEditingController _correoController;
   late final TextEditingController _telefonoContactoController;
+  bool _isSaving = false;
   bool _ivaValido = false;
   bool _exentoImpuestos = false;
   bool _activo = true;
@@ -325,16 +433,22 @@ class _ProveedorFormState extends ConsumerState<_ProveedorForm> {
             spacing: 10,
             children: [
               OutlinedButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Cancelar'),
+                onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
+                child: Text(trText('Cancelar')),
               ),
               ElevatedButton.icon(
-                onPressed: _save,
-                icon: Icon(
-                  widget.proveedor == null
-                      ? Icons.add_rounded
-                      : Icons.save_rounded,
-                ),
+                onPressed: _isSaving ? null : _save,
+                icon: _isSaving
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(
+                        widget.proveedor == null
+                            ? Icons.add_rounded
+                            : Icons.save_rounded,
+                      ),
                 label: Text(
                   widget.proveedor == null
                       ? 'Crear proveedor'
@@ -364,7 +478,10 @@ class _ProveedorFormState extends ConsumerState<_ProveedorForm> {
               _ProviderFieldRow(
                 label: 'Número de proveedor (automático)',
                 controller: _numeroController,
-                hintText: 'Se asignará automáticamente: $numeroSugerido',
+                hintText: tr(
+                  'Se asignará automáticamente: $numeroSugerido',
+                  'It will be assigned automatically: $numeroSugerido',
+                ),
                 helperText:
                     'Si lo dejas vacío, se asigna el consecutivo $numeroSugerido.',
               ),
@@ -407,7 +524,7 @@ class _ProveedorFormState extends ConsumerState<_ProveedorForm> {
               icon: FontAwesomeIcons.addressBook,
               trailing: OutlinedButton(
                 onPressed: () {},
-                child: const Text('+ Añadir contacto'),
+                child: Text(trText('+ Añadir contacto')),
               ),
               child: Column(
                 children: [
@@ -450,6 +567,7 @@ class _ProveedorFormState extends ConsumerState<_ProveedorForm> {
   }
 
   Future<void> _save() async {
+    if (_isSaving) return;
     final now = DateTime.now();
     final nombres = _nombresController.text.trim();
     if (nombres.isEmpty) {
@@ -501,6 +619,7 @@ class _ProveedorFormState extends ConsumerState<_ProveedorForm> {
       updatedAt: now,
     );
 
+    setState(() => _isSaving = true);
     try {
       await ref.read(proveedoresRepositoryProvider).upsert(proveedor);
       ref.invalidate(proveedoresControllerProvider);
@@ -515,6 +634,10 @@ class _ProveedorFormState extends ConsumerState<_ProveedorForm> {
     } catch (_) {
       if (!mounted) return;
       ToastHelper.showError(context, 'No se pudo guardar el proveedor.');
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
     }
   }
 }
@@ -583,7 +706,7 @@ class _ProviderSection extends StatelessWidget {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          title,
+                          trText(title),
                           style: const TextStyle(
                             color: AppColors.textPrimary,
                             fontSize: 16,
@@ -629,7 +752,7 @@ class _ProviderFieldRow extends StatelessWidget {
           SizedBox(
             width: 165,
             child: Text(
-              label,
+              trText(label),
               style: const TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 13,
@@ -643,8 +766,8 @@ class _ProviderFieldRow extends StatelessWidget {
               textInputAction: TextInputAction.next,
               onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
               decoration: InputDecoration(
-                hintText: hintText,
-                helperText: helperText,
+                hintText: hintText == null ? null : trText(hintText!),
+                helperText: helperText == null ? null : trText(helperText!),
               ),
             ),
           ),
@@ -674,7 +797,7 @@ class _ProviderSwitchRow extends StatelessWidget {
           SizedBox(
             width: 165,
             child: Text(
-              label,
+              trText(label),
               style: const TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 13,

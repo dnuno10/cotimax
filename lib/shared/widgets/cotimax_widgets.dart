@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:cotimax/core/constants/app_colors.dart';
 import 'package:cotimax/core/constants/app_spacing.dart';
+import 'package:cotimax/core/localization/app_localization.dart';
 import 'package:cotimax/core/routing/route_paths.dart';
 import 'package:cotimax/shared/enums/app_enums.dart';
 import 'package:cotimax/shared/models/domain_models.dart';
@@ -11,19 +12,47 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-const appNavEntries = <(String label, IconData icon, String path)>[
-  ('Inicio', FontAwesomeIcons.house, RoutePaths.dashboard),
-  ('Clientes', FontAwesomeIcons.users, RoutePaths.clientes),
-  ('Proveedores', FontAwesomeIcons.truckField, RoutePaths.proveedores),
-  ('Productos', FontAwesomeIcons.boxOpen, RoutePaths.productos),
-  ('Materiales', FontAwesomeIcons.cubes, RoutePaths.materiales),
-  ('Cotizaciones', FontAwesomeIcons.fileInvoiceDollar, RoutePaths.cotizaciones),
-  ('Ingresos', FontAwesomeIcons.arrowTrendUp, RoutePaths.ingresos),
-  ('Gastos', FontAwesomeIcons.arrowTrendDown, RoutePaths.gastos),
-  ('Analítica', FontAwesomeIcons.chartLine, RoutePaths.analitica),
-  ('Configuración', FontAwesomeIcons.gear, RoutePaths.configuracion),
-  ('Usuarios', FontAwesomeIcons.userGroup, RoutePaths.usuarios),
-  ('Planes', FontAwesomeIcons.crown, RoutePaths.planes),
+List<(String label, IconData icon, String path)> get appNavEntries => [
+  (tr('Inicio', 'Home'), FontAwesomeIcons.house, RoutePaths.dashboard),
+  (tr('Clientes', 'Clients'), FontAwesomeIcons.users, RoutePaths.clientes),
+  (
+    tr('Proveedores', 'Suppliers'),
+    FontAwesomeIcons.truckField,
+    RoutePaths.proveedores,
+  ),
+  (tr('Productos', 'Products'), FontAwesomeIcons.boxOpen, RoutePaths.productos),
+  (
+    tr('Materiales', 'Materials'),
+    FontAwesomeIcons.cubes,
+    RoutePaths.materiales,
+  ),
+  (
+    tr('Cotizaciones', 'Quotes'),
+    FontAwesomeIcons.fileInvoiceDollar,
+    RoutePaths.cotizaciones,
+  ),
+  (
+    tr('Ingresos', 'Income'),
+    FontAwesomeIcons.arrowTrendUp,
+    RoutePaths.ingresos,
+  ),
+  (
+    tr('Gastos', 'Expenses'),
+    FontAwesomeIcons.arrowTrendDown,
+    RoutePaths.gastos,
+  ),
+  (
+    tr('Analítica', 'Analytics'),
+    FontAwesomeIcons.chartLine,
+    RoutePaths.analitica,
+  ),
+  (
+    tr('Configuración', 'Settings'),
+    FontAwesomeIcons.gear,
+    RoutePaths.configuracion,
+  ),
+  (tr('Usuarios', 'Users'), FontAwesomeIcons.userGroup, RoutePaths.usuarios),
+  (tr('Planes', 'Plans'), FontAwesomeIcons.crown, RoutePaths.planes),
 ];
 
 const primaryNavIndexes = <int>[0, 1, 2, 3, 4, 5, 6, 7, 8];
@@ -38,13 +67,7 @@ const creatablePaths = <String>{
   RoutePaths.gastos,
 };
 
-final _mxnFormatter = NumberFormat.currency(
-  locale: 'en_US',
-  symbol: 'MXN ',
-  decimalDigits: 2,
-);
-
-String formatMxn(num value) => _mxnFormatter.format(value);
+String formatMxn(num value) => formatMoney(value);
 
 const _microInteractionDuration = Duration(milliseconds: 180);
 const _microInteractionCurve = Curves.easeOutCubic;
@@ -69,8 +92,8 @@ InputDecoration cotimaxDropdownDecoration({
   EdgeInsetsGeometry? contentPadding,
 }) {
   return InputDecoration(
-    hintText: hintText,
-    helperText: helperText,
+    hintText: hintText == null ? null : trText(hintText),
+    helperText: helperText == null ? null : trText(helperText),
     isDense: isDense,
     contentPadding:
         contentPadding ??
@@ -515,8 +538,8 @@ class SidebarNavigation extends StatelessWidget {
               Container(height: 1, color: AppColors.border),
               const SizedBox(height: AppSpacing.md),
               if (!compact)
-                const Text(
-                  'COMERCIAL',
+                Text(
+                  trText('COMERCIAL'),
                   style: TextStyle(
                     color: AppColors.textMuted,
                     fontSize: 10,
@@ -548,8 +571,8 @@ class SidebarNavigation extends StatelessWidget {
                     Container(height: 1, color: AppColors.border),
                     if (!compact) ...[
                       const SizedBox(height: 12),
-                      const Text(
-                        'ADMINISTRACION',
+                      Text(
+                        trText('ADMINISTRACION'),
                         style: TextStyle(
                           color: AppColors.textMuted,
                           fontSize: 10,
@@ -610,11 +633,11 @@ class SidebarNavigation extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 10),
-                        const Expanded(
+                        Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
+                              const Text(
                                 'Daniel Nuno',
                                 style: TextStyle(
                                   color: AppColors.textPrimary,
@@ -624,8 +647,8 @@ class SidebarNavigation extends StatelessWidget {
                               ),
                               SizedBox(height: 2),
                               Text(
-                                'Administrador',
-                                style: TextStyle(
+                                trText('Administrador'),
+                                style: const TextStyle(
                                   color: AppColors.textSecondary,
                                   fontWeight: FontWeight.w600,
                                   fontSize: 11,
@@ -716,7 +739,7 @@ class Topbar extends StatelessWidget {
             SizedBox(
               width: 360,
               child: SearchField(
-                hint: 'Busca clientes, folios, productos o acciones',
+                hint: trText('Busca clientes, folios, productos o acciones'),
                 readOnly: true,
                 onTap: onSearchTap,
                 suffix: const _CommandPaletteShortcutHint(),
@@ -732,17 +755,17 @@ class Topbar extends StatelessWidget {
                 borderRadius: BorderRadius.circular(AppSpacing.radius),
                 color: AppColors.background,
               ),
-              child: const Row(
+              child: Row(
                 children: [
-                  FaIcon(
+                  const FaIcon(
                     FontAwesomeIcons.calendarDays,
                     size: 13,
                     color: AppColors.textSecondary,
                   ),
-                  SizedBox(width: 8),
+                  const SizedBox(width: 8),
                   Text(
-                    'Vista diaria',
-                    style: TextStyle(
+                    trText('Vista diaria'),
+                    style: const TextStyle(
                       fontSize: 12,
                       color: AppColors.textPrimary,
                       fontWeight: FontWeight.w700,
@@ -765,7 +788,7 @@ class Topbar extends StatelessWidget {
               ),
               onPressed: () {},
               icon: const FaIcon(FontAwesomeIcons.gem, size: 14),
-              label: const Text('Actualizar a Pro'),
+              label: Text(trText('Actualizar a Pro')),
             ),
           ],
         ],
@@ -810,7 +833,7 @@ class BreadCrumbs extends StatelessWidget {
       children: [
         for (var i = 0; i < items.length; i++)
           Text(
-            i == items.length - 1 ? items[i] : '${items[i]} /',
+            i == items.length - 1 ? trText(items[i]) : '${trText(items[i])} /',
             style: TextStyle(
               color: i == items.length - 1
                   ? AppColors.textPrimary
@@ -843,10 +866,10 @@ class PageHeader extends StatelessWidget {
         ? Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              BreadCrumbs(items: ['Inicio', title]),
+              BreadCrumbs(items: [trText('Inicio'), trText(title)]),
               const SizedBox(height: 10),
               Text(
-                title,
+                trText(title),
                 style: const TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.w800,
@@ -856,7 +879,7 @@ class PageHeader extends StatelessWidget {
               if (subtitle.trim().isNotEmpty) ...[
                 const SizedBox(height: 6),
                 Text(
-                  subtitle,
+                  trText(subtitle),
                   style: const TextStyle(
                     color: AppColors.textSecondary,
                     fontWeight: FontWeight.w600,
@@ -877,10 +900,10 @@ class PageHeader extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    BreadCrumbs(items: ['Inicio', title]),
+                    BreadCrumbs(items: [trText('Inicio'), trText(title)]),
                     const SizedBox(height: 10),
                     Text(
-                      title,
+                      trText(title),
                       style: const TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.w800,
@@ -890,7 +913,7 @@ class PageHeader extends StatelessWidget {
                     if (subtitle.trim().isNotEmpty) ...[
                       const SizedBox(height: 6),
                       Text(
-                        subtitle,
+                        trText(subtitle),
                         style: const TextStyle(
                           color: AppColors.textSecondary,
                           fontWeight: FontWeight.w600,
@@ -912,18 +935,29 @@ List<Widget> buildImportExportHeaderActions(
   BuildContext context, {
   required String entityLabel,
 }) {
+  final translatedEntityLabel = trText(entityLabel);
   return [
     OutlinedButton.icon(
-      onPressed: () =>
-          ToastHelper.show(context, 'Importar $entityLabel disponible pronto.'),
+      onPressed: () => ToastHelper.show(
+        context,
+        tr(
+          'Importar $entityLabel disponible pronto.',
+          'Import for $translatedEntityLabel coming soon.',
+        ),
+      ),
       icon: const Icon(Icons.file_upload_outlined),
-      label: const Text('Importar'),
+      label: Text(trText('Importar')),
     ),
     OutlinedButton.icon(
-      onPressed: () =>
-          ToastHelper.show(context, 'Exportar $entityLabel disponible pronto.'),
+      onPressed: () => ToastHelper.show(
+        context,
+        tr(
+          'Exportar $entityLabel disponible pronto.',
+          'Export for $translatedEntityLabel coming soon.',
+        ),
+      ),
       icon: const Icon(Icons.file_download_outlined),
-      label: const Text('Exportar'),
+      label: Text(trText('Exportar')),
     ),
   ];
 }
@@ -1033,7 +1067,7 @@ class SectionCard extends StatelessWidget {
                           ],
                           Expanded(
                             child: Text(
-                              title!,
+                              trText(title!),
                               style: const TextStyle(
                                 fontWeight: FontWeight.w800,
                                 fontSize: 17,
@@ -1159,7 +1193,7 @@ class SearchField extends StatelessWidget {
             color: AppColors.textMuted,
           ),
         ),
-        hintText: hint,
+        hintText: trText(hint),
         prefixIconConstraints: const BoxConstraints(minWidth: 42),
         suffixIcon: suffix == null
             ? null
@@ -1216,7 +1250,7 @@ class InlineEmptyMessage extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 28),
         child: Text(
-          message,
+          trText(message),
           textAlign: TextAlign.center,
           style: const TextStyle(
             color: AppColors.textSecondary,
@@ -1226,6 +1260,43 @@ class InlineEmptyMessage extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class EmptyFieldState extends StatelessWidget {
+  const EmptyFieldState({
+    required this.message,
+    required this.buttonLabel,
+    required this.onPressed,
+    this.hintText = 'No hay datos.',
+    super.key,
+  });
+
+  final String message;
+  final String buttonLabel;
+  final VoidCallback onPressed;
+  final String hintText;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextFormField(
+          enabled: false,
+          decoration: InputDecoration(
+            hintText: trText(hintText),
+            helperText: trText(message),
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextButton.icon(
+          onPressed: onPressed,
+          icon: const Icon(Icons.add_rounded, size: 16),
+          label: Text(trText(buttonLabel)),
+        ),
+      ],
     );
   }
 }
@@ -1244,44 +1315,49 @@ class EmptyStateWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: SizedBox(
-        width: 520,
-        child: SectionCard(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                height: 64,
-                width: 64,
-                decoration: BoxDecoration(
-                  color: AppColors.background,
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: AppColors.border),
+    return SizedBox(
+      width: double.infinity,
+      child: SectionCard(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  height: 64,
+                  width: 64,
+                  decoration: BoxDecoration(
+                    color: AppColors.background,
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: const Icon(
+                    Icons.inbox_outlined,
+                    size: 28,
+                    color: AppColors.textMuted,
+                  ),
                 ),
-                child: const Icon(
-                  Icons.inbox_outlined,
-                  size: 28,
-                  color: AppColors.textMuted,
+                const SizedBox(height: 10),
+                Text(
+                  trText(title),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 18,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 18,
+                const SizedBox(height: 4),
+                Text(
+                  trText(subtitle),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: AppColors.textSecondary),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.textSecondary),
-              ),
-              if (action != null) const SizedBox(height: 12),
-              if (action != null) action!,
-            ],
+                if (action != null) const SizedBox(height: 12),
+                if (action != null) Center(child: action!),
+              ],
+            ),
           ),
         ),
       ),
@@ -1293,21 +1369,124 @@ class ErrorStateWidget extends StatelessWidget {
   const ErrorStateWidget({
     required this.message,
     required this.onRetry,
+    this.details,
     super.key,
   });
 
   final String message;
   final VoidCallback onRetry;
+  final String? details;
 
   @override
   Widget build(BuildContext context) {
-    return EmptyStateWidget(
-      title: 'Ocurrio un error',
-      subtitle: message,
-      action: OutlinedButton.icon(
-        onPressed: onRetry,
-        icon: const Icon(Icons.refresh),
-        label: const Text('Reintentar'),
+    return SizedBox(
+      width: double.infinity,
+      child: SectionCard(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 640),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  height: 64,
+                  width: 64,
+                  decoration: BoxDecoration(
+                    color: AppColors.background,
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: const Icon(
+                    Icons.inbox_outlined,
+                    size: 28,
+                    color: AppColors.textMuted,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  trText('Ocurrio un error'),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 18,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  trText(message),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: AppColors.textSecondary),
+                ),
+                if (details != null && details!.trim().isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.background,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: SelectableText(
+                      details!,
+                      textAlign: TextAlign.left,
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: onRetry,
+                  icon: const Icon(Icons.refresh),
+                  label: Text(trText('Reintentar')),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class LoadingStateWidget extends StatelessWidget {
+  const LoadingStateWidget({this.message, super.key});
+
+  final String? message;
+
+  @override
+  Widget build(BuildContext context) {
+    return SectionCard(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 120),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(
+                width: 28,
+                height: 28,
+                child: CircularProgressIndicator(strokeWidth: 2.4),
+              ),
+              if (message != null) ...[
+                const SizedBox(height: 12),
+                Text(
+                  trText(message!),
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -1408,25 +1587,65 @@ class _SkeletonBoxState extends State<SkeletonBox>
   }
 }
 
-class ConfirmDialog extends StatelessWidget {
-  const ConfirmDialog({required this.title, required this.message, super.key});
+class ConfirmDialog extends StatefulWidget {
+  const ConfirmDialog({
+    required this.title,
+    required this.message,
+    this.onConfirmAsync,
+    super.key,
+  });
 
   final String title;
   final String message;
+  final Future<void> Function()? onConfirmAsync;
+
+  @override
+  State<ConfirmDialog> createState() => _ConfirmDialogState();
+}
+
+class _ConfirmDialogState extends State<ConfirmDialog> {
+  bool _isSubmitting = false;
+
+  Future<void> _handleConfirm() async {
+    if (_isSubmitting) return;
+    if (widget.onConfirmAsync == null) {
+      Navigator.of(context).pop(true);
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+    try {
+      await widget.onConfirmAsync!.call();
+      if (!mounted) return;
+      Navigator.of(context).pop(true);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text(title),
-      content: Text(message),
+      title: Text(trText(widget.title)),
+      content: Text(trText(widget.message)),
       actions: [
         OutlinedButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Cancelar'),
+          onPressed: _isSubmitting
+              ? null
+              : () => Navigator.of(context).pop(false),
+          child: Text(trText('Cancelar')),
         ),
         ElevatedButton(
-          onPressed: () => Navigator.of(context).pop(true),
-          child: const Text('Confirmar'),
+          onPressed: _handleConfirm,
+          child: _isSubmitting
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Text(trText('Confirmar')),
         ),
       ],
     );
@@ -1436,22 +1655,39 @@ class ConfirmDialog extends StatelessWidget {
 Future<bool> showDeleteConfirmation(
   BuildContext context, {
   required String entityLabel,
+  String? title,
+  String? message,
+  Future<void> Function()? onConfirmAsync,
 }) async {
+  final translatedEntityLabel = trText(entityLabel);
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (_) => ConfirmDialog(
-      title: 'Eliminar $entityLabel',
-      message: '¿Estás seguro que quieres eliminar este $entityLabel?',
+      title:
+          title ?? tr('Eliminar $entityLabel', 'Delete $translatedEntityLabel'),
+      message:
+          message ??
+          tr(
+            '¿Estás seguro que quieres eliminar este $entityLabel?',
+            'Are you sure you want to delete this $translatedEntityLabel?',
+          ),
+      onConfirmAsync: onConfirmAsync,
     ),
   );
   return confirmed ?? false;
 }
 
 class ModalBase extends StatelessWidget {
-  const ModalBase({required this.title, required this.child, super.key});
+  const ModalBase({
+    required this.title,
+    required this.child,
+    this.showCloseButton = true,
+    super.key,
+  });
 
   final String title;
   final Widget child;
+  final bool showCloseButton;
 
   @override
   Widget build(BuildContext context) {
@@ -1488,7 +1724,7 @@ class ModalBase extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        title,
+                        trText(title),
                         style: const TextStyle(
                           fontWeight: FontWeight.w800,
                           fontSize: 18,
@@ -1496,14 +1732,15 @@ class ModalBase extends StatelessWidget {
                         ),
                       ),
                     ),
-                    _HoverCircleButton(
-                      onTap: () => Navigator.of(context).pop(),
-                      icon: Icons.close,
-                      baseColor: AppColors.background,
-                      hoverColor: AppColors.accent,
-                      baseIconColor: AppColors.textPrimary,
-                      hoverIconColor: AppColors.white,
-                    ),
+                    if (showCloseButton)
+                      _HoverCircleButton(
+                        onTap: () => Navigator.of(context).pop(),
+                        icon: Icons.close,
+                        baseColor: AppColors.background,
+                        hoverColor: AppColors.accent,
+                        baseIconColor: AppColors.textPrimary,
+                        hoverIconColor: AppColors.white,
+                      ),
                   ],
                 ),
               ),
@@ -1538,7 +1775,7 @@ class SideDrawerForm extends StatelessWidget {
       child: SafeArea(
         child: FocusTraversalGroup(
           policy: WidgetOrderTraversalPolicy(),
-          child: SectionCard(title: title, child: child),
+          child: SectionCard(title: trText(title), child: child),
         ),
       ),
     );
@@ -1557,7 +1794,7 @@ class FormFieldWrapper extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          label,
+          trText(label),
           style: const TextStyle(
             fontWeight: FontWeight.w700,
             fontSize: 12,
@@ -1591,7 +1828,7 @@ class CurrencyInput extends StatelessWidget {
         inputFormatters: const [
           NumericTextInputFormatter(useGrouping: true, maxDecimalDigits: 2),
         ],
-        decoration: const InputDecoration(prefixText: r'$ '),
+        decoration: InputDecoration(prefixText: '${currentCurrencyCode()} '),
       ),
     );
   }
@@ -1617,7 +1854,9 @@ class DatePickerField extends StatelessWidget {
         onTap: onTap,
         child: InputDecorator(
           decoration: const InputDecoration(),
-          child: Text(DateFormat('dd/MM/yyyy').format(value)),
+          child: Text(
+            DateFormat('dd/MM/yyyy', currentIntlLocale()).format(value),
+          ),
         ),
       ),
     );
@@ -1656,7 +1895,7 @@ class SelectField<T> extends StatelessWidget {
               (option) => DropdownMenuItem<T>(
                 value: option,
                 child: Text(
-                  option.toString().split('.').last,
+                  trText(option.toString().split('.').last),
                   overflow: TextOverflow.ellipsis,
                   style: cotimaxDropdownTextStyle,
                 ),
@@ -1692,7 +1931,7 @@ class MultiSelectField extends StatelessWidget {
             .map(
               (option) => FilterChip(
                 selected: selected.contains(option),
-                label: Text(option),
+                label: Text(trText(option)),
                 onSelected: (_) {},
               ),
             )
@@ -1725,7 +1964,7 @@ class StatusBadge extends StatelessWidget {
         border: Border.all(color: style.$1.withValues(alpha: 0.2)),
       ),
       child: Text(
-        style.$2,
+        trText(style.$2),
         style: TextStyle(
           color: style.$1,
           fontWeight: FontWeight.w700,
@@ -1781,7 +2020,7 @@ class UsageProgressBar extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '$label: $used/${limit <= 0 ? 'Ilimitado' : limit}',
+          '${trText(label)}: $used/${limit <= 0 ? trText('Ilimitado') : limit}',
           style: const TextStyle(fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 6),
@@ -1940,6 +2179,7 @@ class CotimaxDataTable extends StatelessWidget {
     required this.rows,
     this.title,
     this.trailing,
+    this.toolbar,
     this.emptyTitle = 'Sin registros para mostrar.',
     this.emptySubtitle = 'Ajusta el rango o agrega datos para ver actividad.',
     super.key,
@@ -1949,6 +2189,7 @@ class CotimaxDataTable extends StatelessWidget {
   final List<DataRow> rows;
   final String? title;
   final Widget? trailing;
+  final Widget? toolbar;
   final String emptyTitle;
   final String emptySubtitle;
 
@@ -1957,9 +2198,14 @@ class CotimaxDataTable extends StatelessWidget {
     return SectionCard(
       title: title,
       trailing: trailing,
-      child: rows.isEmpty
-          ? _InlineEmptyTableState(title: emptyTitle, subtitle: emptySubtitle)
-          : LayoutBuilder(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (toolbar != null) ...[toolbar!, const SizedBox(height: 12)],
+          if (rows.isEmpty)
+            _InlineEmptyTableState(title: emptyTitle, subtitle: emptySubtitle)
+          else
+            LayoutBuilder(
               builder: (context, constraints) {
                 return ClipRRect(
                   borderRadius: BorderRadius.circular(AppSpacing.radius),
@@ -1982,6 +2228,73 @@ class CotimaxDataTable extends StatelessWidget {
                 );
               },
             ),
+        ],
+      ),
+    );
+  }
+}
+
+class TableSelectionToolbar extends StatelessWidget {
+  const TableSelectionToolbar({
+    required this.count,
+    required this.entityLabel,
+    required this.onClear,
+    required this.onDelete,
+    this.onEdit,
+    this.pluralLabel,
+    super.key,
+  });
+
+  final int count;
+  final String entityLabel;
+  final String? pluralLabel;
+  final VoidCallback onClear;
+  final VoidCallback onDelete;
+  final VoidCallback? onEdit;
+
+  @override
+  Widget build(BuildContext context) {
+    final singular = trText(entityLabel);
+    final plural = trText(pluralLabel ?? '${entityLabel}s');
+    final label = count == 1
+        ? tr('1 $entityLabel seleccionado', '1 $singular selected')
+        : tr('$count $plural seleccionados', '$count $plural selected');
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(AppSpacing.radius),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Wrap(
+        spacing: 10,
+        runSpacing: 10,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          if (onEdit != null)
+            OutlinedButton.icon(
+              onPressed: onEdit,
+              icon: const Icon(Icons.edit_rounded, size: 16),
+              label: Text(trText('Editar')),
+            ),
+          OutlinedButton.icon(
+            onPressed: onDelete,
+            icon: const Icon(Icons.delete_outline_rounded, size: 16),
+            label: Text(trText('Eliminar')),
+          ),
+          TextButton(onPressed: onClear, child: Text(trText('Limpiar'))),
+        ],
+      ),
     );
   }
 }
@@ -2019,7 +2332,7 @@ class _InlineEmptyTableState extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            title,
+            trText(title),
             style: const TextStyle(
               color: AppColors.textPrimary,
               fontWeight: FontWeight.w800,
@@ -2028,7 +2341,7 @@ class _InlineEmptyTableState extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            subtitle,
+            trText(subtitle),
             style: const TextStyle(
               color: AppColors.textSecondary,
               fontWeight: FontWeight.w600,
@@ -2275,7 +2588,7 @@ class ToastHelper {
     ToastVariant variant = ToastVariant.exito,
   }) {
     final host = ToastViewport.maybeOf(context) ?? ToastViewportState.current;
-    host?.show(message, variant: variant);
+    host?.show(trText(message), variant: variant);
   }
 
   static void showSuccess(BuildContext context, String message) {
@@ -2561,9 +2874,9 @@ class _CommandPaletteDialogState extends State<_CommandPaletteDialog> {
                   children: [
                     Row(
                       children: [
-                        const Expanded(
+                        Expanded(
                           child: Text(
-                            'Búsqueda global',
+                            trText('Búsqueda global'),
                             style: TextStyle(
                               color: AppColors.textPrimary,
                               fontWeight: FontWeight.w800,
@@ -2594,9 +2907,14 @@ class _CommandPaletteDialogState extends State<_CommandPaletteDialog> {
                     Row(
                       children: [
                         Text(
-                          _query.trim().isEmpty
-                              ? 'Sugerencias listas para navegar'
-                              : '${matches.length} resultados relevantes',
+                          tr(
+                            _query.trim().isEmpty
+                                ? 'Sugerencias listas para navegar'
+                                : '${matches.length} resultados relevantes',
+                            _query.trim().isEmpty
+                                ? 'Suggestions ready to navigate'
+                                : '${matches.length} relevant results',
+                          ),
                           style: const TextStyle(
                             color: AppColors.textSecondary,
                             fontWeight: FontWeight.w700,
@@ -2604,8 +2922,8 @@ class _CommandPaletteDialogState extends State<_CommandPaletteDialog> {
                           ),
                         ),
                         const Spacer(),
-                        const Text(
-                          'Enter abre el primero',
+                        Text(
+                          trText('Enter abre el primero'),
                           style: TextStyle(
                             color: AppColors.textMuted,
                             fontWeight: FontWeight.w700,
@@ -2692,7 +3010,7 @@ class _CommandPaletteTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      entry.title,
+                      trText(entry.title),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -2709,7 +3027,7 @@ class _CommandPaletteTile extends StatelessWidget {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              entry.subtitle,
+                              trText(entry.subtitle),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
@@ -2948,7 +3266,7 @@ class ImageUploadField extends StatelessWidget {
       child: OutlinedButton.icon(
         onPressed: () {},
         icon: const Icon(Icons.upload_file),
-        label: const Text('Subir imagen'),
+        label: Text(trText('Subir imagen')),
       ),
     );
   }
@@ -3058,7 +3376,7 @@ class LimitUsageWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SectionCard(
-      title: 'Consumo del plan',
+      title: trText('Consumo del plan'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -3081,7 +3399,7 @@ class LimitUsageWidget extends StatelessWidget {
                 backgroundColor: AppColors.accent,
               ),
               onPressed: () {},
-              child: const Text('Upgrade ahora'),
+              child: Text(trText('Upgrade ahora')),
             ),
           ),
         ],

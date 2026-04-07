@@ -98,7 +98,7 @@ class ProductoUpsertPayload {
   Map<String, dynamic> toJson() {
     return {
       'p_id': id,
-      'p_tipo': tipo.name,
+      'p_tipo': tipo.key,
       'p_nombre': nombre,
       'p_descripcion': descripcion,
       'p_precio_base': precioBase,
@@ -219,7 +219,7 @@ class CotizacionUpsertPayload {
       'p_notas_privadas': notasPrivadas,
       'p_terminos': terminos,
       'p_pie_pagina': piePagina,
-      'p_estatus': estatus.name,
+      'p_estatus': estatus.key,
       'p_lineas': lineas.map((item) => item.toJson()).toList(),
     };
   }

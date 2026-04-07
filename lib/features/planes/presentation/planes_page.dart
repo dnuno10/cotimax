@@ -1,3 +1,4 @@
+import 'package:cotimax/core/localization/app_localization.dart';
 import 'package:cotimax/features/planes/application/planes_controller.dart';
 import 'package:cotimax/shared/models/domain_models.dart';
 import 'package:cotimax/shared/widgets/cotimax_widgets.dart';
@@ -27,7 +28,7 @@ class PlanesPage extends ConsumerWidget {
                 PlanBadge(planName: sub.planId.toUpperCase()),
                 const SizedBox(width: 8),
                 Text(
-                  'Estado: ${sub.estado} | Usuarios activos: ${sub.usuariosActivos}',
+                  '${trText('Estatus')}: ${trText(sub.estado)} | ${tr('Usuarios activos', 'Active users')}: ${sub.usuariosActivos}',
                 ),
               ],
             ),
@@ -65,21 +66,23 @@ class PlanesPage extends ConsumerWidget {
                             Text(plan.descripcion),
                             const SizedBox(height: 10),
                             Text(
-                              'Clientes: ${plan.limiteClientes <= 0 ? 'Ilimitados' : plan.limiteClientes}',
+                              '${trText('Clientes')}: ${plan.limiteClientes <= 0 ? tr('Ilimitados', 'Unlimited') : plan.limiteClientes}',
                             ),
                             Text(
-                              'Productos: ${plan.limiteProductos <= 0 ? 'Ilimitados' : plan.limiteProductos}',
+                              '${trText('Productos')}: ${plan.limiteProductos <= 0 ? tr('Ilimitados', 'Unlimited') : plan.limiteProductos}',
                             ),
                             Text(
-                              'Cotizaciones mes: ${plan.limiteCotizacionesMensuales <= 0 ? 'Ilimitadas' : plan.limiteCotizacionesMensuales}',
+                              '${tr('Cotizaciones mes', 'Monthly quotes')}: ${plan.limiteCotizacionesMensuales <= 0 ? tr('Ilimitadas', 'Unlimited') : plan.limiteCotizacionesMensuales}',
                             ),
-                            Text('Usuarios: ${_userLimitLabel(plan)}'),
+                            Text(
+                              '${trText('Usuarios')}: ${_userLimitLabel(plan)}',
+                            ),
                             const SizedBox(height: 12),
                             SizedBox(
                               width: double.infinity,
                               child: ElevatedButton(
                                 onPressed: () {},
-                                child: const Text('Cambiar plan'),
+                                child: Text(trText('Cambiar plan')),
                               ),
                             ),
                           ],
@@ -92,9 +95,9 @@ class PlanesPage extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 12),
-        const SectionCard(
+        SectionCard(
           title: 'Notas de roadmap',
-          child: Text('Reportes por usuario: proximamente.'),
+          child: Text(trText('Reportes por usuario: proximamente.')),
         ),
       ],
     );
@@ -103,12 +106,12 @@ class PlanesPage extends ConsumerWidget {
 
 String _planPriceLabel(Plan plan) {
   if (plan.billingMode == 'per_user_monthly') {
-    return '\$${plan.precioPorUsuario.toStringAsFixed(0)} / usuario / mes';
+    return '${formatMoney(plan.precioPorUsuario, decimalDigits: 0)} / ${tr('usuario', 'user')} / ${tr('mes', 'month')}';
   }
   if (plan.precioMensual <= 0) {
-    return 'Gratis';
+    return trText('Gratis');
   }
-  return '\$${plan.precioMensual.toStringAsFixed(0)} / mes';
+  return '${formatMoney(plan.precioMensual, decimalDigits: 0)} / ${tr('mes', 'month')}';
 }
 
 String _userLimitLabel(Plan plan) {

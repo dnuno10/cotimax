@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:cotimax/core/constants/app_colors.dart';
+import 'package:cotimax/core/localization/app_localization.dart';
 import 'package:cotimax/features/clientes/application/clientes_controller.dart';
 import 'package:cotimax/features/cotizaciones/application/cotizaciones_controller.dart';
 import 'package:cotimax/features/gastos/application/gastos_controller.dart';
@@ -306,7 +307,7 @@ class _AnalyticsSummaryEntry extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          item.title,
+          trText(item.title),
           style: const TextStyle(
             color: AppColors.textSecondary,
             fontSize: 12,
@@ -325,7 +326,7 @@ class _AnalyticsSummaryEntry extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         Text(
-          item.subtitle,
+          trText(item.subtitle),
           style: const TextStyle(
             color: AppColors.textPrimary,
             fontSize: 12,
@@ -858,7 +859,7 @@ class _AnalyticsLegend extends StatelessWidget {
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  item.$1,
+                  trText(item.$1),
                   style: const TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 11,
@@ -904,7 +905,7 @@ class _ProjectionRangeDropdown extends StatelessWidget {
             (option) => DropdownMenuItem(
               value: option,
               child: Text(
-                option.label,
+                trText(option.label),
                 overflow: TextOverflow.ellipsis,
                 style: cotimaxDropdownTextStyle,
               ),
@@ -957,14 +958,14 @@ class _ResultsBreakdownList extends StatelessWidget {
       ),
       child: Column(
         children: [
-          const Padding(
+          Padding(
             padding: EdgeInsets.symmetric(horizontal: 8),
             child: Row(
               children: [
                 Expanded(
                   flex: 2,
                   child: Text(
-                    'Periodo',
+                    trText('Periodo'),
                     style: TextStyle(
                       color: AppColors.textSecondary,
                       fontWeight: FontWeight.w800,
@@ -974,7 +975,7 @@ class _ResultsBreakdownList extends StatelessWidget {
                 ),
                 Expanded(
                   child: Text(
-                    'Ingresos',
+                    trText('Ingresos'),
                     style: TextStyle(
                       color: AppColors.textSecondary,
                       fontWeight: FontWeight.w800,
@@ -984,7 +985,7 @@ class _ResultsBreakdownList extends StatelessWidget {
                 ),
                 Expanded(
                   child: Text(
-                    'Gastos',
+                    trText('Gastos'),
                     style: TextStyle(
                       color: AppColors.textSecondary,
                       fontWeight: FontWeight.w800,
@@ -994,7 +995,7 @@ class _ResultsBreakdownList extends StatelessWidget {
                 ),
                 Expanded(
                   child: Text(
-                    'Libre',
+                    trText('Libre'),
                     style: TextStyle(
                       color: AppColors.textSecondary,
                       fontWeight: FontWeight.w800,
@@ -1025,7 +1026,9 @@ class _ResultsExpansionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final periodType = row.isProjected ? 'Proyeccion' : 'Actual';
+    final periodType = row.isProjected
+        ? trText('Proyeccion')
+        : trText('Actual');
 
     return Theme(
       data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
@@ -1055,7 +1058,7 @@ class _ResultsExpansionRow extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      row.label,
+                      trText(row.label),
                       style: const TextStyle(
                         color: AppColors.textPrimary,
                         fontWeight: FontWeight.w800,
@@ -1113,7 +1116,10 @@ class _ResultsExpansionRow extends StatelessWidget {
           subtitle: Padding(
             padding: const EdgeInsets.only(top: 6),
             child: Text(
-              '$periodType • ${row.sections.length} secciones',
+              tr(
+                '$periodType • ${row.sections.length} secciones',
+                '$periodType • ${row.sections.length} sections',
+              ),
               style: const TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 11,
@@ -1168,27 +1174,27 @@ class _PeriodMetricsStrip extends StatelessWidget {
       runSpacing: 10,
       children: [
         _PeriodMetricLine(
-          label: 'Ingresos',
+          label: trText('Ingresos'),
           value: formatMxn(row.ingresos),
           color: AppColors.primary,
         ),
         _PeriodMetricLine(
-          label: 'Gastos',
+          label: trText('Gastos'),
           value: formatMxn(row.gastos),
           color: AppColors.accent,
         ),
         _PeriodMetricLine(
-          label: 'Utilidad confirmada',
+          label: trText('Utilidad confirmada'),
           value: formatMxn(row.utilidadConfirmada),
           color: AppColors.success,
         ),
         _PeriodMetricLine(
-          label: 'Flujo libre',
+          label: trText('Flujo libre'),
           value: formatMxn(row.dineroLibre),
           color: row.dineroLibre >= 0 ? AppColors.success : AppColors.error,
         ),
         _PeriodMetricLine(
-          label: 'Cobertura',
+          label: trText('Cobertura'),
           value: '${row.coverageRatio.toStringAsFixed(2)}x',
           color: AppColors.textSecondary,
         ),
@@ -1224,7 +1230,7 @@ class _PeriodMetricLine extends StatelessWidget {
             fontWeight: FontWeight.w700,
           ),
           children: [
-            TextSpan(text: '$label: '),
+            TextSpan(text: '${trText(label)}: '),
             TextSpan(
               text: value,
               style: TextStyle(
@@ -1266,7 +1272,7 @@ class _BreakdownSectionCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  section.title,
+                  trText(section.title),
                   style: const TextStyle(
                     color: AppColors.textPrimary,
                     fontWeight: FontWeight.w800,
@@ -1287,7 +1293,10 @@ class _BreakdownSectionCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            '${section.items.length} movimientos',
+            tr(
+              '${section.items.length} movimientos',
+              '${section.items.length} entries',
+            ),
             style: const TextStyle(
               color: AppColors.textSecondary,
               fontWeight: FontWeight.w700,
@@ -1342,7 +1351,7 @@ class _BreakdownSectionItemTile extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  item.label,
+                  trText(item.label),
                   style: const TextStyle(
                     color: AppColors.textPrimary,
                     fontWeight: FontWeight.w700,
@@ -1364,7 +1373,7 @@ class _BreakdownSectionItemTile extends StatelessWidget {
           if (item.subtitle.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(
-              item.subtitle,
+              trText(item.subtitle),
               style: const TextStyle(
                 color: AppColors.textSecondary,
                 fontWeight: FontWeight.w600,
@@ -1457,7 +1466,7 @@ List<_AnalyticsRow> _buildHistoricalMonths({
 
     return _AnalyticsRow(
       period: monthKey,
-      label: DateFormat('MMM yy').format(monthKey),
+      label: DateFormat('MMM yy', currentIntlLocale()).format(monthKey),
       ingresos: ingresosMes,
       gastos: gastosMes,
       utilidadConfirmada: utilidadMes,
@@ -1482,7 +1491,7 @@ List<_AnalyticsRow> _buildHistoricalMonths({
                   label:
                       clientes[item.clienteId]?.nombre ?? 'Ingreso registrado',
                   subtitle:
-                      '${DateFormat('dd/MM/yyyy').format(item.fecha)} • ${item.metodoPago.label} • ${item.referencia}',
+                      '${DateFormat('dd/MM/yyyy', currentIntlLocale()).format(item.fecha)} • ${trText(item.metodoPago.label)} • ${item.referencia}',
                   amount: item.monto,
                 ),
               )
@@ -1498,7 +1507,7 @@ List<_AnalyticsRow> _buildHistoricalMonths({
                       categorias[item.gastoCategoriaId]?.nombre ??
                       item.gastoCategoriaId,
                   subtitle:
-                      '${DateFormat('dd/MM/yyyy').format(item.fecha)} • ${item.proveedor} • ${item.descripcion}',
+                      '${DateFormat('dd/MM/yyyy', currentIntlLocale()).format(item.fecha)} • ${item.proveedor} • ${item.descripcion}',
                   amount: -item.monto,
                 ),
               )
@@ -1545,7 +1554,7 @@ List<_AnalyticsRow> _buildForecastMonths({
 
     final row = _AnalyticsRow(
       period: currentMonth,
-      label: DateFormat('MMM yy').format(currentMonth),
+      label: DateFormat('MMM yy', currentIntlLocale()).format(currentMonth),
       ingresos: projectedIngresos,
       gastos: projectedGastos,
       utilidadConfirmada: projectedUtility,
@@ -1722,7 +1731,7 @@ List<_AnalyticsRow> _buildWeeklyRows({
 
     return _AnalyticsRow(
       period: weekStart,
-      label: DateFormat('dd MMM').format(weekStart),
+      label: DateFormat('dd MMM', currentIntlLocale()).format(weekStart),
       ingresos: ingresosSemana,
       gastos: gastosSemana,
       utilidadConfirmada: utilidadSemana,
@@ -1795,7 +1804,7 @@ List<_AnalyticsSectionItem> _approvedQuoteItemsForMonth({
       _AnalyticsSectionItem(
         label: cotizacion.folio,
         subtitle:
-            '${clientes[cotizacion.clienteId]?.nombre ?? cotizacion.clienteId} • ${DateFormat('dd/MM/yyyy').format(cotizacion.fechaEmision)}',
+            '${clientes[cotizacion.clienteId]?.nombre ?? cotizacion.clienteId} • ${DateFormat('dd/MM/yyyy', currentIntlLocale()).format(cotizacion.fechaEmision)}',
         amount: utility,
       ),
     );

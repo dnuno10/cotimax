@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:cotimax/core/constants/app_colors.dart';
+import 'package:cotimax/core/localization/app_localization.dart';
 import 'package:cotimax/core/routing/route_paths.dart';
 import 'package:cotimax/features/clientes/application/clientes_controller.dart';
 import 'package:cotimax/features/cotizaciones/application/cotizaciones_controller.dart';
@@ -385,7 +386,8 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
       );
     });
     await _simulateDashboardRefresh(
-      toast: 'Dashboard actualizado para ${_rangeLabel(_selectedRange)}.',
+      toast:
+          '${trText('Dashboard actualizado para')} ${_rangeLabel(_selectedRange)}.',
     );
   }
 
@@ -588,7 +590,7 @@ class _IngresosPanel extends StatelessWidget {
                 fontWeight: FontWeight.w600,
               ),
               children: [
-                const TextSpan(text: 'Total del rango '),
+                TextSpan(text: '${trText('Total del rango')} '),
                 TextSpan(
                   text: formatMxn(totalIngresos),
                   style: const TextStyle(
@@ -598,7 +600,7 @@ class _IngresosPanel extends StatelessWidget {
                   ),
                 ),
                 const TextSpan(text: '  |  '),
-                const TextSpan(text: 'Cotizaciones aprobadas '),
+                TextSpan(text: '${trText('Cotizaciones aprobadas')} '),
                 TextSpan(
                   text: '$numeroVentas',
                   style: const TextStyle(
@@ -633,18 +635,22 @@ class _IngresosPanel extends StatelessWidget {
             height: 58,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
+              children: [
                 Text(
-                  'Ritmo comercial: cotizaciones aprobadas convertidas a ingreso en el rango actual.',
+                  trText(
+                    'Ritmo comercial: cotizaciones aprobadas convertidas a ingreso en el rango actual.',
+                  ),
                   style: TextStyle(
                     color: AppColors.primary,
                     fontWeight: FontWeight.w800,
                     fontSize: 15,
                   ),
                 ),
-                SizedBox(height: 8),
+                const SizedBox(height: 8),
                 Text(
-                  'Esta vista resume cuanto ingreso entro y que tan activo estuvo el cierre comercial durante el periodo.',
+                  trText(
+                    'Esta vista resume cuanto ingreso entro y que tan activo estuvo el cierre comercial durante el periodo.',
+                  ),
                   style: TextStyle(
                     color: AppColors.textPrimary,
                     fontWeight: FontWeight.w600,
@@ -701,7 +707,7 @@ class _GastosImpactPanel extends StatelessWidget {
                 fontWeight: FontWeight.w600,
               ),
               children: [
-                const TextSpan(text: 'Total del rango '),
+                TextSpan(text: '${trText('Total del rango')} '),
                 TextSpan(
                   text: formatMxn(totalGastos),
                   style: const TextStyle(
@@ -738,7 +744,7 @@ class _GastosImpactPanel extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Estado financiero: $saludFinanciera',
+                  '${trText('Estado financiero')}: ${trText(saludFinanciera)}',
                   style: TextStyle(
                     color: impactColor,
                     fontWeight: FontWeight.w800,
@@ -747,7 +753,7 @@ class _GastosImpactPanel extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Margen actual: ${margen.toStringAsFixed(1)}%. ${margen >= 20 ? 'El gasto se mantiene bajo control.' : 'Conviene revisar gastos para recuperar margen.'}',
+                  '${trText('Margen actual')}: ${margen.toStringAsFixed(1)}%. ${trText(margen >= 20 ? 'El gasto se mantiene bajo control.' : 'Conviene revisar gastos para recuperar margen.')}',
                   style: const TextStyle(
                     color: AppColors.textPrimary,
                     fontWeight: FontWeight.w600,
@@ -1020,12 +1026,12 @@ class _PipelinePanel extends StatelessWidget {
                         horizontalMargin: 14,
                         columnSpacing: 20,
                         dividerThickness: 1,
-                        columns: const [
-                          DataColumn(label: Text('Folio')),
-                          DataColumn(label: Text('Cliente')),
-                          DataColumn(label: Text('Total')),
-                          DataColumn(label: Text('Probabilidad')),
-                          DataColumn(label: Text('Estatus')),
+                        columns: [
+                          DataColumn(label: Text(trText('Folio'))),
+                          DataColumn(label: Text(trText('Cliente'))),
+                          DataColumn(label: Text(trText('Total'))),
+                          DataColumn(label: Text(trText('Probabilidad'))),
+                          DataColumn(label: Text(trText('Estatus'))),
                         ],
                         rows: prioritized
                             .map(
@@ -1068,20 +1074,21 @@ class _RecentIncomePanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return CotimaxDataTable(
-      title: 'Ultimos ingresos',
-      trailing: const _TopChip(
+      title: trText('Ultimos ingresos'),
+      trailing: _TopChip(
         icon: FontAwesomeIcons.receipt,
-        label: 'Cobranza',
+        label: trText('Cobranza'),
       ),
-      emptyTitle: 'Todavia no hay ingresos recientes en el rango.',
-      emptySubtitle:
-          'Cuando entren cobros, esta vista mostrara lo ultimo registrado sin saturar el dashboard.',
-      columns: const [
-        DataColumn(label: Text('Cliente')),
-        DataColumn(label: Text('Fecha')),
-        DataColumn(label: Text('Metodo')),
-        DataColumn(label: Text('Monto')),
-        DataColumn(label: Text('Referencia')),
+      emptyTitle: trText('Todavia no hay ingresos recientes en el rango.'),
+      emptySubtitle: trText(
+        'Cuando entren cobros, esta vista mostrara lo ultimo registrado sin saturar el dashboard.',
+      ),
+      columns: [
+        DataColumn(label: Text(trText('Cliente'))),
+        DataColumn(label: Text(trText('Fecha'))),
+        DataColumn(label: Text(trText('Metodo'))),
+        DataColumn(label: Text(trText('Monto'))),
+        DataColumn(label: Text(trText('Referencia'))),
       ],
       rows: ingresos
           .map(
@@ -1090,7 +1097,14 @@ class _RecentIncomePanel extends StatelessWidget {
                 DataCell(
                   Text(clientes[item.clienteId]?.nombre ?? item.clienteId),
                 ),
-                DataCell(Text(DateFormat('dd/MM/yyyy').format(item.fecha))),
+                DataCell(
+                  Text(
+                    DateFormat(
+                      'dd/MM/yyyy',
+                      currentIntlLocale(),
+                    ).format(item.fecha),
+                  ),
+                ),
                 DataCell(Text(_paymentMethodLabel(item.metodoPago))),
                 DataCell(Text(formatMxn(item.monto))),
                 DataCell(Text(item.referencia)),
@@ -1229,7 +1243,7 @@ class _KpiCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  title,
+                  trText(title),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -1251,14 +1265,14 @@ class _KpiCard extends StatelessWidget {
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     visualDensity: VisualDensity.compact,
                   ),
-                  child: const Text('Ver mas'),
+                  child: Text(trText('Ver mas')),
                 ),
             ],
           ),
           if (metaLabel != null) ...[
             const SizedBox(height: 4),
             Text(
-              metaLabel!,
+              trText(metaLabel!),
               style: const TextStyle(
                 color: AppColors.textMuted,
                 fontSize: 11,
@@ -1278,7 +1292,7 @@ class _KpiCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            footer,
+            trText(footer),
             style: TextStyle(
               color: footer.startsWith('↑')
                   ? AppColors.success
@@ -1375,7 +1389,7 @@ class _TopChip extends StatelessWidget {
         FaIcon(icon, size: 12, color: AppColors.textSecondary),
         const SizedBox(width: 8),
         Text(
-          label,
+          trText(label),
           style: const TextStyle(
             color: AppColors.textPrimary,
             fontWeight: FontWeight.w800,
@@ -1445,7 +1459,7 @@ class _QuickActionButton extends StatelessWidget {
     return OutlinedButton.icon(
       onPressed: () => context.go('$route?create=1'),
       icon: FaIcon(icon, size: 13),
-      label: Text(label),
+      label: Text(trText(label)),
     );
   }
 }
@@ -1534,14 +1548,20 @@ class _FilterableIncomeTimelineDialogState
       query: _query,
       onQueryChanged: (value) => setState(() => _query = value),
       rangeLabel: _selectedRange == null
-          ? 'Todo el rango actual'
+          ? trText('Todo el rango actual')
           : _rangeLabel(_selectedRange!),
       onPickRange: sorted.isEmpty ? null : () => _pickRange(sorted),
       onClearRange: _selectedRange == null
           ? null
           : () => setState(() => _selectedRange = null),
-      summaryLabel: '${filtered.length} de ${sorted.length} ingresos',
-      emptyLabel: 'No hay ingresos que coincidan con el filtro.',
+      summaryLabel: tr(
+        '${filtered.length} de ${sorted.length} ingresos',
+        '${filtered.length} of ${sorted.length} income entries',
+      ),
+      emptyLabel: tr(
+        'No hay ingresos que coincidan con el filtro.',
+        'No income entries match the filter.',
+      ),
       children: filtered
           .map(
             (item) => _TimelineRow(
@@ -1554,18 +1574,23 @@ class _FilterableIncomeTimelineDialogState
               ),
               title: widget.clientes[item.clienteId]?.nombre ?? item.clienteId,
               amount: formatMxn(item.monto),
-              operationLabel:
-                  'Ingreso por ${_paymentMethodLabel(item.metodoPago)}',
+              operationLabel: tr(
+                'Ingreso por ${_paymentMethodLabel(item.metodoPago)}',
+                'Income via ${_paymentMethodLabel(item.metodoPago)}',
+              ),
               timestampLabel: _dateTimeLabel(item.fecha),
               detailLines: [
-                'Cotización ${widget.cotizaciones[item.cotizacionId]?.folio ?? item.cotizacionId}',
-                'Referencia ${item.referencia.isEmpty ? 'sin referencia' : item.referencia}',
+                tr(
+                  'Cotización ${widget.cotizaciones[item.cotizacionId]?.folio ?? item.cotizacionId}',
+                  'Quote ${widget.cotizaciones[item.cotizacionId]?.folio ?? item.cotizacionId}',
+                ),
+                '${trText('Referencia')} ${item.referencia.isEmpty ? trText('sin referencia') : item.referencia}',
                 _recurrenceSummary(
                   item.recurrente,
                   item.recurrencia,
                   item.diasSemana,
                 ),
-                if (item.notas.isNotEmpty) 'Notas ${item.notas}',
+                if (item.notas.isNotEmpty) '${trText('Notas')} ${item.notas}',
               ],
             ),
           )
@@ -1639,14 +1664,20 @@ class _FilterableExpenseTimelineDialogState
       query: _query,
       onQueryChanged: (value) => setState(() => _query = value),
       rangeLabel: _selectedRange == null
-          ? 'Todo el rango actual'
+          ? trText('Todo el rango actual')
           : _rangeLabel(_selectedRange!),
       onPickRange: sorted.isEmpty ? null : () => _pickRange(sorted),
       onClearRange: _selectedRange == null
           ? null
           : () => setState(() => _selectedRange = null),
-      summaryLabel: '${filtered.length} de ${sorted.length} gastos',
-      emptyLabel: 'No hay gastos que coincidan con el filtro.',
+      summaryLabel: tr(
+        '${filtered.length} de ${sorted.length} gastos',
+        '${filtered.length} of ${sorted.length} expense entries',
+      ),
+      emptyLabel: tr(
+        'No hay gastos que coincidan con el filtro.',
+        'No expense entries match the filter.',
+      ),
       children: filtered
           .map(
             (item) => _TimelineRow(
@@ -1662,18 +1693,21 @@ class _FilterableExpenseTimelineDialogState
                   item.gastoCategoriaId,
               amount: formatMxn(item.monto),
               operationLabel: item.proveedor.isEmpty
-                  ? 'Gasto registrado'
-                  : 'Gasto con ${item.proveedor}',
+                  ? trText('Gasto registrado')
+                  : tr(
+                      'Gasto con ${item.proveedor}',
+                      'Expense with ${item.proveedor}',
+                    ),
               timestampLabel: _dateTimeLabel(item.fecha),
               detailLines: [
                 item.descripcion,
-                'Referencia ${item.referencia.isEmpty ? 'sin referencia' : item.referencia}',
+                '${trText('Referencia')} ${item.referencia.isEmpty ? trText('sin referencia') : item.referencia}',
                 _recurrenceSummary(
                   item.recurrente,
                   item.recurrencia,
                   item.diasSemana,
                 ),
-                if (item.notas.isNotEmpty) 'Notas ${item.notas}',
+                if (item.notas.isNotEmpty) '${trText('Notas')} ${item.notas}',
               ],
             ),
           )
@@ -1751,15 +1785,20 @@ class _FilterableApprovedQuoteTimelineDialogState
       query: _query,
       onQueryChanged: (value) => setState(() => _query = value),
       rangeLabel: _selectedRange == null
-          ? 'Todo el rango actual'
+          ? trText('Todo el rango actual')
           : _rangeLabel(_selectedRange!),
       onPickRange: sorted.isEmpty ? null : () => _pickRange(sorted),
       onClearRange: _selectedRange == null
           ? null
           : () => setState(() => _selectedRange = null),
-      summaryLabel:
-          '${filtered.length} de ${sorted.length} cotizaciones aprobadas',
-      emptyLabel: 'No hay cotizaciones aprobadas que coincidan con el filtro.',
+      summaryLabel: tr(
+        '${filtered.length} de ${sorted.length} cotizaciones aprobadas',
+        '${filtered.length} of ${sorted.length} approved quotes',
+      ),
+      emptyLabel: tr(
+        'No hay cotizaciones aprobadas que coincidan con el filtro.',
+        'No approved quotes match the filter.',
+      ),
       children: filtered
           .map(
             (item) => _TimelineRow(
@@ -1779,12 +1818,18 @@ class _FilterableApprovedQuoteTimelineDialogState
               ),
               title: item.clientName,
               amount: formatMxn(item.total),
-              operationLabel: 'Cotización aprobada ${item.folio}',
+              operationLabel: tr(
+                'Cotización aprobada ${item.folio}',
+                'Approved quote ${item.folio}',
+              ),
               timestampLabel: _dateTimeLabel(item.fecha),
               detailLines: [
-                'Utilidad ${formatMxn(item.utility)} • Margen ${item.margin.toStringAsFixed(1)}%',
-                'Costo estimado ${formatMxn(item.cost)}',
-                'Partidas ${item.lines}',
+                tr(
+                  'Utilidad ${formatMxn(item.utility)} • Margen ${item.margin.toStringAsFixed(1)}%',
+                  'Profit ${formatMxn(item.utility)} • Margin ${item.margin.toStringAsFixed(1)}%',
+                ),
+                '${trText('Costo estimado')} ${formatMxn(item.cost)}',
+                '${trText('Partidas')} ${item.lines}',
               ],
             ),
           )
@@ -1842,7 +1887,12 @@ class _TimelineShell extends StatelessWidget {
     final listContent = children.isEmpty
         ? Center(
             child: Text(
-              query.isEmpty ? emptyLabel : 'No hay resultados para "$query".',
+              query.isEmpty
+                  ? trText(emptyLabel)
+                  : tr(
+                      'No hay resultados para "$query".',
+                      'No results for "$query".',
+                    ),
               style: const TextStyle(
                 color: AppColors.textSecondary,
                 fontWeight: FontWeight.w700,
@@ -1873,12 +1923,12 @@ class _TimelineShell extends StatelessWidget {
                   OutlinedButton.icon(
                     onPressed: onPickRange,
                     icon: const Icon(Icons.date_range_rounded, size: 18),
-                    label: Text(rangeLabel),
+                    label: Text(trText(rangeLabel)),
                   ),
                   if (onClearRange != null)
                     TextButton(
                       onPressed: onClearRange,
-                      child: const Text('Limpiar rango'),
+                      child: Text(trText('Limpiar rango')),
                     ),
                 ],
               ),
@@ -1895,19 +1945,19 @@ class _TimelineShell extends StatelessWidget {
                   OutlinedButton.icon(
                     onPressed: onPickRange,
                     icon: const Icon(Icons.date_range_rounded, size: 18),
-                    label: Text(rangeLabel),
+                    label: Text(trText(rangeLabel)),
                   ),
                   if (onClearRange != null) const SizedBox(width: 6),
                   if (onClearRange != null)
                     TextButton(
                       onPressed: onClearRange,
-                      child: const Text('Limpiar rango'),
+                      child: Text(trText('Limpiar rango')),
                     ),
                 ],
               ),
             const SizedBox(height: 12),
             Text(
-              summaryLabel,
+              trText(summaryLabel),
               style: const TextStyle(
                 color: AppColors.textSecondary,
                 fontWeight: FontWeight.w700,
@@ -1979,7 +2029,7 @@ class _TimelineRow extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            title,
+                            trText(title),
                             style: const TextStyle(
                               color: AppColors.textPrimary,
                               fontWeight: FontWeight.w800,
@@ -1988,7 +2038,7 @@ class _TimelineRow extends StatelessWidget {
                           ),
                           const SizedBox(height: 3),
                           Text(
-                            operationLabel,
+                            trText(operationLabel),
                             style: TextStyle(
                               color: color,
                               fontWeight: FontWeight.w700,
@@ -1997,7 +2047,7 @@ class _TimelineRow extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            timestampLabel,
+                            trText(timestampLabel),
                             style: const TextStyle(
                               color: AppColors.textSecondary,
                               fontWeight: FontWeight.w600,
@@ -2035,7 +2085,7 @@ class _TimelineRow extends StatelessWidget {
                       (line) => Padding(
                         padding: const EdgeInsets.only(bottom: 4),
                         child: Text(
-                          line,
+                          trText(line),
                           style: const TextStyle(
                             color: AppColors.textPrimary,
                             fontWeight: FontWeight.w600,
@@ -2185,8 +2235,10 @@ class _ClientProfitabilityPanel extends StatelessWidget {
           : Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Mostramos solo los clientes con mejor utilidad confirmada para que el analisis siga digerible.',
+                Text(
+                  trText(
+                    'Mostramos solo los clientes con mejor utilidad confirmada para que el analisis siga digerible.',
+                  ),
                   style: TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 12,
@@ -2247,7 +2299,10 @@ class _ClientProfitabilityTile extends StatelessWidget {
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
-                  '${item.margin.toStringAsFixed(1)}% margen',
+                  tr(
+                    '${item.margin.toStringAsFixed(1)}% margen',
+                    '${item.margin.toStringAsFixed(1)}% margin',
+                  ),
                   style: TextStyle(
                     color: item.marginColor,
                     fontWeight: FontWeight.w800,
@@ -2263,12 +2318,15 @@ class _ClientProfitabilityTile extends StatelessWidget {
             runSpacing: 10,
             children: [
               _ClientMetricTag(
-                label: 'Ingresos',
+                label: trText('Ingresos'),
                 value: formatMxn(item.revenue),
               ),
-              _ClientMetricTag(label: 'Costo', value: formatMxn(item.cost)),
               _ClientMetricTag(
-                label: 'Frecuencia',
+                label: trText('Costo'),
+                value: formatMxn(item.cost),
+              ),
+              _ClientMetricTag(
+                label: trText('Frecuencia'),
                 value: item.frequencyLabel,
                 accent: AppColors.primary,
               ),
@@ -2276,7 +2334,10 @@ class _ClientProfitabilityTile extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            'Utilidad confirmada ${formatMxn(item.utility)} en ${item.purchaseCount} compras aprobadas.',
+            tr(
+              'Utilidad confirmada ${formatMxn(item.utility)} en ${item.purchaseCount} compras aprobadas.',
+              'Confirmed profit ${formatMxn(item.utility)} across ${item.purchaseCount} approved purchases.',
+            ),
             style: const TextStyle(
               color: AppColors.textSecondary,
               fontWeight: FontWeight.w600,
@@ -2315,7 +2376,7 @@ class _ClientMetricTag extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            label,
+            trText(label),
             style: const TextStyle(
               color: AppColors.textMuted,
               fontWeight: FontWeight.w700,
@@ -2355,8 +2416,10 @@ class _IncomeConcentrationPanel extends StatelessWidget {
           : Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Resumimos la exposicion a pocos clientes con dos indicadores claros para no abrumar la lectura.',
+                Text(
+                  trText(
+                    'Resumimos la exposicion a pocos clientes con dos indicadores claros para no abrumar la lectura.',
+                  ),
                   style: TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 12,
@@ -2366,19 +2429,21 @@ class _IncomeConcentrationPanel extends StatelessWidget {
                 ),
                 const SizedBox(height: 14),
                 _ShareIndicator(
-                  label: 'Top 3 clientes',
+                  label: trText('Top 3 clientes'),
                   share: summary.top3Share,
                   accent: summary.dependencyColor,
                 ),
                 const SizedBox(height: 12),
                 _ShareIndicator(
-                  label: 'Top 5 clientes',
+                  label: trText('Top 5 clientes'),
                   share: summary.top5Share,
                   accent: AppColors.primary,
                 ),
                 const SizedBox(height: 14),
                 Text(
-                  '${summary.dependencyLabel}. ${summary.dependencyNarrative}',
+                  trText(
+                    '${summary.dependencyLabel}. ${summary.dependencyNarrative}',
+                  ),
                   style: const TextStyle(
                     color: AppColors.textPrimary,
                     fontWeight: FontWeight.w700,
@@ -2423,7 +2488,7 @@ class _ShareIndicator extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                label,
+                trText(label),
                 style: const TextStyle(
                   color: AppColors.textPrimary,
                   fontWeight: FontWeight.w700,
@@ -2618,7 +2683,7 @@ LineChartData _lineChartData({
   final end = _endOfDay(range.end);
   final values = List<double>.filled(8, 0);
   final labels = List<String>.filled(8, '');
-  final formatter = DateFormat('dd MMM');
+  final formatter = DateFormat('dd MMM', currentIntlLocale());
   final totalDays = math.max(1, end.difference(start).inDays + 1);
   final bucketSize = math.max(1, (totalDays / values.length).ceil());
 
@@ -2882,30 +2947,17 @@ _IncomeConcentrationSummary _buildIncomeConcentrationSummary({
 }
 
 String _deltaLabel(List<double> series) {
-  if (series.length < 2) return 'No hay datos del periodo anterior.';
+  if (series.length < 2) return trText('No hay datos del periodo anterior.');
   final current = series.last;
   final previous = series[series.length - 2];
-  if (previous == 0) return 'No hay datos del periodo anterior.';
+  if (previous == 0) return trText('No hay datos del periodo anterior.');
   final delta = ((current - previous) / previous) * 100;
   final arrow = delta >= 0 ? '↑' : '↓';
   final value = delta.abs().toStringAsFixed(0);
-  return '$arrow ${delta >= 0 ? '+' : '-'}$value% vs periodo anterior';
+  return '$arrow ${delta >= 0 ? '+' : '-'}$value% ${trText('vs periodo anterior')}';
 }
 
-String _paymentMethodLabel(PaymentMethod method) {
-  switch (method) {
-    case PaymentMethod.transferencia:
-      return 'Transferencia';
-    case PaymentMethod.efectivo:
-      return 'Efectivo';
-    case PaymentMethod.tarjeta:
-      return 'Tarjeta';
-    case PaymentMethod.deposito:
-      return 'Deposito';
-    case PaymentMethod.otro:
-      return 'Otro';
-  }
-}
+String _paymentMethodLabel(PaymentMethod method) => trText(method.label);
 
 class _ProductUtilityItem {
   const _ProductUtilityItem({required this.name, required this.utility});
@@ -3022,9 +3074,9 @@ class _ClientProfitabilityItem {
       ? AppColors.warning
       : AppColors.error;
   String get frequencyLabel {
-    if (purchaseCount >= 4) return 'Alta';
-    if (purchaseCount >= 2) return 'Media';
-    return 'Ocasional';
+    if (purchaseCount >= 4) return trText('Alta');
+    if (purchaseCount >= 2) return trText('Media');
+    return trText('Ocasional');
   }
 }
 
@@ -3042,19 +3094,25 @@ class _IncomeConcentrationSummary {
   final List<_IncomeShareClient> leadingClients;
 
   String get dependencyLabel {
-    if (top3Share >= 0.68) return 'Dependencia alta';
-    if (top3Share >= 0.5) return 'Dependencia moderada';
-    return 'Dependencia saludable';
+    if (top3Share >= 0.68) return trText('Dependencia alta');
+    if (top3Share >= 0.5) return trText('Dependencia moderada');
+    return trText('Dependencia saludable');
   }
 
   String get dependencyNarrative {
     if (top3Share >= 0.68) {
-      return 'Conviene diversificar el pipeline para no quedar expuesto a pocos clientes.';
+      return trText(
+        'Conviene diversificar el pipeline para no quedar expuesto a pocos clientes.',
+      );
     }
     if (top3Share >= 0.5) {
-      return 'Hay concentracion visible, pero aun con margen para equilibrar la cartera.';
+      return trText(
+        'Hay concentracion visible, pero aun con margen para equilibrar la cartera.',
+      );
     }
-    return 'La distribucion se ve equilibrada y reduce el riesgo comercial.';
+    return trText(
+      'La distribucion se ve equilibrada y reduce el riesgo comercial.',
+    );
   }
 
   Color get dependencyColor => top3Share >= 0.68
@@ -3077,11 +3135,11 @@ class _IncomeShareClient {
 }
 
 String _dateTimeLabel(DateTime value) {
-  return DateFormat('dd/MM/yyyy • HH:mm').format(value);
+  return DateFormat('dd/MM/yyyy • HH:mm', currentIntlLocale()).format(value);
 }
 
 String _rangeLabel(DateTimeRange range) {
-  return '${DateFormat('dd MMM yyyy').format(range.start)} - ${DateFormat('dd MMM yyyy').format(range.end)}';
+  return '${DateFormat('dd MMM yyyy', currentIntlLocale()).format(range.start)} - ${DateFormat('dd MMM yyyy', currentIntlLocale()).format(range.end)}';
 }
 
 String _recurrenceSummary(
@@ -3090,12 +3148,12 @@ String _recurrenceSummary(
   List<int> diasSemana,
 ) {
   if (!recurrente || frecuencia == RecurrenceFrequency.ninguna) {
-    return 'Operacion unica';
+    return trText('Operacion unica');
   }
   if (frecuencia == RecurrenceFrequency.diasDeLaSemana) {
-    return 'Recurrente ${weekdaySummary(diasSemana)}';
+    return '${trText('Recurrente')} ${weekdaySummary(diasSemana)}';
   }
-  return 'Recurrente ${frecuencia.label}';
+  return '${trText('Recurrente')} ${trText(frecuencia.label)}';
 }
 
 bool _matchesQuery(String query, Iterable<String> values) {
@@ -3131,9 +3189,10 @@ Future<DateTimeRange?> _showAppDateRangePicker(
     ),
     firstDate: firstDate ?? DateTime(now.year - 5, 1, 1),
     lastDate: lastDate ?? DateTime(now.year + 2, 12, 31),
-    helpText: 'Selecciona un rango',
-    cancelText: 'Cancelar',
-    confirmText: 'Aplicar',
-    saveText: 'Aplicar',
+    helpText: trText('Selecciona un rango'),
+    cancelText: trText('Cancelar'),
+    confirmText: trText('Aplicar'),
+    saveText: trText('Aplicar'),
+    locale: currentAppLocale(),
   );
 }

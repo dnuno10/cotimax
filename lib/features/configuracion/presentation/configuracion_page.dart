@@ -1,4 +1,5 @@
 import 'package:cotimax/core/constants/app_colors.dart';
+import 'package:cotimax/core/localization/app_localization.dart';
 import 'package:cotimax/features/configuracion/application/configuracion_controller.dart';
 import 'package:cotimax/features/planes/application/planes_controller.dart';
 import 'package:cotimax/shared/models/domain_models.dart';
@@ -41,14 +42,8 @@ const List<({String value, String label})> localizationCurrencyOptions = [
 ];
 
 const List<({String value, String label})> localizationLanguageOptions = [
-  (value: 'es-MX', label: 'Español (México)'),
-  (value: 'es-ES', label: 'Español (España)'),
-  (value: 'en-US', label: 'Inglés (Estados Unidos)'),
-  (value: 'en-GB', label: 'Inglés (Reino Unido)'),
-  (value: 'pt-BR', label: 'Portugués (Brasil)'),
-  (value: 'fr-FR', label: 'Francés (Francia)'),
-  (value: 'de-DE', label: 'Alemán (Alemania)'),
-  (value: 'it-IT', label: 'Italiano (Italia)'),
+  (value: 'es-MX', label: 'Español'),
+  (value: 'en-US', label: 'Inglés'),
 ];
 
 const List<({String value, String label})> localizationTimezoneOptions = [
@@ -347,7 +342,7 @@ class _TopConfigTab extends StatelessWidget {
           ),
         ),
         child: Text(
-          label,
+          trText(label),
           style: TextStyle(
             color: selected ? AppColors.textPrimary : AppColors.textMuted,
             fontSize: 15,
@@ -385,7 +380,7 @@ class _SectionPillTab extends StatelessWidget {
           ),
         ),
         child: Text(
-          label,
+          trText(label),
           style: TextStyle(
             color: selected ? AppColors.textPrimary : AppColors.textMuted,
             fontSize: 13,
@@ -443,8 +438,8 @@ class _AccountManagementSection extends ConsumerWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Account Management',
+              Text(
+                trText('Gestión de cuenta'),
                 style: TextStyle(
                   color: AppColors.textPrimary,
                   fontSize: 18,
@@ -514,7 +509,7 @@ class _PlanAndBillingPanel extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _ConfigSectionTitle(title: 'Your Plan'),
+        _ConfigSectionTitle(title: 'Tu plan'),
         const SizedBox(height: 12),
         Container(
           padding: const EdgeInsets.all(18),
@@ -530,7 +525,7 @@ class _PlanAndBillingPanel extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      plan.nombre,
+                      trText(plan.nombre),
                       style: const TextStyle(
                         color: AppColors.textPrimary,
                         fontSize: 22,
@@ -539,7 +534,7 @@ class _PlanAndBillingPanel extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      plan.descripcion,
+                      trText(plan.descripcion),
                       style: const TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 13,
@@ -548,7 +543,7 @@ class _PlanAndBillingPanel extends StatelessWidget {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      'Renueva ${DateFormat('dd MMM yyyy').format(suscripcion.fechaFin)}',
+                      '${trText('Renueva')} ${DateFormat('dd MMM yyyy', currentIntlLocale()).format(suscripcion.fechaFin)}',
                       style: const TextStyle(
                         color: AppColors.textPrimary,
                         fontSize: 13,
@@ -598,7 +593,7 @@ class _PlanAndBillingPanel extends StatelessWidget {
                         vertical: 16,
                       ),
                     ),
-                    child: const Text('Plan de actualización'),
+                    child: Text(trText('Plan de actualización')),
                   ),
                 ),
               ];
@@ -606,9 +601,11 @@ class _PlanAndBillingPanel extends StatelessWidget {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Actualiza a los planes Pro o Enterprise para funciones avanzadas.',
-                    style: TextStyle(
+                  Text(
+                    trText(
+                      'Actualiza a los planes Pro o Enterprise para funciones avanzadas.',
+                    ),
+                    style: const TextStyle(
                       color: AppColors.textPrimary,
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
@@ -641,7 +638,7 @@ class _PlanAndBillingPanel extends StatelessWidget {
                                     vertical: 16,
                                   ),
                                 ),
-                                child: const Text('Plan de actualización'),
+                                child: Text(trText('Plan de actualización')),
                               ),
                             ),
                           ],
@@ -658,14 +655,14 @@ class _PlanAndBillingPanel extends StatelessWidget {
         const SizedBox(height: 28),
         Row(
           children: [
-            const Expanded(child: _ConfigSectionTitle(title: 'Payment method')),
+            Expanded(child: _ConfigSectionTitle(title: 'Método de pago')),
             TextButton.icon(
               onPressed: () => ToastHelper.show(
                 context,
-                'Agregar metodo de pago disponible pronto.',
+                'Agregar método de pago disponible pronto.',
               ),
               icon: const Icon(Icons.add, size: 16),
-              label: const Text('Add Payment Method'),
+              label: Text(trText('Agregar método de pago')),
             ),
           ],
         ),
@@ -680,7 +677,7 @@ class _PlanAndBillingPanel extends StatelessWidget {
             final addCard = _PaymentMethodAddCard(
               onTap: () => ToastHelper.show(
                 context,
-                'Agregar metodo de pago disponible pronto.',
+                'Agregar método de pago disponible pronto.',
               ),
             );
 
@@ -731,19 +728,19 @@ class _GeneralAccountPanel extends StatelessWidget {
             _InfoLine(
               label: 'Clientes',
               value: plan.limiteClientes < 0
-                  ? 'Ilimitados'
+                  ? trText('Ilimitados')
                   : '${plan.limiteClientes}',
             ),
             _InfoLine(
               label: 'Productos',
               value: plan.limiteProductos < 0
-                  ? 'Ilimitados'
+                  ? trText('Ilimitados')
                   : '${plan.limiteProductos}',
             ),
             _InfoLine(
               label: 'Cotizaciones mensuales',
               value: plan.limiteCotizacionesMensuales < 0
-                  ? 'Ilimitadas'
+                  ? trText('Ilimitadas')
                   : '${plan.limiteCotizacionesMensuales}',
             ),
             _InfoLine(label: 'Usuarios', value: _planUsersLabel(plan)),
@@ -775,12 +772,12 @@ class _EnabledModulesPanel extends StatelessWidget {
       ),
       child: Column(
         children: [
-          const Padding(
+          Padding(
             padding: EdgeInsets.fromLTRB(18, 18, 18, 12),
             child: Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                'Módulos habilitados',
+                trText('Módulos habilitados'),
                 style: TextStyle(
                   color: AppColors.textPrimary,
                   fontSize: 18,
@@ -803,7 +800,7 @@ class _EnabledModulesPanel extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      entries[index].key,
+                      trText(entries[index].key),
                       style: const TextStyle(
                         color: AppColors.textPrimary,
                         fontSize: 15,
@@ -998,8 +995,8 @@ class _CompanySettingsSectionState
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Logo',
+              Text(
+                trText('Logo'),
                 style: TextStyle(
                   color: AppColors.textPrimary,
                   fontSize: 16,
@@ -1058,10 +1055,7 @@ class _LocalizationSettingsSectionState
       _localizacion.moneda,
       localizationCurrencyOptions,
     );
-    _idioma = _resolveLocalizationValue(
-      _localizacion.idioma,
-      localizationLanguageOptions,
-    );
+    _idioma = normalizeSupportedLanguageTag(_localizacion.idioma);
     _husoHorario = _resolveLocalizationValue(
       _localizacion.husoHorario,
       localizationTimezoneOptions,
@@ -1237,9 +1231,9 @@ class _InvoiceDesignSection extends StatelessWidget {
       children: [
         Row(
           children: [
-            const Expanded(
+            Expanded(
               child: Text(
-                'Diseño de factura',
+                trText('Diseño de factura'),
                 style: TextStyle(
                   color: AppColors.textPrimary,
                   fontSize: 18,
@@ -1252,7 +1246,7 @@ class _InvoiceDesignSection extends StatelessWidget {
                 context,
                 'Gestionar plan disponible pronto.',
               ),
-              child: const Text('Gestionar plan'),
+              child: Text(trText('Gestionar plan')),
             ),
           ],
         ),
@@ -1288,10 +1282,10 @@ class _InvoiceDesignSection extends StatelessWidget {
             children: [
               const Icon(Icons.info_outline, color: AppColors.primary),
               const SizedBox(width: 10),
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'Comience su prueba GRATUITA de 14 días del Plan Pro',
-                  style: TextStyle(
+                  trText('Comience su prueba GRATUITA de 14 días del Plan Pro'),
+                  style: const TextStyle(
                     color: AppColors.textPrimary,
                     fontWeight: FontWeight.w700,
                     fontSize: 13,
@@ -1303,7 +1297,7 @@ class _InvoiceDesignSection extends StatelessWidget {
                   context,
                   'Gestionar plan disponible pronto.',
                 ),
-                child: const Text('Gestionar plan'),
+                child: Text(trText('Gestionar plan')),
               ),
             ],
           ),
@@ -1501,12 +1495,12 @@ class _InvoiceControlsPanel extends StatelessWidget {
               enabled: true,
             ),
             _DesignToggleRow(
-              label: 'Mostrar direccion de envio',
+              label: 'Mostrar dirección de envío',
               value: showShippingAddress,
               onChanged: onShowShippingAddressChanged,
             ),
             _DesignToggleRow(
-              label: 'Incrustar imagenes/documentos',
+              label: 'Incrustar imágenes/documentos',
               value: embedAttachments,
               onChanged: onEmbedAttachmentsChanged,
               helper:
@@ -1552,7 +1546,7 @@ class _InvoiceControlsPanel extends StatelessWidget {
             onChanged: onPageOrientationChanged,
           ),
           _DesignSelectRow(
-            label: 'Page Size',
+            label: 'Tamaño de página',
             value: pageSize,
             options: const ['A4', 'Letter', 'Legal'],
             onChanged: onPageSizeChanged,
@@ -1787,7 +1781,7 @@ class _InvoicePreviewPanel extends StatelessWidget {
                                       if (showShippingAddress) ...[
                                         const SizedBox(height: 10),
                                         Text(
-                                          'Enviar a: Blvd. Agua Caliente 1444, Tijuana, BC',
+                                          '${trText('Enviar a:')} Blvd. Agua Caliente 1444, Tijuana, BC',
                                           style: TextStyle(
                                             color: secondary,
                                             fontSize: headerFontSize - 4,
@@ -1805,7 +1799,7 @@ class _InvoicePreviewPanel extends StatelessWidget {
                       ),
                       const SizedBox(height: 26),
                       Text(
-                        'FACTURA',
+                        trText('FACTURA'),
                         style: TextStyle(
                           color: primary,
                           fontSize: headerFontSize + 2,
@@ -1819,8 +1813,8 @@ class _InvoicePreviewPanel extends StatelessWidget {
                       Wrap(
                         spacing: 18,
                         runSpacing: 14,
-                        children: const [
-                          _PreviewMeta(label: 'Número', value: '0029'),
+                        children: [
+                          const _PreviewMeta(label: 'Número', value: '0029'),
                           _PreviewMeta(
                             label: 'Número de Orden',
                             value: 'PO12345',
@@ -1835,7 +1829,7 @@ class _InvoicePreviewPanel extends StatelessWidget {
                           ),
                           _PreviewMeta(
                             label: 'Total Facturado',
-                            value: '\$330.00',
+                            value: formatMoney(330),
                           ),
                         ],
                       ),
@@ -1854,7 +1848,7 @@ class _InvoicePreviewPanel extends StatelessWidget {
                             Expanded(
                               flex: 2,
                               child: Text(
-                                'Concepto',
+                                trText('Concepto'),
                                 style: TextStyle(
                                   color: primary,
                                   fontWeight: FontWeight.w800,
@@ -1865,7 +1859,7 @@ class _InvoicePreviewPanel extends StatelessWidget {
                             Expanded(
                               flex: 3,
                               child: Text(
-                                'Descripción',
+                                trText('Descripción'),
                                 style: TextStyle(
                                   color: primary,
                                   fontWeight: FontWeight.w800,
@@ -1876,7 +1870,7 @@ class _InvoicePreviewPanel extends StatelessWidget {
                             Expanded(
                               flex: 2,
                               child: Text(
-                                'Coste unitario',
+                                trText('Coste unitario'),
                                 style: TextStyle(
                                   color: primary,
                                   fontWeight: FontWeight.w800,
@@ -1886,7 +1880,7 @@ class _InvoicePreviewPanel extends StatelessWidget {
                             ),
                             Expanded(
                               child: Text(
-                                'Cantidad',
+                                trText('Cantidad'),
                                 style: TextStyle(
                                   color: primary,
                                   fontWeight: FontWeight.w800,
@@ -1896,7 +1890,7 @@ class _InvoicePreviewPanel extends StatelessWidget {
                             ),
                             Expanded(
                               child: Text(
-                                'Impuesto',
+                                trText('Impuesto'),
                                 style: TextStyle(
                                   color: primary,
                                   fontWeight: FontWeight.w800,
@@ -1908,7 +1902,7 @@ class _InvoicePreviewPanel extends StatelessWidget {
                               child: Align(
                                 alignment: Alignment.centerRight,
                                 child: Text(
-                                  'Total',
+                                  trText('Total'),
                                   style: TextStyle(
                                     color: primary,
                                     fontWeight: FontWeight.w800,
@@ -1932,19 +1926,22 @@ class _InvoicePreviewPanel extends StatelessWidget {
                         ),
                         child: Row(
                           children: [
-                            const Expanded(flex: 2, child: Text('ab')),
-                            const Expanded(
-                              flex: 3,
-                              child: Text('For you see, as.'),
+                            Expanded(
+                              flex: 2,
+                              child: Text(trText('Servicio base')),
                             ),
-                            const Expanded(flex: 2, child: Text('453.55 MXN')),
+                            Expanded(
+                              flex: 3,
+                              child: Text(trText('Descripción del concepto.')),
+                            ),
+                            Expanded(flex: 2, child: Text(formatMoney(453.55))),
                             const Expanded(child: Text('5')),
                             const Expanded(child: Text('10%')),
                             Expanded(
                               child: Align(
                                 alignment: Alignment.centerRight,
                                 child: Text(
-                                  '2,267.75 MXN',
+                                  formatMoney(2267.75),
                                   style: TextStyle(
                                     color: primary,
                                     fontWeight: FontWeight.w800,
@@ -1969,19 +1966,19 @@ class _InvoicePreviewPanel extends StatelessWidget {
                             children: [
                               _PreviewSummaryRow(
                                 label: 'Subtotal',
-                                value: '\$1,955.00',
+                                value: formatMoney(1955),
                                 color: primary,
                               ),
                               const SizedBox(height: 8),
                               _PreviewSummaryRow(
                                 label: 'IVA',
-                                value: '\$312.75',
+                                value: formatMoney(312.75),
                                 color: AppColors.textPrimary,
                               ),
                               const SizedBox(height: 8),
                               _PreviewSummaryRow(
                                 label: 'Total',
-                                value: '\$2,267.75',
+                                value: formatMoney(2267.75),
                                 color: secondary,
                                 strong: true,
                               ),
@@ -2000,7 +1997,7 @@ class _InvoicePreviewPanel extends StatelessWidget {
                             border: Border.all(color: AppColors.border),
                           ),
                           child: Text(
-                            'Adjuntos incluidos: ficha-tecnica.pdf, evidencia-obra.jpg',
+                            '${trText('Adjuntos incluidos:')} ficha-tecnica.pdf, evidencia-obra.jpg',
                             style: TextStyle(
                               color: AppColors.textPrimary,
                               fontFamily: secondaryFont,
@@ -2014,7 +2011,7 @@ class _InvoicePreviewPanel extends StatelessWidget {
                         Align(
                           alignment: Alignment.centerRight,
                           child: Text(
-                            'Página 1 / 1 • $pageSize',
+                            '${trText('Página')} 1 / 1 • $pageSize',
                             style: TextStyle(
                               color: AppColors.textSecondary,
                               fontFamily: secondaryFont,
@@ -2042,7 +2039,7 @@ class _InvoicePreviewPanel extends StatelessWidget {
                             border: Border.all(color: secondary),
                           ),
                           child: Text(
-                            'PAGADO',
+                            trText('PAGADO'),
                             style: TextStyle(
                               color: secondary,
                               fontWeight: FontWeight.w900,
@@ -2139,7 +2136,7 @@ class _TaxSettingsSectionState extends ConsumerState<_TaxSettingsSection> {
       child: Column(
         children: [
           _EditableFieldRow(
-            label: 'Tasas de linea',
+            label: 'Tasas de línea',
             controller: _tasasLineaController,
           ),
           _EditableFieldRow(
@@ -2173,7 +2170,7 @@ class _ConfigSectionTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Text(
-      title,
+      trText(title),
       style: const TextStyle(
         color: AppColors.textPrimary,
         fontSize: 18,
@@ -2237,7 +2234,7 @@ class _PlanUpgradeColumn extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      item,
+                      trText(item),
                       style: const TextStyle(
                         color: AppColors.textPrimary,
                         fontWeight: FontWeight.w600,
@@ -2288,12 +2285,12 @@ class _PaymentMethodCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Visa terminación 4242',
+                      trText('Visa terminación 4242'),
                       style: TextStyle(
                         color: AppColors.textPrimary,
                         fontSize: 15,
@@ -2302,7 +2299,7 @@ class _PaymentMethodCard extends StatelessWidget {
                     ),
                     SizedBox(height: 4),
                     Text(
-                      'Facturación automática activada',
+                      trText('Facturación automática activada'),
                       style: TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 12,
@@ -2323,8 +2320,11 @@ class _PaymentMethodCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          _InfoLine(label: 'Titular', value: empresa.nombreComercial),
-          _InfoLine(label: 'Correo de facturación', value: empresa.correo),
+          _InfoLine(label: trText('Titular'), value: empresa.nombreComercial),
+          _InfoLine(
+            label: trText('Correo de facturación'),
+            value: empresa.correo,
+          ),
         ],
       ),
     );
@@ -2349,14 +2349,14 @@ class _PaymentMethodAddCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: AppColors.border),
         ),
-        child: const Column(
+        child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.add, size: 34, color: AppColors.textPrimary),
-            SizedBox(height: 18),
+            const Icon(Icons.add, size: 34, color: AppColors.textPrimary),
+            const SizedBox(height: 18),
             Text(
-              'Add Payment Method',
-              style: TextStyle(
+              trText('Agregar método de pago'),
+              style: const TextStyle(
                 color: AppColors.textPrimary,
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
@@ -2389,7 +2389,7 @@ class _InfoCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            title,
+            trText(title),
             style: const TextStyle(
               color: AppColors.textPrimary,
               fontSize: 16,
@@ -2420,7 +2420,7 @@ class _InfoLine extends StatelessWidget {
           SizedBox(
             width: 220,
             child: Text(
-              label,
+              trText(label),
               style: const TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 13,
@@ -2473,7 +2473,7 @@ class _DangerActionCard extends StatelessWidget {
             Icon(icon, color: AppColors.error, size: 32),
             const SizedBox(width: 16),
             Text(
-              label,
+              trText(label),
               style: const TextStyle(
                 color: AppColors.error,
                 fontSize: 16,
@@ -2507,7 +2507,7 @@ class _FormShellCard extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
             child: Text(
-              title,
+              trText(title),
               style: const TextStyle(
                 color: AppColors.textPrimary,
                 fontSize: 18,
@@ -2555,7 +2555,7 @@ class _EditableFieldRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  label,
+                  trText(label),
                   style: const TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 14,
@@ -2576,7 +2576,7 @@ class _EditableFieldRow extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.only(top: 14),
                   child: Text(
-                    label,
+                    trText(label),
                     style: const TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 14,
@@ -2628,7 +2628,7 @@ class _SelectableFieldRow extends StatelessWidget {
                   (option) => DropdownMenuItem<String>(
                     value: option.value,
                     child: Text(
-                      option.label,
+                      trText(option.label),
                       overflow: TextOverflow.ellipsis,
                       style: cotimaxDropdownTextStyle,
                     ),
@@ -2646,7 +2646,7 @@ class _SelectableFieldRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  label,
+                  trText(label),
                   style: const TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 14,
@@ -2667,7 +2667,7 @@ class _SelectableFieldRow extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.only(top: 14),
                   child: Text(
-                    label,
+                    trText(label),
                     style: const TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 14,
@@ -2709,7 +2709,7 @@ class _SettingsActionBar extends StatelessWidget {
             foregroundColor: AppColors.white,
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
           ),
-          child: Text(isSaving ? 'Guardando...' : label),
+          child: Text(isSaving ? trText('Guardando...') : trText(label)),
         ),
       ),
     );
@@ -2739,7 +2739,7 @@ class _DesignSelectRow extends StatelessWidget {
           SizedBox(
             width: 190,
             child: Text(
-              label,
+              trText(label),
               style: const TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 14,
@@ -2762,7 +2762,7 @@ class _DesignSelectRow extends StatelessWidget {
                     (option) => DropdownMenuItem<String>(
                       value: option,
                       child: Text(
-                        option,
+                        trText(option),
                         overflow: TextOverflow.ellipsis,
                         style: cotimaxDropdownTextStyle,
                       ),
@@ -2806,7 +2806,7 @@ class _DesignDoubleInputRow extends StatelessWidget {
           SizedBox(
             width: 190,
             child: Text(
-              label,
+              trText(label),
               style: const TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 14,
@@ -2833,7 +2833,7 @@ class _DesignDoubleInputRow extends StatelessWidget {
                           (option) => DropdownMenuItem<String>(
                             value: option,
                             child: Text(
-                              option,
+                              trText(option),
                               overflow: TextOverflow.ellipsis,
                               style: cotimaxDropdownTextStyle,
                             ),
@@ -2883,7 +2883,7 @@ class _DesignColorRow extends StatelessWidget {
           SizedBox(
             width: 190,
             child: Text(
-              label,
+              trText(label),
               style: const TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 14,
@@ -2945,7 +2945,7 @@ class _DesignToggleRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  label,
+                  trText(label),
                   style: const TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 14,
@@ -2955,7 +2955,7 @@ class _DesignToggleRow extends StatelessWidget {
                 if (helper != null) ...[
                   const SizedBox(height: 6),
                   Text(
-                    helper!,
+                    trText(helper!),
                     style: const TextStyle(
                       color: AppColors.textMuted,
                       fontSize: 12,
@@ -3002,7 +3002,7 @@ class _DesignRadioRow extends StatelessWidget {
           SizedBox(
             width: 190,
             child: Text(
-              label,
+              trText(label),
               style: const TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 14,
@@ -3031,7 +3031,7 @@ class _DesignRadioRow extends StatelessWidget {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            option,
+                            trText(option),
                             style: const TextStyle(
                               color: AppColors.textPrimary,
                               fontWeight: FontWeight.w700,
@@ -3083,7 +3083,7 @@ class _PresetDesignCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            title,
+            trText(title),
             style: const TextStyle(
               color: AppColors.textPrimary,
               fontSize: 15,
@@ -3092,7 +3092,7 @@ class _PresetDesignCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            subtitle,
+            trText(subtitle),
             style: const TextStyle(
               color: AppColors.textSecondary,
               fontSize: 13,
@@ -3120,7 +3120,7 @@ class _PreviewMeta extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            label,
+            trText(label),
             style: const TextStyle(
               color: AppColors.textSecondary,
               fontWeight: FontWeight.w700,
@@ -3159,7 +3159,7 @@ class _PreviewSummaryRow extends StatelessWidget {
       children: [
         Expanded(
           child: Text(
-            label,
+            trText(label),
             style: TextStyle(
               color: AppColors.textSecondary,
               fontWeight: strong ? FontWeight.w800 : FontWeight.w700,
@@ -3221,7 +3221,23 @@ class _OptionalAssetImage extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    return Image.asset(
+    final isAssetPath =
+        normalizedPath.startsWith('assets/') ||
+        (!normalizedPath.startsWith('http://') &&
+            !normalizedPath.startsWith('https://') &&
+            !normalizedPath.startsWith('data:') &&
+            !normalizedPath.startsWith('blob:'));
+
+    if (isAssetPath) {
+      return Image.asset(
+        normalizedPath,
+        height: height,
+        fit: fit,
+        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+      );
+    }
+
+    return Image.network(
       normalizedPath,
       height: height,
       fit: fit,
@@ -3240,12 +3256,12 @@ Color _hexToColor(String value, {required Color fallback}) {
 
 String _planPriceLabel(Plan plan) {
   if (plan.billingMode == 'per_user_monthly') {
-    return '\$${plan.precioPorUsuario.toStringAsFixed(0)} MXN/usuario/mes';
+    return '${formatMoney(plan.precioPorUsuario, decimalDigits: 0)}/${tr('usuario', 'user')}/${tr('mes', 'month')}';
   }
   if (plan.precioMensual <= 0) {
-    return 'Gratis';
+    return trText('Gratis');
   }
-  return '\$${plan.precioMensual.toStringAsFixed(0)} MXN/mes';
+  return '${formatMoney(plan.precioMensual, decimalDigits: 0)}/${tr('mes', 'month')}';
 }
 
 String _planUsersLabel(Plan plan) {
@@ -3253,7 +3269,7 @@ String _planUsersLabel(Plan plan) {
     return '${plan.usuariosMinimos}-${plan.usuariosMaximos}';
   }
   if (plan.limiteUsuarios < 0) {
-    return 'Ilimitados';
+    return trText('Ilimitados');
   }
   return '${plan.limiteUsuarios}';
 }

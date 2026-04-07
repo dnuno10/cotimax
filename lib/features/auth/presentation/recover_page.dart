@@ -1,5 +1,6 @@
 import 'package:cotimax/core/constants/app_colors.dart';
 import 'package:cotimax/core/constants/app_spacing.dart';
+import 'package:cotimax/core/localization/app_localization.dart';
 import 'package:cotimax/features/auth/application/auth_controller.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter/material.dart';
@@ -138,7 +139,7 @@ class _RecoverPageState extends ConsumerState<RecoverPage> {
                                       .recoverPassword(
                                         _emailController.text.trim(),
                                       ),
-                            child: const Text('Enviar enlace'),
+                            child: Text(trText('Enviar enlace')),
                           ),
                         ),
                         if (auth.error != null) ...[
@@ -157,7 +158,7 @@ class _RecoverPageState extends ConsumerState<RecoverPage> {
                           width: double.infinity,
                           child: OutlinedButton(
                             onPressed: context.pop,
-                            child: const Text('Volver al login'),
+                            child: Text(trText('Volver al login')),
                           ),
                         ),
                       ],

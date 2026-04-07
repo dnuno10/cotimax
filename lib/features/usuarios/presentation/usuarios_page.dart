@@ -1,8 +1,12 @@
+import 'package:cotimax/core/constants/app_colors.dart';
+import 'package:cotimax/core/localization/app_localization.dart';
 import 'package:cotimax/features/planes/application/planes_controller.dart';
 import 'package:cotimax/features/usuarios/application/usuarios_controller.dart';
+import 'package:cotimax/features/workspace/application/workspace_controller.dart';
 import 'package:cotimax/shared/enums/app_enums.dart';
 import 'package:cotimax/shared/widgets/cotimax_widgets.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class UsuariosPage extends ConsumerWidget {
@@ -38,7 +42,48 @@ class UsuariosPage extends ConsumerWidget {
                 ),
               );
             }
-            return const SizedBox.shrink();
+            final invitation = ref.watch(companyInvitationCodeProvider);
+            return invitation.when(
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
+              data: (code) => SectionCard(
+                title: tr('Código de invitación', 'Invitation code'),
+                child: Row(
+                  children: [
+                    const Icon(Icons.key_outlined),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        code.codigo,
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: () async {
+                        await Clipboard.setData(
+                          ClipboardData(text: code.codigo),
+                        );
+                        if (!context.mounted) return;
+                        ToastHelper.showSuccess(
+                          context,
+                          tr(
+                            'Código de invitación copiado.',
+                            'Invitation code copied.',
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.copy_rounded, size: 16),
+                      label: Text(tr('Copiar', 'Copy')),
+                    ),
+                  ],
+                ),
+              ),
+            );
           },
           loading: () => const SizedBox.shrink(),
           error: (_, __) => const SizedBox.shrink(),
@@ -51,12 +96,12 @@ class UsuariosPage extends ConsumerWidget {
             onRetry: () => ref.invalidate(usuariosControllerProvider),
           ),
           data: (rows) => CotimaxDataTable(
-            columns: const [
-              DataColumn(label: Text('Nombre')),
-              DataColumn(label: Text('Correo')),
-              DataColumn(label: Text('Rol')),
-              DataColumn(label: Text('Empresas')),
-              DataColumn(label: Text('Activo')),
+            columns: [
+              DataColumn(label: Text(trText('Nombre'))),
+              DataColumn(label: Text(trText('Correo'))),
+              DataColumn(label: Text(trText('Rol'))),
+              DataColumn(label: Text(trText('Empresas'))),
+              DataColumn(label: Text(trText('Activo'))),
             ],
             rows: rows
                 .map(
@@ -65,10 +110,12 @@ class UsuariosPage extends ConsumerWidget {
                       DataCell(Text(u.nombre)),
                       DataCell(Text(u.correo)),
                       DataCell(
-                        Text(u.rol == UserRole.admin ? 'Admin' : 'Usuario'),
+                        Text(
+                          trText(u.rol == UserRole.admin ? 'Admin' : 'Usuario'),
+                        ),
                       ),
                       DataCell(Text(u.empresaIds.join(', '))),
-                      DataCell(Text(u.activo ? 'Si' : 'No')),
+                      DataCell(Text(trText(u.activo ? 'Si' : 'No'))),
                     ],
                   ),
                 )

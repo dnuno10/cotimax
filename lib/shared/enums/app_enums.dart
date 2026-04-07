@@ -1,14 +1,20 @@
+import 'package:cotimax/core/localization/app_localization.dart';
+
 enum ProductType { producto, servicio }
+
+String enumKey(Object value) => value.toString().split('.').last;
 
 extension ProductTypeLabel on ProductType {
   String get label {
     switch (this) {
       case ProductType.producto:
-        return 'Producto';
+        return tr('Producto', 'Product');
       case ProductType.servicio:
-        return 'Servicio';
+        return tr('Servicio', 'Service');
     }
   }
+
+  String get key => enumKey(this);
 }
 
 enum QuoteStatus { borrador, enviada, aprobada, rechazada }
@@ -33,19 +39,35 @@ enum RecurrenceFrequency {
 
 enum UserRole { admin, usuario }
 
+extension QuoteStatusValue on QuoteStatus {
+  String get key => enumKey(this);
+}
+
+extension PaymentMethodValue on PaymentMethod {
+  String get key => enumKey(this);
+}
+
+extension RecurrenceFrequencyValue on RecurrenceFrequency {
+  String get key => enumKey(this);
+}
+
+extension UserRoleValue on UserRole {
+  String get key => enumKey(this);
+}
+
 extension PaymentMethodLabel on PaymentMethod {
   String get label {
     switch (this) {
       case PaymentMethod.transferencia:
-        return 'Transferencia';
+        return tr('Transferencia', 'Transfer');
       case PaymentMethod.efectivo:
-        return 'Efectivo';
+        return tr('Efectivo', 'Cash');
       case PaymentMethod.tarjeta:
-        return 'Tarjeta';
+        return tr('Tarjeta', 'Card');
       case PaymentMethod.deposito:
-        return 'Depósito';
+        return tr('Depósito', 'Deposit');
       case PaymentMethod.otro:
-        return 'Otro';
+        return tr('Otro', 'Other');
     }
   }
 }
@@ -54,31 +76,31 @@ extension RecurrenceFrequencyLabel on RecurrenceFrequency {
   String get label {
     switch (this) {
       case RecurrenceFrequency.ninguna:
-        return 'Ninguna';
+        return tr('Ninguna', 'None');
       case RecurrenceFrequency.cadaDia:
-        return 'Cada dia';
+        return tr('Cada dia', 'Every day');
       case RecurrenceFrequency.diasDeLaSemana:
-        return 'Dias de la semana';
+        return tr('Dias de la semana', 'Weekdays');
       case RecurrenceFrequency.finDeSemana:
-        return 'Fin de semana';
+        return tr('Fin de semana', 'Weekend');
       case RecurrenceFrequency.cadaSemana:
-        return 'Cada semana';
+        return tr('Cada semana', 'Every week');
       case RecurrenceFrequency.cadaDosSemanas:
-        return 'Cada dos semanas';
+        return tr('Cada dos semanas', 'Every two weeks');
       case RecurrenceFrequency.cadaCuatroSemanas:
-        return 'Cada 4 semanas';
+        return tr('Cada 4 semanas', 'Every 4 weeks');
       case RecurrenceFrequency.cadaMes:
-        return 'Cada mes';
+        return tr('Cada mes', 'Every month');
       case RecurrenceFrequency.cadaDosMeses:
-        return 'Cada 2 meses';
+        return tr('Cada 2 meses', 'Every 2 months');
       case RecurrenceFrequency.cadaTresMeses:
-        return 'Cada 3 meses';
+        return tr('Cada 3 meses', 'Every 3 months');
       case RecurrenceFrequency.cadaCuatroMeses:
-        return 'Cada 4 meses';
+        return tr('Cada 4 meses', 'Every 4 months');
       case RecurrenceFrequency.cadaSeisMeses:
-        return 'Cada 6 meses';
+        return tr('Cada 6 meses', 'Every 6 months');
       case RecurrenceFrequency.cadaAnio:
-        return 'Cada año';
+        return tr('Cada año', 'Every year');
     }
   }
 

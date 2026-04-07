@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:cotimax/core/localization/app_localization.dart';
 import 'package:cotimax/shared/enums/app_enums.dart';
 import 'package:cotimax/shared/models/domain_models.dart';
 import 'package:intl/intl.dart';
@@ -10,10 +11,27 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class CotizacionPdfService {
   static Future<Uint8List> generate(Cotizacion cotizacion) async {
     final pdf = pw.Document();
-    final currency = NumberFormat.currency(locale: 'es_MX', symbol: r'$');
     final client = Supabase.instance.client;
 
     final empresaJson = await client.rpc('get_empresa_actual');
+    final localizacionJson =
+        (empresaJson['localizacion'] as Map?)?.cast<String, dynamic>() ??
+        const <String, dynamic>{};
+    final moneda = normalizeCurrencyCode(
+      (localizacionJson['moneda'] ?? 'MXN') as String,
+    );
+    final locale = localeFromLanguageTag(
+      (localizacionJson['idioma'] ?? 'es-MX') as String,
+    );
+    final intlLocale = locale.countryCode == null || locale.countryCode!.isEmpty
+        ? locale.languageCode
+        : '${locale.languageCode}_${locale.countryCode}';
+    final isEnglish = locale.languageCode.toLowerCase().startsWith('en');
+    final currency = NumberFormat.currency(
+      locale: intlLocale,
+      symbol: '$moneda ',
+    );
+    final dateFormat = DateFormat('dd/MM/yyyy', intlLocale);
     final empresa = EmpresaPerfil(
       id: empresaJson['id'] as String,
       logoUrl: (empresaJson['logo_url'] ?? '') as String,
@@ -32,12 +50,15 @@ class CotizacionPdfService {
           (empresaJson['theme_seleccionado'] ?? 'corporativo') as String,
       terminosDefault: (empresaJson['terminos_default'] ?? '') as String,
       piePaginaDefault: (empresaJson['pie_pagina_default'] ?? '') as String,
-      localizacion: const ConfiguracionLocalizacion(
-        moneda: 'MXN',
-        idioma: 'es-MX',
-        husoHorario: 'America/Tijuana',
-        formatoFecha: 'dd/MM/yyyy',
-        formatoMoneda: '1,000.00 MXN',
+      localizacion: ConfiguracionLocalizacion(
+        moneda: moneda,
+        idioma: (localizacionJson['idioma'] ?? 'es-MX') as String,
+        husoHorario:
+            (localizacionJson['huso_horario'] ?? 'America/Tijuana') as String,
+        formatoFecha:
+            (localizacionJson['formato_fecha'] ?? 'dd/MM/yyyy') as String,
+        formatoMoneda:
+            (localizacionJson['formato_moneda'] ?? '1,000.00 MXN') as String,
       ),
       impuestos: const ConfiguracionImpuestos(
         tasasLinea: '',
@@ -57,7 +78,9 @@ class CotizacionPdfService {
           .eq('id', cotizacion.clienteId)
           .maybeSingle();
       if (clienteRow == null) {
-        throw StateError('Cliente no encontrado');
+        throw StateError(
+          isEnglish ? 'Client not found' : 'Cliente no encontrado',
+        );
       }
       cliente = Cliente(
         id: clienteRow['id'] as String,
@@ -70,6 +93,12 @@ class CotizacionPdfService {
         telefono: (clienteRow['telefono'] ?? '') as String,
         correo: (clienteRow['correo'] ?? '') as String,
         direccion: (clienteRow['direccion'] ?? '') as String,
+        calle: '',
+        apartamentoSuite: '',
+        ciudad: '',
+        estadoProvincia: '',
+        codigoPostal: '',
+        pais: '',
         notas: (clienteRow['notas'] ?? '') as String,
         activo: true,
         createdAt: DateTime.now(),
@@ -80,13 +109,19 @@ class CotizacionPdfService {
         id: 'na',
         numero: '',
         idNumber: '',
-        nombre: 'Cliente no encontrado',
+        nombre: isEnglish ? 'Client not found' : 'Cliente no encontrado',
         empresa: '-',
         rfc: '-',
         contacto: '-',
         telefono: '-',
         correo: '-',
         direccion: '-',
+        calle: '',
+        apartamentoSuite: '',
+        ciudad: '',
+        estadoProvincia: '',
+        codigoPostal: '',
+        pais: '',
         notas: '',
         activo: true,
         createdAt: DateTime(2026),
@@ -112,6 +147,8 @@ class CotizacionPdfService {
                 unidad: (item['unidad'] ?? '') as String,
                 descuento: ((item['descuento'] ?? 0) as num).toDouble(),
                 cantidad: ((item['cantidad'] ?? 0) as num).toDouble(),
+                impuestoPorcentaje:
+                    ((item['impuesto_porcentaje'] ?? 0) as num).toDouble(),
                 importe: ((item['importe'] ?? 0) as num).toDouble(),
                 orden: ((item['orden'] ?? 0) as num).toInt(),
                 createdAt: DateTime.now(),
@@ -122,10 +159,10 @@ class CotizacionPdfService {
           ..sort((a, b) => a.orden.compareTo(b.orden));
 
     final estatus = {
-      QuoteStatus.borrador: 'Borrador',
-      QuoteStatus.enviada: 'Enviada',
-      QuoteStatus.aprobada: 'Aprobada',
-      QuoteStatus.rechazada: 'Rechazada',
+      QuoteStatus.borrador: isEnglish ? 'Draft' : 'Borrador',
+      QuoteStatus.enviada: isEnglish ? 'Sent' : 'Enviada',
+      QuoteStatus.aprobada: isEnglish ? 'Approved' : 'Aprobada',
+      QuoteStatus.rechazada: isEnglish ? 'Rejected' : 'Rechazada',
     }[cotizacion.estatus]!;
 
     pdf.addPage(
@@ -150,7 +187,7 @@ class CotizacionPdfService {
                     ),
                     pw.SizedBox(height: 4),
                     pw.Text(empresa.nombreFiscal),
-                    pw.Text('RFC: ${empresa.rfc}'),
+                    pw.Text('${isEnglish ? 'Tax ID' : 'RFC'}: ${empresa.rfc}'),
                     pw.Text(empresa.correo),
                   ],
                 ),
@@ -188,7 +225,7 @@ class CotizacionPdfService {
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
                       pw.Text(
-                        'Cliente',
+                        isEnglish ? 'Client' : 'Cliente',
                         style: pw.TextStyle(
                           fontWeight: pw.FontWeight.bold,
                           color: PdfColor.fromHex('#6B7280'),
@@ -206,19 +243,21 @@ class CotizacionPdfService {
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
                       pw.Text(
-                        'Cotización',
+                        isEnglish ? 'Quote' : 'Cotización',
                         style: pw.TextStyle(
                           fontWeight: pw.FontWeight.bold,
                           color: PdfColor.fromHex('#6B7280'),
                         ),
                       ),
                       pw.SizedBox(height: 4),
-                      pw.Text('Folio: ${cotizacion.folio}'),
                       pw.Text(
-                        'Emisión: ${DateFormat('dd/MM/yyyy').format(cotizacion.fechaEmision)}',
+                        '${isEnglish ? 'Folio' : 'Folio'}: ${cotizacion.folio}',
                       ),
                       pw.Text(
-                        'Vencimiento: ${DateFormat('dd/MM/yyyy').format(cotizacion.fechaVencimiento)}',
+                        '${isEnglish ? 'Issued' : 'Emisión'}: ${dateFormat.format(cotizacion.fechaEmision)}',
+                      ),
+                      pw.Text(
+                        '${isEnglish ? 'Due' : 'Vencimiento'}: ${dateFormat.format(cotizacion.fechaVencimiento)}',
                       ),
                     ],
                   ),
@@ -241,10 +280,10 @@ class CotizacionPdfService {
                   color: PdfColor.fromHex('#F7F9FC'),
                 ),
                 children: [
-                  _cell('Concepto', header: true),
-                  _cell('Cantidad', header: true),
-                  _cell('Precio', header: true),
-                  _cell('Importe', header: true),
+                  _cell(isEnglish ? 'Item' : 'Concepto', header: true),
+                  _cell(isEnglish ? 'Quantity' : 'Cantidad', header: true),
+                  _cell(isEnglish ? 'Price' : 'Precio', header: true),
+                  _cell(isEnglish ? 'Amount' : 'Importe', header: true),
                 ],
               ),
               ...detalles.map(
@@ -271,18 +310,21 @@ class CotizacionPdfService {
               child: pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.stretch,
                 children: [
-                  _totalLine('Subtotal', currency.format(cotizacion.subtotal)),
                   _totalLine(
-                    'Descuento',
+                    isEnglish ? 'Subtotal' : 'Subtotal',
+                    currency.format(cotizacion.subtotal),
+                  ),
+                  _totalLine(
+                    isEnglish ? 'Discount' : 'Descuento',
                     currency.format(cotizacion.descuentoTotal),
                   ),
                   _totalLine(
-                    'Impuesto',
+                    isEnglish ? 'Tax' : 'Impuesto',
                     currency.format(cotizacion.impuestoTotal),
                   ),
                   pw.Divider(color: PdfColor.fromHex('#E6EAF0')),
                   _totalLine(
-                    'Total',
+                    isEnglish ? 'Total' : 'Total',
                     currency.format(cotizacion.total),
                     strong: true,
                   ),
@@ -292,12 +334,12 @@ class CotizacionPdfService {
           ),
           pw.SizedBox(height: 16),
           pw.Text(
-            'Términos: ${cotizacion.terminos}',
+            '${isEnglish ? 'Terms' : 'Términos'}: ${cotizacion.terminos}',
             style: const pw.TextStyle(fontSize: 10),
           ),
           pw.SizedBox(height: 8),
           pw.Text(
-            'Notas: ${cotizacion.notas}',
+            '${isEnglish ? 'Notes' : 'Notas'}: ${cotizacion.notas}',
             style: const pw.TextStyle(fontSize: 10),
           ),
           pw.SizedBox(height: 18),
