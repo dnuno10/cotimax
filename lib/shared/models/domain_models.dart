@@ -370,6 +370,7 @@ class Ingreso {
     required this.recurrente,
     required this.recurrencia,
     required this.diasSemana,
+    required this.fechaInicioRecurrencia,
     required this.iconKey,
     required this.createdAt,
     required this.updatedAt,
@@ -386,6 +387,7 @@ class Ingreso {
   final bool recurrente;
   final RecurrenceFrequency recurrencia;
   final List<int> diasSemana;
+  final DateTime? fechaInicioRecurrencia;
   final String iconKey;
   final DateTime createdAt;
   final DateTime updatedAt;

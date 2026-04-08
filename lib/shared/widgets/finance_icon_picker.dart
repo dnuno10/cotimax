@@ -638,75 +638,34 @@ class _FinanceIconDialogState extends State<_FinanceIconDialog> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 560, maxHeight: 560),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          trText('Seleccionar icono'),
-                          style: TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        Text(
-                          tr(
-                            '$visible.length iconos disponibles',
-                            '${visible.length} icons available',
-                          ),
-                          style: const TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close_rounded),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.white,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: Row(
+        child: SizedBox(
+          width: 560,
+          height: 560,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
                   children: [
-                    FinanceIconAvatar(
-                      iconKey: selected.key,
-                      size: 42,
-                      backgroundColor: AppColors.white,
-                    ),
-                    const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            _displayFinanceIconLabel(selected),
-                            style: const TextStyle(
+                            trText('Seleccionar icono'),
+                            style: TextStyle(
                               color: AppColors.textPrimary,
+                              fontSize: 18,
                               fontWeight: FontWeight.w800,
                             ),
                           ),
                           Text(
-                            trText('Toca un icono para seleccionarlo'),
-                            style: TextStyle(
+                            tr(
+                              '$visible.length iconos disponibles',
+                              '${visible.length} icons available',
+                            ),
+                            style: const TextStyle(
                               color: AppColors.textSecondary,
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -715,70 +674,130 @@ class _FinanceIconDialogState extends State<_FinanceIconDialog> {
                         ],
                       ),
                     ),
+                    IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close_rounded),
+                    ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _searchController,
-                onChanged: (value) => setState(() => _query = value.trim()),
-                decoration: InputDecoration(
-                  hintText: trText('Buscar icono por nombre'),
-                  prefixIcon: const Icon(Icons.search_rounded),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Flexible(
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: GridView.builder(
-                    itemCount: visible.length,
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 6,
-                          mainAxisSpacing: 8,
-                          crossAxisSpacing: 8,
-                          childAspectRatio: 1,
-                        ),
-                    itemBuilder: (context, index) {
-                      final option = visible[index];
-                      final isSelected = option.key == widget.selectedKey;
-                      return Tooltip(
-                        message: _displayFinanceIconLabel(option),
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(10),
-                          onTap: () => Navigator.of(context).pop(option.key),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? AppColors.primary.withValues(alpha: 0.08)
-                                  : AppColors.background,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: isSelected
-                                    ? AppColors.primary
-                                    : AppColors.border,
-                                width: isSelected ? 1.6 : 1,
+                const SizedBox(height: 8),
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppColors.white,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: AppColors.border),
+                          ),
+                          child: Row(
+                            children: [
+                              FinanceIconAvatar(
+                                iconKey: selected.key,
+                                size: 42,
+                                backgroundColor: AppColors.white,
                               ),
-                            ),
-                            child: Icon(
-                              option.icon,
-                              color: isSelected
-                                  ? AppColors.primary
-                                  : AppColors.textSecondary,
-                            ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _displayFinanceIconLabel(selected),
+                                      style: const TextStyle(
+                                        color: AppColors.textPrimary,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                    Text(
+                                      trText(
+                                        'Toca un icono para seleccionarlo',
+                                      ),
+                                      style: TextStyle(
+                                        color: AppColors.textSecondary,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      );
-                    },
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: _searchController,
+                          onChanged: (value) =>
+                              setState(() => _query = value.trim()),
+                          decoration: InputDecoration(
+                            hintText: trText('Buscar icono por nombre'),
+                            prefixIcon: const Icon(Icons.search_rounded),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: AppColors.border),
+                          ),
+                          child: GridView.builder(
+                            itemCount: visible.length,
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            gridDelegate:
+                                const SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 6,
+                                  mainAxisSpacing: 8,
+                                  crossAxisSpacing: 8,
+                                  childAspectRatio: 1,
+                                ),
+                            itemBuilder: (context, index) {
+                              final option = visible[index];
+                              final isSelected =
+                                  option.key == widget.selectedKey;
+                              return Tooltip(
+                                message: _displayFinanceIconLabel(option),
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(10),
+                                  onTap: () =>
+                                      Navigator.of(context).pop(option.key),
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: isSelected
+                                          ? AppColors.primary.withValues(
+                                              alpha: 0.08,
+                                            )
+                                          : AppColors.background,
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: isSelected
+                                            ? AppColors.primary
+                                            : AppColors.border,
+                                        width: isSelected ? 1.6 : 1,
+                                      ),
+                                    ),
+                                    child: Icon(
+                                      option.icon,
+                                      color: isSelected
+                                          ? AppColors.primary
+                                          : AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

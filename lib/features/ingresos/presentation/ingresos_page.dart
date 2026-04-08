@@ -637,9 +637,12 @@ class _IngresosPageState extends ConsumerState<IngresosPage> {
             if (!context.mounted) return;
             ref.invalidate(ingresosControllerProvider);
             ToastHelper.showSuccess(context, 'Ingreso eliminado.');
-          } catch (_) {
+          } catch (error) {
             if (!context.mounted) rethrow;
-            ToastHelper.showError(context, 'No se pudo eliminar el ingreso.');
+            ToastHelper.showError(
+              context,
+              buildActionErrorMessage(error, 'No se pudo eliminar el ingreso.'),
+            );
             rethrow;
           }
         },
@@ -674,11 +677,14 @@ class _IngresosPageState extends ConsumerState<IngresosPage> {
                 ? 'Ingreso eliminado.'
                 : '$count ingresos eliminados correctamente.',
           );
-        } catch (_) {
+        } catch (error) {
           if (!mounted) rethrow;
           ToastHelper.showError(
             context,
-            'No se pudieron eliminar los ingresos.',
+            buildActionErrorMessage(
+              error,
+              'No se pudieron eliminar los ingresos.',
+            ),
           );
           rethrow;
         }
@@ -703,6 +709,7 @@ class _IngresoFormState extends ConsumerState<_IngresoForm> {
   late final TextEditingController _cotizacionController;
   late final TextEditingController _montoController;
   late final TextEditingController _fechaController;
+  late final TextEditingController _fechaInicioRecurrenciaController;
   late final TextEditingController _referenciaController;
   late final TextEditingController _notasController;
   PaymentMethod _metodoPago = PaymentMethod.transferencia;
@@ -710,6 +717,8 @@ class _IngresoFormState extends ConsumerState<_IngresoForm> {
   RecurrenceFrequency _recurrencia = RecurrenceFrequency.ninguna;
   final Set<int> _diasSemana = <int>{};
   String _iconKey = 'wallet';
+  String _clienteValue = '';
+  String _cotizacionValue = '';
   bool _isSaving = false;
 
   @override
@@ -717,8 +726,10 @@ class _IngresoFormState extends ConsumerState<_IngresoForm> {
     super.initState();
     _scrollController = ScrollController();
     final item = widget.item;
-    _clienteController = seededTextController(item?.clienteId);
-    _cotizacionController = seededTextController(item?.cotizacionId ?? '');
+    _clienteValue = item?.clienteId ?? '';
+    _cotizacionValue = item?.cotizacionId ?? '';
+    _clienteController = seededTextController(_clienteValue);
+    _cotizacionController = seededTextController(_cotizacionValue);
     _montoController = seededTextController('0.00');
     if (item != null) {
       assignControllerText(
@@ -728,6 +739,11 @@ class _IngresoFormState extends ConsumerState<_IngresoForm> {
     }
     _fechaController = seededTextController(
       DateFormat('yyyy-MM-dd').format(item?.fecha ?? DateTime.now()),
+    );
+    _fechaInicioRecurrenciaController = seededTextController(
+      DateFormat(
+        'yyyy-MM-dd',
+      ).format(item?.fechaInicioRecurrencia ?? item?.fecha ?? DateTime.now()),
     );
     _referenciaController = seededTextController(item?.referencia);
     _notasController = seededTextController(item?.notas);
@@ -747,6 +763,7 @@ class _IngresoFormState extends ConsumerState<_IngresoForm> {
     _cotizacionController.dispose();
     _montoController.dispose();
     _fechaController.dispose();
+    _fechaInicioRecurrenciaController.dispose();
     _referenciaController.dispose();
     _notasController.dispose();
     super.dispose();
@@ -754,6 +771,36 @@ class _IngresoFormState extends ConsumerState<_IngresoForm> {
 
   @override
   Widget build(BuildContext context) {
+    final clientesCatalogo =
+        ref.watch(clientesControllerProvider).valueOrNull ?? const <Cliente>[];
+    final cotizacionesCatalogo =
+        ref.watch(cotizacionesControllerProvider).valueOrNull ??
+        const <Cotizacion>[];
+    final clienteOptions = clientesCatalogo
+        .map(
+          (item) =>
+              _LookupOption(value: item.id, label: _clientOptionLabel(item)),
+        )
+        .toList();
+    final cotizacionOptions = cotizacionesCatalogo
+        .map(
+          (item) => _LookupOption(
+            value: item.id,
+            label: item.folio.trim().isEmpty ? item.id : item.folio,
+          ),
+        )
+        .toList();
+    _scheduleLookupSync(
+      controller: _clienteController,
+      currentValue: _clienteValue,
+      options: clienteOptions,
+    );
+    _scheduleLookupSync(
+      controller: _cotizacionController,
+      currentValue: _cotizacionValue,
+      options: cotizacionOptions,
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -781,21 +828,43 @@ class _IngresoFormState extends ConsumerState<_IngresoForm> {
                         _ResponsiveFormRow(
                           left: FormFieldWrapper(
                             label: 'Cliente',
-                            child: TextField(
-                              controller: _clienteController,
-                              decoration: InputDecoration(
-                                hintText: trText('Cliente relacionado'),
-                              ),
-                            ),
+                            child: clienteOptions.isEmpty
+                                ? _LookupEmptyState(
+                                    message: 'No hay clientes registrados.',
+                                    buttonLabel: 'Agregar cliente',
+                                    onPressed: _goToCreateClient,
+                                  )
+                                : _LookupAutocompleteField(
+                                    controller: _clienteController,
+                                    options: clienteOptions,
+                                    noneLabel: 'Ningún cliente relacionado',
+                                    hintText: 'Busca y selecciona un cliente',
+                                    onTextChanged: (value) =>
+                                        _clienteValue = value.trim(),
+                                    onOptionSelected: (option) =>
+                                        _clienteValue = option.value,
+                                  ),
                           ),
                           right: FormFieldWrapper(
                             label: 'Cotización',
-                            child: TextField(
-                              controller: _cotizacionController,
-                              decoration: InputDecoration(
-                                hintText: trText('Folio o ID de cotización'),
-                              ),
-                            ),
+                            child: cotizacionOptions.isEmpty
+                                ? _LookupEmptyState(
+                                    message:
+                                        'No hay cotizaciones registradas. Puedes continuar sin relacionar una.',
+                                    buttonLabel: 'Agregar cotización',
+                                    onPressed: _goToCreateQuote,
+                                  )
+                                : _LookupAutocompleteField(
+                                    controller: _cotizacionController,
+                                    options: cotizacionOptions,
+                                    noneLabel: 'Ninguna cotización relacionada',
+                                    hintText:
+                                        'Busca y selecciona una cotización',
+                                    onTextChanged: (value) =>
+                                        _cotizacionValue = value.trim(),
+                                    onOptionSelected: (option) =>
+                                        _cotizacionValue = option.value,
+                                  ),
                           ),
                         ),
                         const SizedBox(height: 12),
@@ -884,6 +953,10 @@ class _IngresoFormState extends ConsumerState<_IngresoForm> {
                     isRecurring: _recurrente,
                     frequency: _recurrencia,
                     selectedWeekdays: _diasSemana,
+                    startDateController: _fechaInicioRecurrenciaController,
+                    startDateLabel: 'Fecha de inicio',
+                    startDateHelperText:
+                        'A partir de esta fecha se calculará la siguiente recurrencia.',
                     onRecurringChanged: (value) {
                       setState(() {
                         _recurrente = value;
@@ -954,13 +1027,17 @@ class _IngresoFormState extends ConsumerState<_IngresoForm> {
   Future<void> _save() async {
     if (_isSaving) return;
     final now = DateTime.now();
+    final movementDate = DateTime.tryParse(_fechaController.text.trim()) ?? now;
+    final recurrenceStartDate =
+        DateTime.tryParse(_fechaInicioRecurrenciaController.text.trim()) ??
+        movementDate;
     final item = Ingreso(
       id: widget.item?.id ?? 'ing-${now.microsecondsSinceEpoch}',
-      clienteId: _clienteController.text.trim(),
-      cotizacionId: _cotizacionController.text.trim(),
+      clienteId: _clienteValue.trim(),
+      cotizacionId: _cotizacionValue.trim(),
       monto: parseNumericText(_montoController.text) ?? 0,
       metodoPago: _metodoPago,
-      fecha: DateTime.tryParse(_fechaController.text.trim()) ?? now,
+      fecha: movementDate,
       referencia: _referenciaController.text.trim(),
       notas: _notasController.text.trim(),
       recurrente: _recurrente,
@@ -972,6 +1049,7 @@ class _IngresoFormState extends ConsumerState<_IngresoForm> {
               return dias;
             })()
           : const [],
+      fechaInicioRecurrencia: _recurrente ? recurrenceStartDate : null,
       iconKey: _iconKey,
       createdAt: widget.item?.createdAt ?? now,
       updatedAt: now,
@@ -989,14 +1067,62 @@ class _IngresoFormState extends ConsumerState<_IngresoForm> {
             : 'Ingreso actualizado correctamente.',
       );
       Navigator.of(context).pop();
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
-      ToastHelper.showError(context, 'No se pudo guardar el ingreso.');
+      ToastHelper.showError(
+        context,
+        buildActionErrorMessage(error, 'No se pudo guardar el ingreso.'),
+      );
     } finally {
       if (mounted) {
         setState(() => _isSaving = false);
       }
     }
+  }
+
+  void _scheduleLookupSync({
+    required TextEditingController controller,
+    required String currentValue,
+    required List<_LookupOption> options,
+  }) {
+    if (currentValue.trim().isEmpty) return;
+    _LookupOption? match;
+    for (final option in options) {
+      if (option.value == currentValue) {
+        match = option;
+        break;
+      }
+    }
+    if (match == null || controller.text == match.label) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (controller.text != match!.label) {
+        assignControllerText(controller, match.label);
+      }
+    });
+  }
+
+  String _clientOptionLabel(Cliente cliente) {
+    final nombre = cliente.nombre.trim();
+    final empresa = cliente.empresa.trim();
+    if (nombre.isNotEmpty &&
+        empresa.isNotEmpty &&
+        nombre.toLowerCase() != empresa.toLowerCase()) {
+      return '$nombre · $empresa';
+    }
+    if (nombre.isNotEmpty) return nombre;
+    if (empresa.isNotEmpty) return empresa;
+    return cliente.id;
+  }
+
+  void _goToCreateClient() {
+    Navigator.of(context).pop();
+    context.go('${RoutePaths.clientes}?create=1');
+  }
+
+  void _goToCreateQuote() {
+    Navigator.of(context).pop();
+    context.go('${RoutePaths.cotizaciones}?create=1');
   }
 }
 
@@ -1022,6 +1148,183 @@ class _ResponsiveFormRow extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+class _LookupOption {
+  const _LookupOption({required this.value, required this.label});
+
+  final String value;
+  final String label;
+}
+
+class _LookupAutocompleteField extends StatefulWidget {
+  const _LookupAutocompleteField({
+    required this.controller,
+    required this.options,
+    required this.noneLabel,
+    required this.hintText,
+    required this.onTextChanged,
+    required this.onOptionSelected,
+  });
+
+  final TextEditingController controller;
+  final List<_LookupOption> options;
+  final String noneLabel;
+  final String hintText;
+  final ValueChanged<String> onTextChanged;
+  final ValueChanged<_LookupOption> onOptionSelected;
+
+  @override
+  State<_LookupAutocompleteField> createState() =>
+      _LookupAutocompleteFieldState();
+}
+
+class _LookupAutocompleteFieldState extends State<_LookupAutocompleteField> {
+  late final FocusNode _focusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode = FocusNode();
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final allOptions = [
+      _LookupOption(value: '', label: widget.noneLabel),
+      ...widget.options,
+    ];
+    return RawAutocomplete<_LookupOption>(
+      textEditingController: widget.controller,
+      focusNode: _focusNode,
+      displayStringForOption: (option) => option.label,
+      optionsBuilder: (textEditingValue) {
+        final query = textEditingValue.text.trim().toLowerCase();
+        if (query.isEmpty) return allOptions.take(8);
+        return allOptions
+            .where((option) => option.label.toLowerCase().contains(query))
+            .take(8);
+      },
+      onSelected: (option) {
+        assignControllerText(widget.controller, option.label);
+        widget.onOptionSelected(option);
+      },
+      fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+        return TextFormField(
+          controller: controller,
+          focusNode: focusNode,
+          onChanged: widget.onTextChanged,
+          onEditingComplete: () {
+            final query = controller.text.trim().toLowerCase();
+            for (final option in allOptions) {
+              if (option.label.toLowerCase() == query) {
+                assignControllerText(controller, option.label);
+                widget.onOptionSelected(option);
+                break;
+              }
+            }
+            focusNode.unfocus();
+          },
+          decoration: cotimaxDropdownDecoration(
+            hintText: widget.hintText,
+          ).copyWith(suffixIcon: const Icon(Icons.search_rounded)),
+        );
+      },
+      optionsViewBuilder: (context, onSelected, options) {
+        final matches = options.toList(growable: false);
+        if (matches.isEmpty) return const SizedBox.shrink();
+        return Align(
+          alignment: Alignment.topLeft,
+          child: Material(
+            elevation: 10,
+            color: AppColors.white,
+            borderRadius: cotimaxMenuBorderRadius,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420, maxHeight: 280),
+              child: ListView.separated(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                shrinkWrap: true,
+                itemCount: matches.length,
+                separatorBuilder: (_, _) => const Divider(height: 1),
+                itemBuilder: (context, index) {
+                  final option = matches[index];
+                  return InkWell(
+                    onTap: () => onSelected(option),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                      child: Text(
+                        trText(option.label),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _LookupEmptyState extends StatelessWidget {
+  const _LookupEmptyState({
+    required this.message,
+    required this.buttonLabel,
+    required this.onPressed,
+  });
+
+  final String message;
+  final String buttonLabel;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            trText(message),
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 10),
+          TextButton.icon(
+            onPressed: onPressed,
+            icon: const Icon(Icons.add_rounded, size: 16),
+            label: Text(trText(buttonLabel)),
+          ),
+        ],
+      ),
     );
   }
 }

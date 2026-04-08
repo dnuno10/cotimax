@@ -247,9 +247,12 @@ class _ProveedoresPageState extends ConsumerState<ProveedoresPage> {
         context,
         proveedor.activo ? 'Proveedor desactivado.' : 'Proveedor activado.',
       );
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
-      ToastHelper.showError(context, 'No se pudo actualizar el proveedor.');
+      ToastHelper.showError(
+        context,
+        buildActionErrorMessage(error, 'No se pudo actualizar el proveedor.'),
+      );
     }
   }
 
@@ -263,9 +266,12 @@ class _ProveedoresPageState extends ConsumerState<ProveedoresPage> {
           ref.invalidate(proveedoresControllerProvider);
           if (!mounted) return;
           ToastHelper.showSuccess(context, 'Proveedor eliminado.');
-        } catch (_) {
+        } catch (error) {
           if (!mounted) rethrow;
-          ToastHelper.showError(context, 'No se pudo eliminar el proveedor.');
+          ToastHelper.showError(
+            context,
+            buildActionErrorMessage(error, 'No se pudo eliminar el proveedor.'),
+          );
           rethrow;
         }
       },
@@ -299,11 +305,14 @@ class _ProveedoresPageState extends ConsumerState<ProveedoresPage> {
                 ? 'Proveedor eliminado.'
                 : '$count proveedores eliminados correctamente.',
           );
-        } catch (_) {
+        } catch (error) {
           if (!mounted) rethrow;
           ToastHelper.showError(
             context,
-            'No se pudieron eliminar los proveedores.',
+            buildActionErrorMessage(
+              error,
+              'No se pudieron eliminar los proveedores.',
+            ),
           );
           rethrow;
         }
@@ -631,9 +640,12 @@ class _ProveedorFormState extends ConsumerState<_ProveedorForm> {
             : 'Proveedor actualizado correctamente.',
       );
       Navigator.of(context).pop();
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
-      ToastHelper.showError(context, 'No se pudo guardar el proveedor.');
+      ToastHelper.showError(
+        context,
+        buildActionErrorMessage(error, 'No se pudo guardar el proveedor.'),
+      );
     } finally {
       if (mounted) {
         setState(() => _isSaving = false);

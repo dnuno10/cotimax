@@ -415,9 +415,12 @@ class _MaterialesPageState extends ConsumerState<MaterialesPage> {
           ref.invalidate(materialesControllerProvider);
           if (!mounted) return;
           ToastHelper.showSuccess(context, 'Material eliminado.');
-        } catch (_) {
+        } catch (error) {
           if (!mounted) rethrow;
-          ToastHelper.showError(context, 'No se pudo eliminar el material.');
+          ToastHelper.showError(
+            context,
+            buildActionErrorMessage(error, 'No se pudo eliminar el material.'),
+          );
           rethrow;
         }
       },
@@ -451,11 +454,14 @@ class _MaterialesPageState extends ConsumerState<MaterialesPage> {
                 ? 'Material eliminado.'
                 : '$count materiales eliminados correctamente.',
           );
-        } catch (_) {
+        } catch (error) {
           if (!mounted) rethrow;
           ToastHelper.showError(
             context,
-            'No se pudieron eliminar los materiales.',
+            buildActionErrorMessage(
+              error,
+              'No se pudieron eliminar los materiales.',
+            ),
           );
           rethrow;
         }
@@ -1012,9 +1018,12 @@ class _MaterialFormState extends ConsumerState<_MaterialForm> {
             : 'Material actualizado correctamente.',
       );
       Navigator.of(context).pop();
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
-      ToastHelper.showError(context, 'No se pudo guardar el material.');
+      ToastHelper.showError(
+        context,
+        buildActionErrorMessage(error, 'No se pudo guardar el material.'),
+      );
     } finally {
       if (mounted) {
         setState(() => _isSaving = false);

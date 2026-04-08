@@ -363,11 +363,14 @@ class _CotizacionesPageState extends ConsumerState<CotizacionesPage> {
             ref.invalidate(cotizacionesControllerProvider);
             if (!context.mounted) return;
             ToastHelper.showSuccess(context, 'Cotización eliminada.');
-          } catch (_) {
+          } catch (error) {
             if (!context.mounted) rethrow;
             ToastHelper.showError(
               context,
-              'No se pudo eliminar la cotización.',
+              buildActionErrorMessage(
+                error,
+                'No se pudo eliminar la cotización.',
+              ),
             );
             rethrow;
           }
@@ -403,11 +406,14 @@ class _CotizacionesPageState extends ConsumerState<CotizacionesPage> {
                 ? 'Cotización eliminada.'
                 : '$count cotizaciones eliminadas correctamente.',
           );
-        } catch (_) {
+        } catch (error) {
           if (!mounted) rethrow;
           ToastHelper.showError(
             context,
-            'No se pudieron eliminar las cotizaciones.',
+            buildActionErrorMessage(
+              error,
+              'No se pudieron eliminar las cotizaciones.',
+            ),
           );
           rethrow;
         }
@@ -451,14 +457,7 @@ class _CotizacionesPageState extends ConsumerState<CotizacionesPage> {
           child: SizedBox(
             width: 1000,
             height: 760,
-            child: PdfPreview(
-              build: (_) => CotizacionPdfService.generate(quote),
-              canChangePageFormat: false,
-              canChangeOrientation: false,
-              allowSharing: true,
-              allowPrinting: true,
-              pdfFileName: '${quote.folio}.pdf',
-            ),
+            child: _QuotePdfPreviewDialog(quote: quote),
           ),
         );
       },
@@ -467,6 +466,65 @@ class _CotizacionesPageState extends ConsumerState<CotizacionesPage> {
 }
 
 enum _QuoteViewMode { table, kanban }
+
+class _QuotePdfPreviewDialog extends StatefulWidget {
+  const _QuotePdfPreviewDialog({required this.quote});
+
+  final Cotizacion quote;
+
+  @override
+  State<_QuotePdfPreviewDialog> createState() => _QuotePdfPreviewDialogState();
+}
+
+class _QuotePdfPreviewDialogState extends State<_QuotePdfPreviewDialog> {
+  late Future<Uint8List> _pdfFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _pdfFuture = CotizacionPdfService.generate(widget.quote);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Uint8List>(
+      future: _pdfFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Center(
+            child: SizedBox(
+              width: 36,
+              height: 36,
+              child: CircularProgressIndicator(strokeWidth: 3),
+            ),
+          );
+        }
+        if (snapshot.hasError || !snapshot.hasData) {
+          return ErrorStateWidget(
+            message: buildActionErrorMessage(
+              snapshot.error ?? 'No se pudo generar el PDF.',
+              'No se pudo generar la vista previa.',
+            ),
+            onRetry: () {
+              setState(() {
+                _pdfFuture = CotizacionPdfService.generate(widget.quote);
+              });
+            },
+          );
+        }
+        final pdfBytes = snapshot.data!;
+        return PdfPreview(
+          build: (_) async => pdfBytes,
+          canChangePageFormat: false,
+          canChangeOrientation: false,
+          allowSharing: true,
+          allowPrinting: true,
+          pdfFileName: '${widget.quote.folio}.pdf',
+        );
+      },
+    );
+  }
+}
 
 class _QuoteViewToggle extends StatelessWidget {
   const _QuoteViewToggle({required this.mode, required this.onChanged});
@@ -919,6 +977,7 @@ const double _quoteUnitWidth = 130;
 const double _quoteQuantityWidth = 130;
 const double _quoteTaxWidth = 150;
 const double _quoteTotalWidth = 170;
+const double _quoteRetIsrRate = 0.10;
 
 double _extractTaxPercent(String raw, {double fallback = 16}) {
   final match = RegExp(r'(\d+(?:\.\d+)?)').firstMatch(raw);
@@ -1150,6 +1209,8 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
       final options =
           products.where((item) => item.activo).map((item) {
             final raw = rowsById[item.id];
+            final unidad = (raw?['unidad_medida']?.toString() ?? item.unidad)
+                .trim();
             return _QuoteProductOption(
               id: item.id,
               nombre: item.nombre,
@@ -1162,7 +1223,7 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
               impuestoPorcentaje: _extractTaxPercent(
                 raw?['tasa_impuesto_nombre']?.toString() ?? '',
               ),
-              unidad: (raw?['unidad_medida']?.toString() ?? item.unidad).trim(),
+              unidad: unidad.isEmpty ? 'pieza' : unidad,
             );
           }).toList()..sort(
             (a, b) => a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()),
@@ -1293,11 +1354,14 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
       for (final line in previousLines) {
         line.dispose();
       }
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
       ToastHelper.showError(
         context,
-        'No se pudieron cargar las líneas de la cotización.',
+        buildActionErrorMessage(
+          error,
+          'No se pudieron cargar las líneas de la cotización.',
+        ),
       );
     } finally {
       if (mounted) {
@@ -1336,302 +1400,339 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
     final subtotal = _subtotalAmount;
     final discount = _discountAmount(subtotal);
     final taxes = _taxTotalAmount;
+    final retIsrAmount = _retIsrAmount;
     final total = _totalAmount;
     final deposit = _depositAmount;
     final paid = deposit.clamp(0, total).toDouble();
     final balance = (total - paid).clamp(0, double.infinity).toDouble();
+    final showFormLoader =
+        _loadingExistingQuote ||
+        clientesAsync.isLoading ||
+        (_loadingProductOptions && _productOptions.isEmpty);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Expanded(
-          child: Scrollbar(
-            controller: _scrollController,
-            child: SingleChildScrollView(
-              controller: _scrollController,
-              child: Opacity(
-                opacity: _loadingExistingQuote ? 0.6 : 1,
-                child: Column(
-                  children: [
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        final wide = constraints.maxWidth >= 1040;
-                        final blocks = [
-                          _QuoteSection(
-                            title: 'Cliente',
-                            icon: FontAwesomeIcons.userGroup,
-                            child: clientesAsync.when(
-                              loading: () => const SizedBox(
-                                height: 72,
-                                child: Center(
-                                  child: CircularProgressIndicator(),
-                                ),
-                              ),
-                              error: (_, __) => EmptyFieldState(
-                                hintText: 'No se pudieron cargar los clientes.',
-                                message:
-                                    'Vuelve a intentar o registra un cliente nuevo para continuar.',
-                                buttonLabel: 'Agregar cliente',
-                                onPressed: _goToCreateClient,
-                              ),
-                              data: (items) {
-                                if (items.isEmpty) {
-                                  return EmptyFieldState(
-                                    hintText: 'No hay clientes registrados.',
-                                    message:
-                                        'Debes registrar un cliente para poder crear una cotización final.',
-                                    buttonLabel: 'Agregar cliente',
-                                    onPressed: _goToCreateClient,
-                                  );
-                                }
-                                return _QuoteDropdownFieldRow(
-                                  label: 'Cliente',
-                                  value: _selectedClientId,
-                                  hintText: 'Selecciona un cliente',
-                                  options: clientOptions,
-                                  onChanged: (value) {
-                                    setState(() => _selectedClientId = value);
-                                  },
-                                );
-                              },
-                            ),
-                          ),
-                          _QuoteSection(
-                            title: 'Fechas y anticipo',
-                            icon: FontAwesomeIcons.calendarDays,
-                            child: Column(
-                              children: [
-                                _QuoteFieldRow(
-                                  label: 'Fecha cotización',
-                                  controller: _fechaController,
-                                  hintText: 'DD/MM/AAAA',
-                                ),
-                                _QuoteFieldRow(
-                                  label: 'Válida hasta',
-                                  controller: _validaHastaController,
-                                  hintText: 'DD/MM/AAAA',
-                                ),
-                                _QuoteFieldRow(
-                                  label: 'Depósito inicial',
-                                  controller: _depositoController,
-                                  suffixText: currentCurrencyCode(),
-                                  helperText:
-                                      'Monto que el cliente pagará por anticipado. Se refleja en pagado y saldo pendiente.',
-                                  keyboardType:
-                                      const TextInputType.numberWithOptions(
-                                        decimal: true,
+          child: Stack(
+            children: [
+              Scrollbar(
+                controller: _scrollController,
+                child: IgnorePointer(
+                  ignoring: showFormLoader,
+                  child: SingleChildScrollView(
+                    controller: _scrollController,
+                    child: Opacity(
+                      opacity: showFormLoader ? 0.45 : 1,
+                      child: Column(
+                        children: [
+                          LayoutBuilder(
+                            builder: (context, constraints) {
+                              final wide = constraints.maxWidth >= 1040;
+                              final blocks = [
+                                _QuoteSection(
+                                  title: 'Cliente',
+                                  icon: FontAwesomeIcons.userGroup,
+                                  child: clientesAsync.when(
+                                    loading: () => const SizedBox(
+                                      height: 72,
+                                      child: Center(
+                                        child: CircularProgressIndicator(),
                                       ),
-                                  inputFormatters: const [
-                                    NumericTextInputFormatter(
-                                      useGrouping: true,
-                                      maxDecimalDigits: 2,
                                     ),
-                                  ],
+                                    error: (_, __) => EmptyFieldState(
+                                      hintText:
+                                          'No se pudieron cargar los clientes.',
+                                      message:
+                                          'Vuelve a intentar o registra un cliente nuevo para continuar.',
+                                      buttonLabel: 'Agregar cliente',
+                                      onPressed: _goToCreateClient,
+                                    ),
+                                    data: (items) {
+                                      if (items.isEmpty) {
+                                        return EmptyFieldState(
+                                          hintText:
+                                              'No hay clientes registrados.',
+                                          message:
+                                              'Debes registrar un cliente para poder crear una cotización final.',
+                                          buttonLabel: 'Agregar cliente',
+                                          onPressed: _goToCreateClient,
+                                        );
+                                      }
+                                      return _QuoteDropdownFieldRow(
+                                        label: 'Cliente',
+                                        value: _selectedClientId,
+                                        hintText: 'Selecciona un cliente',
+                                        options: clientOptions,
+                                        onChanged: (value) {
+                                          setState(
+                                            () => _selectedClientId = value,
+                                          );
+                                        },
+                                      );
+                                    },
+                                  ),
                                 ),
-                              ],
-                            ),
-                          ),
-                          _QuoteSection(
-                            title: 'Control comercial',
-                            icon: FontAwesomeIcons.clipboardList,
-                            child: Column(
-                              children: [
-                                _QuoteFieldRow(
-                                  label: 'Cotización #',
-                                  controller: _folioController,
-                                  helperText:
-                                      'Próximo folio sugerido: $_currentSuggestedFolio',
-                                ),
-                                _QuoteFieldRow(
-                                  label: 'Orden #',
-                                  controller: _ordenController,
-                                ),
-                                _QuoteCustomFieldRow(
-                                  label: 'Descuento',
-                                  child: Row(
+                                _QuoteSection(
+                                  title: 'Fechas y anticipo',
+                                  icon: FontAwesomeIcons.calendarDays,
+                                  child: Column(
                                     children: [
-                                      Expanded(
-                                        flex: 2,
-                                        child: _QuoteInlineDropdownField(
-                                          value: _discountType,
-                                          options: _quoteDiscountTypeOptions
-                                              .map(
-                                                (item) =>
-                                                    (value: item, label: item),
-                                              )
-                                              .toList(),
-                                          onChanged: (value) {
-                                            if (value == null) return;
-                                            setState(
-                                              () => _discountType = value,
-                                            );
-                                          },
-                                        ),
+                                      _QuoteFieldRow(
+                                        label: 'Fecha cotización',
+                                        controller: _fechaController,
+                                        hintText: 'DD/MM/AAAA',
                                       ),
-                                      const SizedBox(width: 10),
-                                      Expanded(
-                                        flex: 3,
-                                        child: TextFormField(
-                                          controller: _descuentoValorController,
-                                          keyboardType:
-                                              const TextInputType.numberWithOptions(
-                                                decimal: true,
+                                      _QuoteFieldRow(
+                                        label: 'Válida hasta',
+                                        controller: _validaHastaController,
+                                        hintText: 'DD/MM/AAAA',
+                                      ),
+                                      _QuoteFieldRow(
+                                        label: 'Depósito inicial',
+                                        controller: _depositoController,
+                                        suffixText: currentCurrencyCode(),
+                                        helperText:
+                                            'Monto que el cliente pagará por anticipado. Se refleja en pagado y saldo pendiente.',
+                                        keyboardType:
+                                            const TextInputType.numberWithOptions(
+                                              decimal: true,
+                                            ),
+                                        inputFormatters: const [
+                                          NumericTextInputFormatter(
+                                            useGrouping: true,
+                                            maxDecimalDigits: 2,
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                _QuoteSection(
+                                  title: 'Control comercial',
+                                  icon: FontAwesomeIcons.clipboardList,
+                                  child: Column(
+                                    children: [
+                                      _QuoteFieldRow(
+                                        label: 'Cotización #',
+                                        controller: _folioController,
+                                        helperText:
+                                            'Próximo folio sugerido: $_currentSuggestedFolio',
+                                      ),
+                                      _QuoteFieldRow(
+                                        label: 'Orden #',
+                                        controller: _ordenController,
+                                      ),
+                                      _QuoteCustomFieldRow(
+                                        label: 'Descuento',
+                                        child: Row(
+                                          children: [
+                                            Expanded(
+                                              flex: 2,
+                                              child: _QuoteInlineDropdownField(
+                                                value: _discountType,
+                                                options:
+                                                    _quoteDiscountTypeOptions
+                                                        .map(
+                                                          (item) => (
+                                                            value: item,
+                                                            label: item,
+                                                          ),
+                                                        )
+                                                        .toList(),
+                                                onChanged: (value) {
+                                                  if (value == null) return;
+                                                  setState(
+                                                    () => _discountType = value,
+                                                  );
+                                                },
                                               ),
-                                          inputFormatters: const [
-                                            NumericTextInputFormatter(
-                                              useGrouping: true,
-                                              maxDecimalDigits: 2,
+                                            ),
+                                            const SizedBox(width: 10),
+                                            Expanded(
+                                              flex: 3,
+                                              child: TextFormField(
+                                                controller:
+                                                    _descuentoValorController,
+                                                keyboardType:
+                                                    const TextInputType.numberWithOptions(
+                                                      decimal: true,
+                                                    ),
+                                                inputFormatters: const [
+                                                  NumericTextInputFormatter(
+                                                    useGrouping: true,
+                                                    maxDecimalDigits: 2,
+                                                  ),
+                                                ],
+                                                decoration: InputDecoration(
+                                                  suffixText:
+                                                      _discountType ==
+                                                          'Porcentaje'
+                                                      ? '%'
+                                                      : currentCurrencyCode(),
+                                                ),
+                                              ),
                                             ),
                                           ],
-                                          decoration: InputDecoration(
-                                            suffixText:
-                                                _discountType == 'Porcentaje'
-                                                ? '%'
-                                                : currentCurrencyCode(),
-                                          ),
                                         ),
                                       ),
                                     ],
                                   ),
                                 ),
-                              ],
-                            ),
+                              ];
+
+                              if (wide) {
+                                return Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(child: blocks[0]),
+                                    const SizedBox(width: 10),
+                                    Expanded(child: blocks[1]),
+                                    const SizedBox(width: 10),
+                                    Expanded(child: blocks[2]),
+                                  ],
+                                );
+                              }
+
+                              return Column(
+                                children: [
+                                  blocks[0],
+                                  const SizedBox(height: 10),
+                                  blocks[1],
+                                  const SizedBox(height: 10),
+                                  blocks[2],
+                                ],
+                              );
+                            },
                           ),
-                        ];
+                          const SizedBox(height: 10),
+                          _QuoteSection(
+                            title: 'Productos',
+                            icon: FontAwesomeIcons.boxOpen,
+                            child: _buildProductsSection(),
+                          ),
+                          const SizedBox(height: 10),
+                          LayoutBuilder(
+                            builder: (context, constraints) {
+                              final wide = constraints.maxWidth >= 980;
+                              final notes = _QuoteSection(
+                                title: 'Notas y textos',
+                                icon: FontAwesomeIcons.noteSticky,
+                                child: Column(
+                                  children: [
+                                    _QuoteFieldRow(
+                                      label: 'Notas',
+                                      controller: _notasController,
+                                      maxLines: 4,
+                                    ),
+                                    _QuoteFieldRow(
+                                      label: 'Notas privadas',
+                                      controller: _notasPrivadasController,
+                                      maxLines: 4,
+                                    ),
+                                    _QuoteFieldRow(
+                                      label: 'Términos',
+                                      controller: _terminosController,
+                                      maxLines: 4,
+                                    ),
+                                    _QuoteFieldRow(
+                                      label: 'Pie de página',
+                                      controller: _piePaginaController,
+                                      maxLines: 3,
+                                    ),
+                                  ],
+                                ),
+                              );
 
-                        if (wide) {
-                          return Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(child: blocks[0]),
-                              const SizedBox(width: 10),
-                              Expanded(child: blocks[1]),
-                              const SizedBox(width: 10),
-                              Expanded(child: blocks[2]),
-                            ],
-                          );
-                        }
+                              final summary = _QuoteSection(
+                                title: 'Resumen',
+                                icon: FontAwesomeIcons.chartPie,
+                                child: Column(
+                                  children: [
+                                    _QuoteSummaryRow(
+                                      label: 'Subtotal',
+                                      value: formatMoney(subtotal),
+                                    ),
+                                    _QuoteSummaryRow(
+                                      label: 'Descuento',
+                                      value: formatMoney(discount),
+                                    ),
+                                    _QuoteSummaryRow(
+                                      label: 'Impuesto',
+                                      value: formatMoney(taxes),
+                                    ),
+                                    if (_retIsr)
+                                      _QuoteSummaryRow(
+                                        label: 'Base RET ISR',
+                                        value: formatMoney(_retIsrBaseAmount),
+                                      ),
+                                    if (_retIsr)
+                                      _QuoteSummaryRow(
+                                        label:
+                                            'RET ISR (${(_quoteRetIsrRate * 100).toStringAsFixed(0)}%)',
+                                        value: '-${formatMoney(retIsrAmount)}',
+                                      ),
+                                    _QuoteSummaryRow(
+                                      label: 'Total',
+                                      value: formatMoney(total),
+                                      strong: true,
+                                    ),
+                                    _QuoteSummaryRow(
+                                      label: 'Pagado',
+                                      value: formatMoney(paid),
+                                    ),
+                                    _QuoteSummaryRow(
+                                      label: 'Saldo',
+                                      value: formatMoney(balance),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    _QuoteSwitchRow(
+                                      label: 'RET ISR',
+                                      value: _retIsr,
+                                      onChanged: (value) =>
+                                          setState(() => _retIsr = value),
+                                    ),
+                                  ],
+                                ),
+                              );
 
-                        return Column(
-                          children: [
-                            blocks[0],
-                            const SizedBox(height: 10),
-                            blocks[1],
-                            const SizedBox(height: 10),
-                            blocks[2],
-                          ],
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 10),
-                    _QuoteSection(
-                      title: 'Productos',
-                      icon: FontAwesomeIcons.boxOpen,
-                      trailing: TextButton.icon(
-                        onPressed: _agregarLinea,
-                        icon: const Icon(Icons.add, size: 16),
-                        label: Text(trText('Añadir artículo')),
+                              if (wide) {
+                                return Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(flex: 2, child: notes),
+                                    const SizedBox(width: 10),
+                                    Expanded(child: summary),
+                                  ],
+                                );
+                              }
+
+                              return Column(
+                                children: [
+                                  notes,
+                                  const SizedBox(height: 10),
+                                  summary,
+                                ],
+                              );
+                            },
+                          ),
+                        ],
                       ),
-                      child: _buildProductsSection(),
                     ),
-                    const SizedBox(height: 10),
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        final wide = constraints.maxWidth >= 980;
-                        final notes = _QuoteSection(
-                          title: 'Notas y textos',
-                          icon: FontAwesomeIcons.noteSticky,
-                          child: Column(
-                            children: [
-                              _QuoteFieldRow(
-                                label: 'Notas',
-                                controller: _notasController,
-                                maxLines: 4,
-                              ),
-                              _QuoteFieldRow(
-                                label: 'Notas privadas',
-                                controller: _notasPrivadasController,
-                                maxLines: 4,
-                              ),
-                              _QuoteFieldRow(
-                                label: 'Términos',
-                                controller: _terminosController,
-                                maxLines: 4,
-                              ),
-                              _QuoteFieldRow(
-                                label: 'Pie de página',
-                                controller: _piePaginaController,
-                                maxLines: 3,
-                              ),
-                            ],
-                          ),
-                        );
-
-                        final summary = _QuoteSection(
-                          title: 'Resumen',
-                          icon: FontAwesomeIcons.chartPie,
-                          child: Column(
-                            children: [
-                              _QuoteSummaryRow(
-                                label: 'Subtotal',
-                                value: formatMoney(subtotal),
-                              ),
-                              _QuoteSummaryRow(
-                                label: 'Descuento',
-                                value: formatMoney(discount),
-                              ),
-                              _QuoteSummaryRow(
-                                label: 'Impuesto',
-                                value: formatMoney(taxes),
-                              ),
-                              _QuoteSummaryRow(
-                                label: 'Total',
-                                value: formatMoney(total),
-                                strong: true,
-                              ),
-                              _QuoteSummaryRow(
-                                label: 'Pagado',
-                                value: formatMoney(paid),
-                              ),
-                              _QuoteSummaryRow(
-                                label: 'Saldo',
-                                value: formatMoney(balance),
-                              ),
-                              const SizedBox(height: 10),
-                              _QuoteSwitchRow(
-                                label: 'RET ISR',
-                                value: _retIsr,
-                                onChanged: (value) =>
-                                    setState(() => _retIsr = value),
-                              ),
-                            ],
-                          ),
-                        );
-
-                        if (wide) {
-                          return Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(flex: 2, child: notes),
-                              const SizedBox(width: 10),
-                              Expanded(child: summary),
-                            ],
-                          );
-                        }
-
-                        return Column(
-                          children: [
-                            notes,
-                            const SizedBox(height: 10),
-                            summary,
-                          ],
-                        );
-                      },
-                    ),
-                  ],
+                  ),
                 ),
               ),
-            ),
+              if (showFormLoader)
+                const Positioned.fill(
+                  child: Center(
+                    child: SizedBox(
+                      width: 36,
+                      height: 36,
+                      child: CircularProgressIndicator(strokeWidth: 3),
+                    ),
+                  ),
+                ),
+            ],
           ),
         ),
         const SizedBox(height: 12),
@@ -1766,6 +1867,22 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
             ),
           ),
         ),
+        const SizedBox(height: 14),
+        Center(
+          child: TextButton.icon(
+            onPressed: _agregarLinea,
+            icon: const Icon(Icons.add, size: 18),
+            label: Text(trText('Añadir artículo')),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              foregroundColor: AppColors.textPrimary,
+              textStyle: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -1784,9 +1901,43 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
     item.dispose();
   }
 
-  void _seleccionarProducto(int index, String? productId) {
+  Future<void> _seleccionarProducto(int index, String? productId) async {
     if (productId == null) return;
-    final product = _findProductById(productId);
+    var product = _findProductById(productId);
+    try {
+      final client = ref.read(supabaseClientProvider);
+      final productRow = await client
+          .from('productos_servicios')
+          .select(
+            'id,nombre,descripcion,precio_base,cantidad_predeterminada,'
+            'tasa_impuesto_nombre,unidad_medida',
+          )
+          .eq('id', productId)
+          .maybeSingle();
+      if (productRow != null) {
+        final unidad = (productRow['unidad_medida']?.toString() ?? '').trim();
+        product = _QuoteProductOption(
+          id: productRow['id'].toString(),
+          nombre: productRow['nombre']?.toString() ?? product?.nombre ?? '',
+          descripcion: productRow['descripcion']?.toString() ?? '',
+          precioBase: _doubleFromValue(productRow['precio_base']),
+          cantidadPredeterminada: _doubleFromValue(
+            productRow['cantidad_predeterminada'],
+            fallback: product?.cantidadPredeterminada ?? 1,
+          ),
+          impuestoPorcentaje: _extractTaxPercent(
+            productRow['tasa_impuesto_nombre']?.toString() ?? '',
+          ),
+          unidad: unidad.isEmpty
+              ? ((product?.unidad.trim().isEmpty ?? true)
+                    ? 'pieza'
+                    : product!.unidad)
+              : unidad,
+        );
+      }
+    } catch (_) {
+      // Keep local suggestion data if the direct lookup fails.
+    }
     if (product == null) return;
     final draft = _lineas[index];
     draft.syncing = true;
@@ -1963,10 +2114,13 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
         );
       }
       Navigator.of(context).pop();
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
       if (!silent) {
-        ToastHelper.showError(context, 'No se pudo guardar la cotización.');
+        ToastHelper.showError(
+          context,
+          buildActionErrorMessage(error, 'No se pudo guardar la cotización.'),
+        );
       }
     } finally {
       if (mounted) {
@@ -2083,8 +2237,23 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
       .where(_hasMeaningfulLineData)
       .fold<double>(0, (sum, draft) => sum + _lineTax(draft));
 
+  double get _retIsrBaseAmount =>
+      (_subtotalAmount - _discountAmount(_subtotalAmount))
+          .clamp(0, double.infinity)
+          .toDouble();
+
+  double get _retIsrAmount {
+    if (!_retIsr) return 0;
+    return (_retIsrBaseAmount * _quoteRetIsrRate)
+        .clamp(0, double.infinity)
+        .toDouble();
+  }
+
   double get _totalAmount =>
-      (_subtotalAmount - _discountAmount(_subtotalAmount) + _taxTotalAmount)
+      (_subtotalAmount -
+              _discountAmount(_subtotalAmount) +
+              _taxTotalAmount -
+              _retIsrAmount)
           .clamp(0, double.infinity)
           .toDouble();
 
@@ -2129,13 +2298,11 @@ class _QuoteSection extends StatelessWidget {
     required this.title,
     required this.icon,
     required this.child,
-    this.trailing,
   });
 
   final String title;
   final IconData icon;
   final Widget child;
-  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -2169,7 +2336,6 @@ class _QuoteSection extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (trailing != null) trailing!,
               ],
             ),
           ),

@@ -310,6 +310,7 @@ class SupabaseIngresosRepository implements IngresosRepository {
           'monto': ingreso.monto,
           'metodo_pago': ingreso.metodoPago.key,
           'fecha': ingreso.fecha.toIso8601String(),
+          'fecha_inicio': ingreso.fechaInicioRecurrencia?.toIso8601String(),
           'referencia': ingreso.referencia,
           'notas': ingreso.notas,
           'recurrente': ingreso.recurrente,
@@ -721,6 +722,9 @@ Ingreso _ingresoFromRow(Map<String, dynamic> row) {
       RecurrenceFrequency.ninguna,
     ),
     diasSemana: diasSemana,
+    fechaInicioRecurrencia: row['fecha_inicio'] == null
+        ? null
+        : _dateTimeFrom(row['fecha_inicio']),
     iconKey: (row['icon_key'] ?? 'wallet') as String,
     createdAt: _dateTimeFrom(row['created_at']),
     updatedAt: _dateTimeFrom(row['updated_at']),

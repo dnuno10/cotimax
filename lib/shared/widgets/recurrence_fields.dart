@@ -40,6 +40,10 @@ class RecurrenceConfigurationCard extends StatelessWidget {
     required this.onRecurringChanged,
     required this.onFrequencyChanged,
     required this.onToggleWeekday,
+    this.startDateController,
+    this.startDateLabel = 'Fecha de inicio',
+    this.startDateHintText = 'AAAA-MM-DD',
+    this.startDateHelperText,
     this.titleIcon = FontAwesomeIcons.arrowsRotate,
     super.key,
   });
@@ -52,6 +56,10 @@ class RecurrenceConfigurationCard extends StatelessWidget {
   final ValueChanged<RecurrenceFrequency?> onFrequencyChanged;
   final ValueChanged<int> onToggleWeekday;
   final IconData titleIcon;
+  final TextEditingController? startDateController;
+  final String startDateLabel;
+  final String startDateHintText;
+  final String? startDateHelperText;
 
   @override
   Widget build(BuildContext context) {
@@ -104,6 +112,30 @@ class RecurrenceConfigurationCard extends StatelessWidget {
           ),
           if (isRecurring) ...[
             const SizedBox(height: 12),
+            if (startDateController != null) ...[
+              FormFieldWrapper(
+                label: startDateLabel,
+                child: TextField(
+                  controller: startDateController,
+                  decoration: InputDecoration(
+                    hintText: trText(startDateHintText),
+                  ),
+                ),
+              ),
+              if (startDateHelperText != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  trText(startDateHelperText!),
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+              const SizedBox(height: 12),
+            ],
             FormFieldWrapper(
               label: 'Frecuencia',
               child: DropdownButtonFormField<RecurrenceFrequency>(

@@ -411,9 +411,12 @@ class _ProductosPageState extends ConsumerState<ProductosPage> {
           ref.invalidate(productosControllerProvider);
           if (!mounted) return;
           ToastHelper.showSuccess(context, 'Producto eliminado.');
-        } catch (_) {
+        } catch (error) {
           if (!mounted) rethrow;
-          ToastHelper.showError(context, 'No se pudo eliminar el producto.');
+          ToastHelper.showError(
+            context,
+            buildActionErrorMessage(error, 'No se pudo eliminar el producto.'),
+          );
           rethrow;
         }
       },
@@ -447,11 +450,14 @@ class _ProductosPageState extends ConsumerState<ProductosPage> {
                 ? 'Producto eliminado.'
                 : '$count productos eliminados correctamente.',
           );
-        } catch (_) {
+        } catch (error) {
           if (!mounted) rethrow;
           ToastHelper.showError(
             context,
-            'No se pudieron eliminar los productos.',
+            buildActionErrorMessage(
+              error,
+              'No se pudieron eliminar los productos.',
+            ),
           );
           rethrow;
         }
@@ -566,7 +572,13 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
         fallback: 'General',
       ),
     );
-    _unidadController = seededTextController(item?.unidad);
+    _unidadController = seededTextController(
+      _resolvedOptionValue(
+        item?.unidad,
+        options: _productUnitOptions,
+        fallback: 'pieza',
+      ),
+    );
     _skuController = seededTextController(item?.sku);
     _selectedTipo = item?.tipo ?? ProductType.producto;
     _modoPrecio = 'Fijo';
@@ -898,7 +910,7 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
           trailing: TextButton.icon(
             onPressed: _agregarMaterial,
             icon: const Icon(Icons.add, size: 16),
-            label: Text(trText('Agregar material')),
+            label: Text(trText('Añadir renglón')),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1229,11 +1241,14 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
         _replacePriceRangeDrafts(nuevosRangos);
       });
       _handleCalculationChanged();
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
       ToastHelper.showError(
         context,
-        'No se pudo cargar la configuración del producto.',
+        buildActionErrorMessage(
+          error,
+          'No se pudo cargar la configuración del producto.',
+        ),
       );
     } finally {
       if (mounted) {
@@ -1286,10 +1301,19 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
 
   Future<void> _save() async {
     if (_isSaving) return;
+    final nombre = _conceptoController.text.trim();
+    final sku = _skuController.text.trim();
+    if (nombre.isEmpty) {
+      ToastHelper.showWarning(
+        context,
+        'Debes capturar el nombre del producto antes de guardarlo.',
+      );
+      return;
+    }
     final payload = ProductoUpsertPayload(
       id: widget.item?.id,
       tipo: _selectedTipo,
-      nombre: _conceptoController.text.trim(),
+      nombre: nombre,
       descripcion: _descripcionController.text.trim(),
       precioBase: parseNumericText(_precioController.text) ?? 0,
       costoBase: _costoBaseActual,
@@ -1300,8 +1324,10 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
       categoriaNombre: _categoriaController.text.trim(),
       categoriaImpuestoNombre: _categoriaImpuestosController.text.trim(),
       tasaImpuestoNombre: _impuestoController.text.trim(),
-      unidadMedida: _unidadController.text.trim(),
-      sku: _skuController.text.trim(),
+      unidadMedida: _unidadController.text.trim().isEmpty
+          ? 'pieza'
+          : _unidadController.text.trim(),
+      sku: sku,
       imagenUrl: _imagenController.text.trim(),
       activo: _activo,
       componentes: List.generate(_materiales.length, (index) {
@@ -1346,9 +1372,12 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
             : 'Producto actualizado correctamente.',
       );
       Navigator.of(context).pop();
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
-      ToastHelper.showError(context, 'No se pudo guardar el producto.');
+      ToastHelper.showError(
+        context,
+        buildActionErrorMessage(error, 'No se pudo guardar el producto.'),
+      );
     } finally {
       if (mounted) {
         setState(() => _isSaving = false);
@@ -2236,8 +2265,8 @@ class _MaterialRow extends StatelessWidget {
               onChanged: onMaterialChanged,
               emptyHintText: 'No hay materiales registrados.',
               emptyMessage:
-                  'No hay datos para seleccionar un material en este campo.',
-              emptyButtonLabel: 'Agregar material',
+                  'No hay materiales registrados todavía. Crea uno nuevo para poder usarlo en este producto.',
+              emptyButtonLabel: 'Crear material',
               onEmptyPressed: onAddMaterial,
             )
           else

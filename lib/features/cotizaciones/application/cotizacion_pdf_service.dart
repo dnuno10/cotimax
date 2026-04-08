@@ -6,11 +6,17 @@ import 'package:cotimax/shared/models/domain_models.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class CotizacionPdfService {
+  static Future<_CotizacionPdfFonts>? _fontsFuture;
+
   static Future<Uint8List> generate(Cotizacion cotizacion) async {
-    final pdf = pw.Document();
+    final fonts = await _loadFonts();
+    final pdf = pw.Document(
+      theme: pw.ThemeData.withFont(base: fonts.base, bold: fonts.bold),
+    );
     final client = Supabase.instance.client;
 
     final empresaJson = await client.rpc('get_empresa_actual');
@@ -147,8 +153,8 @@ class CotizacionPdfService {
                 unidad: (item['unidad'] ?? '') as String,
                 descuento: ((item['descuento'] ?? 0) as num).toDouble(),
                 cantidad: ((item['cantidad'] ?? 0) as num).toDouble(),
-                impuestoPorcentaje:
-                    ((item['impuesto_porcentaje'] ?? 0) as num).toDouble(),
+                impuestoPorcentaje: ((item['impuesto_porcentaje'] ?? 0) as num)
+                    .toDouble(),
                 importe: ((item['importe'] ?? 0) as num).toDouble(),
                 orden: ((item['orden'] ?? 0) as num).toInt(),
                 createdAt: DateTime.now(),
@@ -357,6 +363,14 @@ class CotizacionPdfService {
     return pdf.save();
   }
 
+  static Future<_CotizacionPdfFonts> _loadFonts() {
+    return _fontsFuture ??= () async {
+      final base = await PdfGoogleFonts.notoSansRegular();
+      final bold = await PdfGoogleFonts.notoSansBold();
+      return _CotizacionPdfFonts(base: base, bold: bold);
+    }();
+  }
+
   static pw.Widget _cell(String text, {bool header = false}) {
     return pw.Padding(
       padding: const pw.EdgeInsets.all(8),
@@ -397,4 +411,11 @@ class CotizacionPdfService {
       ),
     );
   }
+}
+
+class _CotizacionPdfFonts {
+  const _CotizacionPdfFonts({required this.base, required this.bold});
+
+  final pw.Font base;
+  final pw.Font bold;
 }

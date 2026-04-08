@@ -122,6 +122,100 @@ void clearControllerText(TextEditingController controller) {
   assignControllerText(controller, '');
 }
 
+String buildActionErrorMessage(Object error, String fallback) {
+  final localizedFallback = trText(fallback);
+  final detail = _humanizeErrorDetail(error);
+  if (detail.isEmpty) return localizedFallback;
+  return '$localizedFallback ${tr("Motivo:", "Reason:")} $detail';
+}
+
+String _humanizeErrorDetail(Object error) {
+  var raw = error.toString().trim();
+  if (raw.isEmpty) return '';
+
+  final messageMatch = RegExp(
+    r'message:\s*(.*?)(?:,\s*(?:code|details|hint|statusCode):|\)$)',
+    caseSensitive: false,
+  ).firstMatch(raw);
+  final detailsMatch = RegExp(
+    r'details:\s*(.*?)(?:,\s*(?:hint|code|statusCode):|\)$)',
+    caseSensitive: false,
+  ).firstMatch(raw);
+
+  final extractedMessage = messageMatch?.group(1)?.trim();
+  final extractedDetails = detailsMatch?.group(1)?.trim();
+  if (extractedMessage != null && extractedMessage.isNotEmpty) {
+    raw = extractedMessage;
+    if (extractedDetails != null &&
+        extractedDetails.isNotEmpty &&
+        extractedDetails.toLowerCase() != 'null' &&
+        !raw.contains(extractedDetails)) {
+      raw = '$raw. $extractedDetails';
+    }
+  }
+
+  raw = raw
+      .replaceFirst(RegExp(r'^[A-Za-z_]+Exception:\s*'), '')
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .trim();
+
+  final lower = raw.toLowerCase();
+  if (lower.isEmpty || lower == 'null') return '';
+  if (lower.contains('failed to fetch') ||
+      lower.contains('clientexception') ||
+      lower.contains('socketexception') ||
+      lower.contains('network')) {
+    return tr(
+      'No se pudo conectar con el servidor.',
+      'Could not connect to the server.',
+    );
+  }
+  if (lower.contains('duplicate key value') ||
+      lower.contains('unique constraint') ||
+      lower.contains('already exists')) {
+    return tr(
+      'Ya existe un registro con esos datos.',
+      'A record with those values already exists.',
+    );
+  }
+  if (lower.contains('foreign key constraint')) {
+    return tr(
+      'Hay datos relacionados que impiden completar la operación.',
+      'Related data prevents completing this action.',
+    );
+  }
+  if (lower.contains('not-null constraint') ||
+      lower.contains('null value in column')) {
+    return tr(
+      'Faltan campos obligatorios por completar.',
+      'Required fields are missing.',
+    );
+  }
+  if (lower.contains('invalid input syntax') ||
+      lower.contains('invalid uuid') ||
+      lower.contains('numeric field overflow')) {
+    return tr(
+      'Uno de los valores capturados tiene un formato inválido.',
+      'One of the entered values has an invalid format.',
+    );
+  }
+  if (lower.contains('row-level security') ||
+      lower.contains('permission denied') ||
+      lower.contains('app_require_company_access')) {
+    return tr(
+      'No tienes permisos para realizar esta acción.',
+      'You do not have permission to perform this action.',
+    );
+  }
+  if (lower.contains('violates check constraint')) {
+    return tr(
+      'Uno de los valores no cumple con las reglas requeridas.',
+      'One of the values does not satisfy the required rules.',
+    );
+  }
+  return raw;
+}
+
 int? parseSequenceNumber(String? value) {
   final digits = (value ?? '').replaceAll(RegExp(r'[^0-9]'), '');
   if (digits.isEmpty) return null;
@@ -1042,7 +1136,7 @@ class SectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _MotionSurface(
-      hoverOffset: -2,
+      hoverOffset: 0,
       enablePress: false,
       child: Card(
         clipBehavior: Clip.antiAlias,

@@ -467,9 +467,12 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
         context,
         cliente.activo ? 'Cliente desactivado.' : 'Cliente activado.',
       );
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
-      ToastHelper.showError(context, 'No se pudo actualizar el cliente.');
+      ToastHelper.showError(
+        context,
+        buildActionErrorMessage(error, 'No se pudo actualizar el cliente.'),
+      );
     }
   }
 
@@ -483,9 +486,12 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
           ref.invalidate(clientesControllerProvider);
           if (!mounted) return;
           ToastHelper.showSuccess(context, 'Cliente eliminado.');
-        } catch (_) {
+        } catch (error) {
           if (!mounted) rethrow;
-          ToastHelper.showError(context, 'No se pudo eliminar el cliente.');
+          ToastHelper.showError(
+            context,
+            buildActionErrorMessage(error, 'No se pudo eliminar el cliente.'),
+          );
           rethrow;
         }
       },
@@ -519,11 +525,14 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
                 ? 'Cliente eliminado.'
                 : '$count clientes eliminados correctamente.',
           );
-        } catch (_) {
+        } catch (error) {
           if (!mounted) rethrow;
           ToastHelper.showError(
             context,
-            'No se pudieron eliminar los clientes.',
+            buildActionErrorMessage(
+              error,
+              'No se pudieron eliminar los clientes.',
+            ),
           );
           rethrow;
         }
@@ -842,9 +851,12 @@ class _ClienteFormState extends ConsumerState<_ClienteForm> {
             : 'Cliente actualizado correctamente.',
       );
       Navigator.of(context).pop();
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
-      ToastHelper.showError(context, 'No se pudo guardar el cliente.');
+      ToastHelper.showError(
+        context,
+        buildActionErrorMessage(error, 'No se pudo guardar el cliente.'),
+      );
     } finally {
       if (mounted) {
         setState(() => _isSaving = false);

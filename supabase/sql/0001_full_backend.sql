@@ -406,13 +406,12 @@ create table if not exists public.productos_servicios (
   categoria_impuesto_nombre text not null default '',
   tasa_impuesto_nombre text not null default '',
   unidad_medida text not null default '',
-  sku text not null,
+  sku text not null default '',
   imagen_url text not null default '',
   activo boolean not null default true,
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now()),
-  deleted_at timestamptz,
-  unique (empresa_id, sku)
+  deleted_at timestamptz
 );
 
 create table if not exists public.producto_componentes (
@@ -1985,6 +1984,7 @@ declare
   v_linea jsonb;
   v_subtotal numeric := 0;
   v_impuesto_total numeric := 0;
+  v_ret_isr_total numeric := 0;
   v_total numeric := 0;
   v_folio text := btrim(coalesce(p_folio, ''));
 begin
@@ -2011,7 +2011,10 @@ begin
       * coalesce((v_linea ->> 'impuesto_porcentaje')::numeric, 0) / 100
     );
   end loop;
-  v_total := v_subtotal - coalesce(p_descuento_valor, 0) + v_impuesto_total;
+  if coalesce(p_ret_isr, false) then
+    v_ret_isr_total := greatest(v_subtotal - coalesce(p_descuento_valor, 0), 0) * 0.10;
+  end if;
+  v_total := v_subtotal - coalesce(p_descuento_valor, 0) + v_impuesto_total - v_ret_isr_total;
 
   if v_folio = '' then
     v_folio := 'COT-' || to_char(current_date, 'YYYY') || '-' ||
@@ -2095,6 +2098,7 @@ returns table (
   recurrente boolean,
   recurrencia text,
   dias_semana int[],
+  fecha_inicio date,
   icon_key text,
   created_at timestamptz,
   updated_at timestamptz
@@ -2118,6 +2122,7 @@ as $$
       ),
       '{}'::int[]
     ) as dias_semana,
+    ir.fecha_inicio,
     i.icon_key, i.created_at, i.updated_at
   from public.ingresos i
   left join public.ingresos_recurrentes ir on ir.id = i.ingreso_recurrente_id
@@ -2173,8 +2178,16 @@ begin
       coalesce((p_payload ->> 'monto')::numeric, 0),
       coalesce(p_payload ->> 'metodo_pago', 'transferencia'),
       coalesce(p_payload ->> 'recurrencia', 'ninguna'),
-      coalesce((p_payload ->> 'fecha')::date, current_date),
-      coalesce((p_payload ->> 'fecha')::date, current_date),
+      coalesce(
+        (p_payload ->> 'fecha_inicio')::date,
+        (p_payload ->> 'fecha')::date,
+        current_date
+      ),
+      coalesce(
+        (p_payload ->> 'fecha_inicio')::date,
+        (p_payload ->> 'fecha')::date,
+        current_date
+      ),
       true,
       coalesce(p_payload ->> 'notas', '')
     )

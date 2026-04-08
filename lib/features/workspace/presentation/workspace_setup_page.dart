@@ -65,7 +65,10 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
       context.go(RoutePaths.dashboard);
     } catch (error) {
       if (!mounted) return;
-      ToastHelper.showError(context, 'No se pudo crear la empresa.');
+      ToastHelper.showError(
+        context,
+        buildActionErrorMessage(error, 'No se pudo crear la empresa.'),
+      );
     } finally {
       if (mounted) {
         setState(() => _isSubmitting = false);
@@ -87,11 +90,14 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
       if (!mounted) return;
       ToastHelper.showSuccess(context, 'Te uniste al equipo correctamente.');
       context.go(RoutePaths.dashboard);
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
       ToastHelper.showError(
         context,
-        'No se pudo usar el código de invitación.',
+        buildActionErrorMessage(
+          error,
+          'No se pudo usar el código de invitación.',
+        ),
       );
     } finally {
       if (mounted) {

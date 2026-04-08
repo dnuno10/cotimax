@@ -703,9 +703,12 @@ class _GastosPageState extends ConsumerState<GastosPage> {
             if (!context.mounted) return;
             ref.invalidate(gastosControllerProvider);
             ToastHelper.showSuccess(context, 'Gasto eliminado.');
-          } catch (_) {
+          } catch (error) {
             if (!context.mounted) rethrow;
-            ToastHelper.showError(context, 'No se pudo eliminar el gasto.');
+            ToastHelper.showError(
+              context,
+              buildActionErrorMessage(error, 'No se pudo eliminar el gasto.'),
+            );
             rethrow;
           }
         },
@@ -740,9 +743,15 @@ class _GastosPageState extends ConsumerState<GastosPage> {
                 ? 'Gasto eliminado.'
                 : '$count gastos eliminados correctamente.',
           );
-        } catch (_) {
+        } catch (error) {
           if (!mounted) rethrow;
-          ToastHelper.showError(context, 'No se pudieron eliminar los gastos.');
+          ToastHelper.showError(
+            context,
+            buildActionErrorMessage(
+              error,
+              'No se pudieron eliminar los gastos.',
+            ),
+          );
           rethrow;
         }
       },
@@ -1032,9 +1041,12 @@ class _GastoFormState extends ConsumerState<_GastoForm> {
             : 'Gasto actualizado correctamente.',
       );
       Navigator.of(context).pop();
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
-      ToastHelper.showError(context, 'No se pudo guardar el gasto.');
+      ToastHelper.showError(
+        context,
+        buildActionErrorMessage(error, 'No se pudo guardar el gasto.'),
+      );
     } finally {
       if (mounted) {
         setState(() => _isSaving = false);
