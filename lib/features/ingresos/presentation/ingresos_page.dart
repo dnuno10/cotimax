@@ -5,6 +5,7 @@ import 'package:cotimax/core/localization/app_localization.dart';
 import 'package:cotimax/core/routing/route_paths.dart';
 import 'package:cotimax/features/clientes/application/clientes_controller.dart';
 import 'package:cotimax/features/cotizaciones/application/cotizaciones_controller.dart';
+import 'package:cotimax/features/gastos/application/gastos_controller.dart';
 import 'package:cotimax/features/ingresos/application/ingresos_controller.dart';
 import 'package:cotimax/features/productos/application/productos_controller.dart';
 import 'package:cotimax/shared/enums/app_enums.dart';
@@ -20,7 +21,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 class IngresosPage extends ConsumerStatefulWidget {
-  const IngresosPage({super.key});
+  IngresosPage({super.key});
 
   @override
   ConsumerState<IngresosPage> createState() => _IngresosPageState();
@@ -39,7 +40,7 @@ class _IngresosPageState extends ConsumerState<IngresosPage> {
     final firstDate = DateUtils.dateOnly(orderedDates.first);
     final lastDate = DateUtils.dateOnly(orderedDates.last);
     final defaultStart = DateUtils.dateOnly(
-      lastDate.subtract(const Duration(days: 49)),
+      lastDate.subtract(Duration(days: 49)),
     );
     final initialRange =
         _selectedDateRange ??
@@ -94,13 +95,13 @@ class _IngresosPageState extends ConsumerState<IngresosPage> {
               ),
               ElevatedButton.icon(
                 onPressed: () => _openForm(context),
-                icon: const Icon(Icons.add),
+                icon: Icon(Icons.add),
                 label: Text(trText('Nuevo ingreso')),
               ),
             ],
           ),
           SizedBox(height: 12),
-          const LoadingStateWidget(message: 'Cargando ingresos...'),
+          LoadingStateWidget(message: 'Cargando ingresos...'),
         ],
       ),
       error: (_, __) => ListView(
@@ -115,12 +116,12 @@ class _IngresosPageState extends ConsumerState<IngresosPage> {
               ),
               ElevatedButton.icon(
                 onPressed: () => _openForm(context),
-                icon: const Icon(Icons.add),
+                icon: Icon(Icons.add),
                 label: Text(trText('Nuevo ingreso')),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           ErrorStateWidget(
             message: 'No se pudieron cargar ingresos.',
             onRetry: () => ref.invalidate(ingresosControllerProvider),
@@ -141,7 +142,7 @@ class _IngresosPageState extends ConsumerState<IngresosPage> {
                   ),
                   ElevatedButton.icon(
                     onPressed: () => _openForm(context),
-                    icon: const Icon(Icons.add),
+                    icon: Icon(Icons.add),
                     label: Text(trText('Nuevo ingreso')),
                   ),
                 ],
@@ -153,7 +154,7 @@ class _IngresosPageState extends ConsumerState<IngresosPage> {
                     'Registra tu primer ingreso para comenzar a ver resultados.',
                 action: ElevatedButton.icon(
                   onPressed: () => _openForm(context),
-                  icon: const Icon(Icons.add),
+                  icon: Icon(Icons.add),
                   label: Text(trText('Nuevo ingreso')),
                 ),
               ),
@@ -167,6 +168,8 @@ class _IngresosPageState extends ConsumerState<IngresosPage> {
         final cotizacionesCatalogo =
             ref.watch(cotizacionesControllerProvider).valueOrNull ??
             const <Cotizacion>[];
+        final gastosCatalogo =
+            ref.watch(gastosControllerProvider).valueOrNull ?? const <Gasto>[];
         final productosCatalogo =
             ref.watch(productosControllerProvider).valueOrNull ??
             const <ProductoServicio>[];
@@ -177,15 +180,16 @@ class _IngresosPageState extends ConsumerState<IngresosPage> {
         final cotizaciones = {
           for (final item in cotizacionesCatalogo) item.id: item,
         };
+        final gastos = {for (final item in gastosCatalogo) item.id: item};
         final productos = {for (final item in productosCatalogo) item.id: item};
         final orderedDates = ingresos.map((item) => item.fecha).toList()
           ..sort();
         final lastDate = DateUtils.dateOnly(orderedDates.last);
         final firstDate = DateUtils.dateOnly(orderedDates.first);
         final defaultRange = DateTimeRange(
-          start: lastDate.subtract(const Duration(days: 49)).isBefore(firstDate)
+          start: lastDate.subtract(Duration(days: 49)).isBefore(firstDate)
               ? firstDate
-              : lastDate.subtract(const Duration(days: 49)),
+              : lastDate.subtract(Duration(days: 49)),
           end: lastDate,
         );
         final activeRange = _selectedDateRange ?? defaultRange;
@@ -230,12 +234,12 @@ class _IngresosPageState extends ConsumerState<IngresosPage> {
                 ),
                 ElevatedButton.icon(
                   onPressed: () => _openForm(context),
-                  icon: const Icon(Icons.add),
+                  icon: Icon(Icons.add),
                   label: Text(trText('Nuevo ingreso')),
                 ),
               ],
             ),
-            const SizedBox(height: 14),
+            SizedBox(height: 14),
             SectionCard(
               title: 'Ingresos totales',
               trailing: _RangeChip(label: _showProjection ? baseLabel : rango),
@@ -252,36 +256,36 @@ class _IngresosPageState extends ConsumerState<IngresosPage> {
                             _showProjection
                                 ? trText('Escenario proyectado')
                                 : trText('Historico real'),
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: AppColors.textSecondary,
                               fontSize: 11,
                               fontWeight: FontWeight.w800,
                               letterSpacing: 0.4,
                             ),
                           ),
-                          const SizedBox(height: 6),
+                          SizedBox(height: 6),
                           Text(
                             formatMxn(chartTotal),
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: AppColors.textPrimary,
                               fontWeight: FontWeight.w800,
                               fontSize: 30,
                               height: 1,
                             ),
                           ),
-                          const SizedBox(height: 8),
+                          SizedBox(height: 8),
                           Text(
                             _showProjection
                                 ? 'Proyeccion estimada con el comportamiento historico de cobro y la tendencia reciente.'
                                 : 'Lectura historica de ingresos registrados en el periodo actual.',
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: AppColors.textSecondary,
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                               height: 1.45,
                             ),
                           ),
-                          const SizedBox(height: 8),
+                          SizedBox(height: 8),
                           Wrap(
                             spacing: 14,
                             runSpacing: 8,
@@ -308,7 +312,7 @@ class _IngresosPageState extends ConsumerState<IngresosPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             summary,
-                            const SizedBox(height: 16),
+                            SizedBox(height: 16),
                             _ProjectionToolbar(
                               projected: _showProjection,
                               selectedOption: _selectedProjection,
@@ -337,7 +341,7 @@ class _IngresosPageState extends ConsumerState<IngresosPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Expanded(child: summary),
-                          const SizedBox(width: 18),
+                          SizedBox(width: 18),
                           _ProjectionToolbar(
                             projected: _showProjection,
                             selectedOption: _selectedProjection,
@@ -362,7 +366,7 @@ class _IngresosPageState extends ConsumerState<IngresosPage> {
                       );
                     },
                   ),
-                  const SizedBox(height: 20),
+                  SizedBox(height: 20),
                   SizedBox(
                     height: 280,
                     child: LineChart(
@@ -376,7 +380,7 @@ class _IngresosPageState extends ConsumerState<IngresosPage> {
                 ],
               ),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             LayoutBuilder(
               builder: (context, constraints) {
                 final wide = constraints.maxWidth >= 1100;
@@ -391,7 +395,7 @@ class _IngresosPageState extends ConsumerState<IngresosPage> {
                           rows: rankingClientes,
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      SizedBox(width: 12),
                       Expanded(
                         child: _RankingIncomeTable(
                           title: 'Ranking por producto',
@@ -410,7 +414,7 @@ class _IngresosPageState extends ConsumerState<IngresosPage> {
                       valueLabel: 'Ingreso',
                       rows: rankingClientes,
                     ),
-                    const SizedBox(height: 12),
+                    SizedBox(height: 12),
                     _RankingIncomeTable(
                       title: 'Ranking por producto',
                       valueLabel: 'Ingreso estimado',
@@ -421,8 +425,8 @@ class _IngresosPageState extends ConsumerState<IngresosPage> {
                 );
               },
             ),
-            const SizedBox(height: 12),
-            const FilterBar(
+            SizedBox(height: 12),
+            FilterBar(
               children: [
                 SizedBox(
                   width: 220,
@@ -460,7 +464,7 @@ class _IngresosPageState extends ConsumerState<IngresosPage> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             Builder(
               builder: (context) {
                 final allSelected =
@@ -511,6 +515,7 @@ class _IngresosPageState extends ConsumerState<IngresosPage> {
                     ),
                     DataColumn(label: Text(trText('Cliente'))),
                     DataColumn(label: Text(trText('Cotización'))),
+                    DataColumn(label: Text(trText('Fuente de gasto'))),
                     DataColumn(label: Text(trText('Monto'))),
                     DataColumn(label: Text(trText('Metodo de pago'))),
                     DataColumn(label: Text(trText('Fecha'))),
@@ -545,7 +550,7 @@ class _IngresosPageState extends ConsumerState<IngresosPage> {
                                     iconKey: item.iconKey,
                                     size: 28,
                                   ),
-                                  const SizedBox(width: 8),
+                                  SizedBox(width: 8),
                                   Text(
                                     clientes[item.clienteId]?.nombre ??
                                         item.clienteId,
@@ -557,6 +562,17 @@ class _IngresosPageState extends ConsumerState<IngresosPage> {
                               Text(
                                 cotizaciones[item.cotizacionId]?.folio ??
                                     item.cotizacionId,
+                              ),
+                            ),
+                            DataCell(
+                              Text(
+                                item.gastoFuenteId.trim().isEmpty
+                                    ? trText('Sin vincular')
+                                    : (item.gastoFuenteNombre.trim().isNotEmpty
+                                          ? item.gastoFuenteNombre
+                                          : _expenseSourceLabel(
+                                              gastos[item.gastoFuenteId],
+                                            )),
                               ),
                             ),
                             DataCell(
@@ -695,7 +711,7 @@ class _IngresosPageState extends ConsumerState<IngresosPage> {
 }
 
 class _IngresoForm extends ConsumerStatefulWidget {
-  const _IngresoForm({this.item});
+  _IngresoForm({this.item});
 
   final Ingreso? item;
 
@@ -705,8 +721,6 @@ class _IngresoForm extends ConsumerStatefulWidget {
 
 class _IngresoFormState extends ConsumerState<_IngresoForm> {
   late final ScrollController _scrollController;
-  late final TextEditingController _clienteController;
-  late final TextEditingController _cotizacionController;
   late final TextEditingController _montoController;
   late final TextEditingController _fechaController;
   late final TextEditingController _fechaInicioRecurrenciaController;
@@ -717,8 +731,11 @@ class _IngresoFormState extends ConsumerState<_IngresoForm> {
   RecurrenceFrequency _recurrencia = RecurrenceFrequency.ninguna;
   final Set<int> _diasSemana = <int>{};
   String _iconKey = 'wallet';
+  String _categoriaValue = '';
+  String _categoriaDisplayLabel = '';
   String _clienteValue = '';
   String _cotizacionValue = '';
+  String _gastoFuenteValue = '';
   bool _isSaving = false;
 
   @override
@@ -726,10 +743,10 @@ class _IngresoFormState extends ConsumerState<_IngresoForm> {
     super.initState();
     _scrollController = ScrollController();
     final item = widget.item;
+    _categoriaValue = item?.ingresoCategoriaId ?? '';
     _clienteValue = item?.clienteId ?? '';
     _cotizacionValue = item?.cotizacionId ?? '';
-    _clienteController = seededTextController(_clienteValue);
-    _cotizacionController = seededTextController(_cotizacionValue);
+    _gastoFuenteValue = item?.gastoFuenteId ?? '';
     _montoController = seededTextController('0.00');
     if (item != null) {
       assignControllerText(
@@ -759,8 +776,6 @@ class _IngresoFormState extends ConsumerState<_IngresoForm> {
   @override
   void dispose() {
     _scrollController.dispose();
-    _clienteController.dispose();
-    _cotizacionController.dispose();
     _montoController.dispose();
     _fechaController.dispose();
     _fechaInicioRecurrenciaController.dispose();
@@ -773,15 +788,35 @@ class _IngresoFormState extends ConsumerState<_IngresoForm> {
   Widget build(BuildContext context) {
     final clientesCatalogo =
         ref.watch(clientesControllerProvider).valueOrNull ?? const <Cliente>[];
+    final categoriasCatalogo =
+        ref.watch(ingresoCategoriasControllerProvider).valueOrNull ??
+        const <IngresoCategoria>[];
     final cotizacionesCatalogo =
         ref.watch(cotizacionesControllerProvider).valueOrNull ??
         const <Cotizacion>[];
+    final gastosCatalogo =
+        ref.watch(gastosControllerProvider).valueOrNull ?? const <Gasto>[];
+    final categoriaOptions = categoriasCatalogo
+        .map((item) => _LookupOption(value: item.id, label: item.nombre))
+        .toList();
+    final categoriaSelectOptions = _ensureSelectedLookupOption(
+      options: categoriaOptions,
+      currentValue: _categoriaValue,
+      fallbackLabel: _categoriaDisplayLabel.isNotEmpty
+          ? _categoriaDisplayLabel
+          : _categoriaValue,
+    );
     final clienteOptions = clientesCatalogo
         .map(
           (item) =>
               _LookupOption(value: item.id, label: _clientOptionLabel(item)),
         )
         .toList();
+    final clienteSelectOptions = _ensureSelectedLookupOption(
+      options: clienteOptions,
+      currentValue: _clienteValue,
+      fallbackLabel: _clienteValue,
+    );
     final cotizacionOptions = cotizacionesCatalogo
         .map(
           (item) => _LookupOption(
@@ -790,15 +825,21 @@ class _IngresoFormState extends ConsumerState<_IngresoForm> {
           ),
         )
         .toList();
-    _scheduleLookupSync(
-      controller: _clienteController,
-      currentValue: _clienteValue,
-      options: clienteOptions,
-    );
-    _scheduleLookupSync(
-      controller: _cotizacionController,
-      currentValue: _cotizacionValue,
+    final cotizacionSelectOptions = _ensureSelectedLookupOption(
       options: cotizacionOptions,
+      currentValue: _cotizacionValue,
+      fallbackLabel: _cotizacionValue,
+    );
+    final gastoOptions = gastosCatalogo
+        .map(
+          (item) =>
+              _LookupOption(value: item.id, label: _expenseSourceLabel(item)),
+        )
+        .toList();
+    final gastoSelectOptions = _ensureSelectedLookupOption(
+      options: gastoOptions,
+      currentValue: _gastoFuenteValue,
+      fallbackLabel: _gastoFuenteValue,
     );
 
     return Column(
@@ -824,50 +865,93 @@ class _IngresoFormState extends ConsumerState<_IngresoForm> {
                                 setState(() => _iconKey = value),
                           ),
                         ),
-                        const SizedBox(height: 12),
+                        SizedBox(height: 12),
                         _ResponsiveFormRow(
                           left: FormFieldWrapper(
                             label: 'Cliente',
-                            child: clienteOptions.isEmpty
-                                ? _LookupEmptyState(
-                                    message: 'No hay clientes registrados.',
-                                    buttonLabel: 'Agregar cliente',
-                                    onPressed: _goToCreateClient,
-                                  )
-                                : _LookupAutocompleteField(
-                                    controller: _clienteController,
-                                    options: clienteOptions,
-                                    noneLabel: 'Ningún cliente relacionado',
-                                    hintText: 'Busca y selecciona un cliente',
-                                    onTextChanged: (value) =>
-                                        _clienteValue = value.trim(),
-                                    onOptionSelected: (option) =>
-                                        _clienteValue = option.value,
-                                  ),
+                            child: _LookupSelectField(
+                              value: _clienteValue,
+                              options: clienteSelectOptions,
+                              emptyLabel: 'Sin cliente relacionado',
+                              hintText: 'Selecciona un cliente',
+                              emptyStateMessage:
+                                  'No hay clientes registrados. Puedes continuar sin relacionar uno.',
+                              buttonLabel: 'Agregar cliente',
+                              onAddPressed: _goToCreateClient,
+                              onChanged: (value) =>
+                                  setState(() => _clienteValue = value),
+                            ),
                           ),
                           right: FormFieldWrapper(
                             label: 'Cotización',
-                            child: cotizacionOptions.isEmpty
-                                ? _LookupEmptyState(
-                                    message:
-                                        'No hay cotizaciones registradas. Puedes continuar sin relacionar una.',
-                                    buttonLabel: 'Agregar cotización',
-                                    onPressed: _goToCreateQuote,
-                                  )
-                                : _LookupAutocompleteField(
-                                    controller: _cotizacionController,
-                                    options: cotizacionOptions,
-                                    noneLabel: 'Ninguna cotización relacionada',
-                                    hintText:
-                                        'Busca y selecciona una cotización',
-                                    onTextChanged: (value) =>
-                                        _cotizacionValue = value.trim(),
-                                    onOptionSelected: (option) =>
-                                        _cotizacionValue = option.value,
-                                  ),
+                            child: _LookupSelectField(
+                              value: _cotizacionValue,
+                              options: cotizacionSelectOptions,
+                              emptyLabel: 'Sin cotización relacionada',
+                              hintText: 'Selecciona una cotización',
+                              emptyStateMessage:
+                                  'No hay cotizaciones registradas. Puedes continuar sin relacionar una.',
+                              buttonLabel: 'Agregar cotización',
+                              onAddPressed: _goToCreateQuote,
+                              onChanged: (value) =>
+                                  setState(() => _cotizacionValue = value),
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 12),
+                        SizedBox(height: 12),
+                        FormFieldWrapper(
+                          label: 'Fuente de gasto',
+                          child: _LookupSelectField(
+                            value: _gastoFuenteValue,
+                            options: gastoSelectOptions,
+                            emptyLabel: 'Sin gasto relacionado',
+                            hintText: 'Relaciona este ingreso con un gasto',
+                            emptyStateMessage:
+                                'No hay gastos registrados para relacionar.',
+                            buttonLabel: 'Agregar gasto',
+                            onAddPressed: _goToCreateExpense,
+                            onChanged: (value) =>
+                                setState(() => _gastoFuenteValue = value),
+                          ),
+                        ),
+                        SizedBox(height: 12),
+                        FormFieldWrapper(
+                          label: 'Categoria',
+                          child: _LookupSelectField(
+                            value: _categoriaValue,
+                            options: categoriaSelectOptions,
+                            emptyLabel: 'Sin categoria',
+                            hintText: 'Selecciona una categoria',
+                            emptyStateMessage:
+                                'No hay categorias de ingreso registradas.',
+                            buttonLabel: 'Agregar categoria',
+                            onAddPressed: _createIncomeCategory,
+                            onChanged: (value) => setState(() {
+                              _categoriaValue = value;
+                              _categoriaDisplayLabel = '';
+                            }),
+                          ),
+                        ),
+                        if (_categoriaValue.trim().isNotEmpty)
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Wrap(
+                              spacing: 8,
+                              children: [
+                                TextButton.icon(
+                                  onPressed: _editIncomeCategory,
+                                  icon: Icon(Icons.edit_rounded, size: 16),
+                                  label: Text(trText('Editar categoria')),
+                                ),
+                                TextButton.icon(
+                                  onPressed: _deleteIncomeCategory,
+                                  icon: Icon(Icons.delete_outline, size: 16),
+                                  label: Text(trText('Eliminar categoria')),
+                                ),
+                              ],
+                            ),
+                          ),
+                        SizedBox(height: 12),
                         _ResponsiveFormRow(
                           left: CurrencyInput(
                             controller: _montoController,
@@ -906,7 +990,7 @@ class _IngresoFormState extends ConsumerState<_IngresoForm> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12),
                   SectionCard(
                     title: 'Seguimiento',
                     titleIcon: FontAwesomeIcons.calendarCheck,
@@ -917,8 +1001,13 @@ class _IngresoFormState extends ConsumerState<_IngresoForm> {
                             label: 'Fecha',
                             child: TextField(
                               controller: _fechaController,
+                              readOnly: true,
+                              onTap: _pickMovementDate,
                               decoration: InputDecoration(
                                 hintText: trText('AAAA-MM-DD'),
+                                suffixIcon: const Icon(
+                                  Icons.calendar_month_rounded,
+                                ),
                               ),
                             ),
                           ),
@@ -932,7 +1021,7 @@ class _IngresoFormState extends ConsumerState<_IngresoForm> {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 12),
+                        SizedBox(height: 12),
                         FormFieldWrapper(
                           label: 'Notas',
                           child: TextField(
@@ -946,7 +1035,7 @@ class _IngresoFormState extends ConsumerState<_IngresoForm> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12),
                   RecurrenceConfigurationCard(
                     title: 'Recurrencia del ingreso',
                     titleIcon: FontAwesomeIcons.arrowsRotate,
@@ -957,6 +1046,7 @@ class _IngresoFormState extends ConsumerState<_IngresoForm> {
                     startDateLabel: 'Fecha de inicio',
                     startDateHelperText:
                         'A partir de esta fecha se calculará la siguiente recurrencia.',
+                    onStartDateTap: _pickRecurrenceStartDate,
                     onRecurringChanged: (value) {
                       setState(() {
                         _recurrente = value;
@@ -990,7 +1080,7 @@ class _IngresoFormState extends ConsumerState<_IngresoForm> {
             ),
           ),
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: 16),
         Align(
           alignment: Alignment.centerRight,
           child: Wrap(
@@ -1003,7 +1093,7 @@ class _IngresoFormState extends ConsumerState<_IngresoForm> {
               ElevatedButton.icon(
                 onPressed: _isSaving ? null : _save,
                 icon: _isSaving
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 16,
                         height: 16,
                         child: CircularProgressIndicator(strokeWidth: 2),
@@ -1031,8 +1121,16 @@ class _IngresoFormState extends ConsumerState<_IngresoForm> {
     final recurrenceStartDate =
         DateTime.tryParse(_fechaInicioRecurrenciaController.text.trim()) ??
         movementDate;
+    final gastoById = {
+      for (final item
+          in (ref.read(gastosControllerProvider).valueOrNull ??
+              const <Gasto>[]))
+        item.id: item,
+    };
+    final gastoLabel = _expenseSourceLabel(gastoById[_gastoFuenteValue.trim()]);
     final item = Ingreso(
       id: widget.item?.id ?? 'ing-${now.microsecondsSinceEpoch}',
+      ingresoCategoriaId: _categoriaValue.trim(),
       clienteId: _clienteValue.trim(),
       cotizacionId: _cotizacionValue.trim(),
       monto: parseNumericText(_montoController.text) ?? 0,
@@ -1051,6 +1149,8 @@ class _IngresoFormState extends ConsumerState<_IngresoForm> {
           : const [],
       fechaInicioRecurrencia: _recurrente ? recurrenceStartDate : null,
       iconKey: _iconKey,
+      gastoFuenteId: _gastoFuenteValue.trim(),
+      gastoFuenteNombre: _gastoFuenteValue.trim().isEmpty ? '' : gastoLabel,
       createdAt: widget.item?.createdAt ?? now,
       updatedAt: now,
     );
@@ -1080,26 +1180,68 @@ class _IngresoFormState extends ConsumerState<_IngresoForm> {
     }
   }
 
-  void _scheduleLookupSync({
-    required TextEditingController controller,
-    required String currentValue,
+  Future<void> _pickRecurrenceStartDate() async {
+    final initialDate =
+        DateTime.tryParse(_fechaInicioRecurrenciaController.text.trim()) ??
+        DateTime.tryParse(_fechaController.text.trim()) ??
+        DateTime.now();
+    final picked = await showCotimaxDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+      currentDate: initialDate,
+      locale: currentAppLocale(),
+      helpText: trText('Selecciona la fecha'),
+      cancelText: trText('Cancelar'),
+      confirmText: trText('Aceptar'),
+    );
+    if (picked == null || !mounted) return;
+    assignControllerText(
+      _fechaInicioRecurrenciaController,
+      DateFormat('yyyy-MM-dd').format(picked),
+    );
+  }
+
+  Future<void> _pickMovementDate() async {
+    final initialDate =
+        DateTime.tryParse(_fechaController.text.trim()) ?? DateTime.now();
+    final picked = await showCotimaxDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+      currentDate: initialDate,
+      locale: currentAppLocale(),
+      helpText: trText('Selecciona la fecha'),
+      cancelText: trText('Cancelar'),
+      confirmText: trText('Aceptar'),
+    );
+    if (picked == null || !mounted) return;
+    assignControllerText(
+      _fechaController,
+      DateFormat('yyyy-MM-dd').format(picked),
+    );
+  }
+
+  List<_LookupOption> _ensureSelectedLookupOption({
     required List<_LookupOption> options,
+    required String currentValue,
+    required String fallbackLabel,
   }) {
-    if (currentValue.trim().isEmpty) return;
-    _LookupOption? match;
+    final normalizedValue = currentValue.trim();
+    if (normalizedValue.isEmpty) {
+      return options;
+    }
     for (final option in options) {
-      if (option.value == currentValue) {
-        match = option;
-        break;
+      if (option.value == normalizedValue) {
+        return options;
       }
     }
-    if (match == null || controller.text == match.label) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      if (controller.text != match!.label) {
-        assignControllerText(controller, match.label);
-      }
-    });
+    return [
+      _LookupOption(value: normalizedValue, label: fallbackLabel),
+      ...options,
+    ];
   }
 
   String _clientOptionLabel(Cliente cliente) {
@@ -1120,6 +1262,254 @@ class _IngresoFormState extends ConsumerState<_IngresoForm> {
     context.go('${RoutePaths.clientes}?create=1');
   }
 
+  void _goToCreateExpense() {
+    Navigator.of(context).pop();
+    context.go('${RoutePaths.gastos}?create=1');
+  }
+
+  Future<void> _createIncomeCategory() async {
+    final nombreController = TextEditingController();
+    final descripcionController = TextEditingController();
+    final result = await showDialog<Map<String, String>?>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(trText('Nueva categoria de ingreso')),
+          content: SizedBox(
+            width: 420,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nombreController,
+                  autofocus: true,
+                  decoration: InputDecoration(
+                    labelText: trText('Nombre'),
+                    hintText: trText('Ej. Ventas de servicios'),
+                  ),
+                ),
+                SizedBox(height: 10),
+                TextField(
+                  controller: descripcionController,
+                  maxLines: 2,
+                  decoration: InputDecoration(
+                    labelText: trText('Descripcion'),
+                    hintText: trText('Opcional'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(trText('Cancelar')),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop({
+                  'nombre': nombreController.text.trim(),
+                  'descripcion': descripcionController.text.trim(),
+                });
+              },
+              child: Text(trText('Guardar')),
+            ),
+          ],
+        );
+      },
+    );
+    if (!mounted || result == null) return;
+
+    final nombre = (result['nombre'] ?? '').trim();
+    final descripcion = (result['descripcion'] ?? '').trim();
+    if (nombre.isEmpty) {
+      ToastHelper.showWarning(context, 'Ingresa el nombre de la categoria.');
+      return;
+    }
+
+    try {
+      final categoriaId = await ref
+          .read(ingresosRepositoryProvider)
+          .createCategoria(nombre: nombre, descripcion: descripcion);
+      ref.invalidate(ingresoCategoriasControllerProvider);
+      if (!mounted) return;
+      setState(() {
+        _categoriaValue = categoriaId;
+        _categoriaDisplayLabel = nombre;
+      });
+      ToastHelper.showSuccess(context, 'Categoria de ingreso creada.');
+    } catch (error) {
+      if (!mounted) return;
+      ToastHelper.showError(
+        context,
+        buildActionErrorMessage(
+          error,
+          'No se pudo crear la categoria de ingreso.',
+        ),
+      );
+    }
+  }
+
+  bool _looksLikeUuid(String value) {
+    return RegExp(
+      r'^[0-9a-fA-F]{8}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{12}$',
+    ).hasMatch(value.trim());
+  }
+
+  Future<void> _editIncomeCategory() async {
+    final categoriaId = _categoriaValue.trim();
+    if (!_looksLikeUuid(categoriaId)) {
+      ToastHelper.showWarning(
+        context,
+        'Esta categoria no se puede editar porque no tiene ID valido.',
+      );
+      return;
+    }
+
+    final categorias =
+        ref.read(ingresoCategoriasControllerProvider).valueOrNull ??
+        const <IngresoCategoria>[];
+    final actual = categorias.where((item) => item.id == categoriaId);
+    if (actual.isEmpty) {
+      ToastHelper.showWarning(
+        context,
+        'No se encontró la categoria seleccionada.',
+      );
+      return;
+    }
+    final categoria = actual.first;
+
+    final nombreController = TextEditingController(text: categoria.nombre);
+    final descripcionController = TextEditingController(
+      text: categoria.descripcion,
+    );
+    final result = await showDialog<Map<String, String>?>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(trText('Editar categoria de ingreso')),
+          content: SizedBox(
+            width: 420,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nombreController,
+                  autofocus: true,
+                  decoration: InputDecoration(labelText: trText('Nombre')),
+                ),
+                SizedBox(height: 10),
+                TextField(
+                  controller: descripcionController,
+                  maxLines: 2,
+                  decoration: InputDecoration(labelText: trText('Descripcion')),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(trText('Cancelar')),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop({
+                  'nombre': nombreController.text.trim(),
+                  'descripcion': descripcionController.text.trim(),
+                });
+              },
+              child: Text(trText('Guardar')),
+            ),
+          ],
+        );
+      },
+    );
+    if (!mounted || result == null) return;
+
+    final nombre = (result['nombre'] ?? '').trim();
+    final descripcion = (result['descripcion'] ?? '').trim();
+    if (nombre.isEmpty) {
+      ToastHelper.showWarning(context, 'Ingresa el nombre de la categoria.');
+      return;
+    }
+
+    try {
+      await ref
+          .read(ingresosRepositoryProvider)
+          .updateCategoria(
+            id: categoriaId,
+            nombre: nombre,
+            descripcion: descripcion,
+          );
+      ref.invalidate(ingresoCategoriasControllerProvider);
+      if (!mounted) return;
+      setState(() => _categoriaDisplayLabel = nombre);
+      ToastHelper.showSuccess(context, 'Categoria de ingreso actualizada.');
+    } catch (error) {
+      if (!mounted) return;
+      ToastHelper.showError(
+        context,
+        buildActionErrorMessage(
+          error,
+          'No se pudo actualizar la categoria de ingreso.',
+        ),
+      );
+    }
+  }
+
+  Future<void> _deleteIncomeCategory() async {
+    final categoriaId = _categoriaValue.trim();
+    if (!_looksLikeUuid(categoriaId)) {
+      ToastHelper.showWarning(
+        context,
+        'Esta categoria no se puede eliminar porque no tiene ID valido.',
+      );
+      return;
+    }
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(trText('Eliminar categoria')),
+        content: Text(
+          trText('¿Seguro que quieres eliminar esta categoria de ingreso?'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(trText('Cancelar')),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(trText('Eliminar')),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true || !mounted) return;
+
+    try {
+      await ref.read(ingresosRepositoryProvider).deleteCategoria(categoriaId);
+      ref.invalidate(ingresoCategoriasControllerProvider);
+      if (!mounted) return;
+      setState(() {
+        _categoriaValue = '';
+        _categoriaDisplayLabel = '';
+      });
+      ToastHelper.showSuccess(context, 'Categoria de ingreso eliminada.');
+    } catch (error) {
+      if (!mounted) return;
+      ToastHelper.showError(
+        context,
+        buildActionErrorMessage(
+          error,
+          'No se pudo eliminar la categoria de ingreso.',
+        ),
+      );
+    }
+  }
+
   void _goToCreateQuote() {
     Navigator.of(context).pop();
     context.go('${RoutePaths.cotizaciones}?create=1');
@@ -1127,7 +1517,7 @@ class _IngresoFormState extends ConsumerState<_IngresoForm> {
 }
 
 class _ResponsiveFormRow extends StatelessWidget {
-  const _ResponsiveFormRow({required this.left, required this.right});
+  _ResponsiveFormRow({required this.left, required this.right});
 
   final Widget left;
   final Widget right;
@@ -1137,13 +1527,13 @@ class _ResponsiveFormRow extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         if (constraints.maxWidth < 760) {
-          return Column(children: [left, const SizedBox(height: 12), right]);
+          return Column(children: [left, SizedBox(height: 12), right]);
         }
 
         return Row(
           children: [
             Expanded(child: left),
-            const SizedBox(width: 12),
+            SizedBox(width: 12),
             Expanded(child: right),
           ],
         );
@@ -1153,139 +1543,93 @@ class _ResponsiveFormRow extends StatelessWidget {
 }
 
 class _LookupOption {
-  const _LookupOption({required this.value, required this.label});
+  _LookupOption({required this.value, required this.label});
 
   final String value;
   final String label;
 }
 
-class _LookupAutocompleteField extends StatefulWidget {
-  const _LookupAutocompleteField({
-    required this.controller,
+class _LookupSelectField extends StatelessWidget {
+  _LookupSelectField({
+    required this.value,
     required this.options,
-    required this.noneLabel,
+    required this.emptyLabel,
     required this.hintText,
-    required this.onTextChanged,
-    required this.onOptionSelected,
+    required this.emptyStateMessage,
+    required this.buttonLabel,
+    required this.onAddPressed,
+    required this.onChanged,
   });
 
-  final TextEditingController controller;
+  final String value;
   final List<_LookupOption> options;
-  final String noneLabel;
+  final String emptyLabel;
   final String hintText;
-  final ValueChanged<String> onTextChanged;
-  final ValueChanged<_LookupOption> onOptionSelected;
-
-  @override
-  State<_LookupAutocompleteField> createState() =>
-      _LookupAutocompleteFieldState();
-}
-
-class _LookupAutocompleteFieldState extends State<_LookupAutocompleteField> {
-  late final FocusNode _focusNode;
-
-  @override
-  void initState() {
-    super.initState();
-    _focusNode = FocusNode();
-  }
-
-  @override
-  void dispose() {
-    _focusNode.dispose();
-    super.dispose();
-  }
+  final String emptyStateMessage;
+  final String buttonLabel;
+  final VoidCallback onAddPressed;
+  final ValueChanged<String> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    final allOptions = [
-      _LookupOption(value: '', label: widget.noneLabel),
-      ...widget.options,
-    ];
-    return RawAutocomplete<_LookupOption>(
-      textEditingController: widget.controller,
-      focusNode: _focusNode,
-      displayStringForOption: (option) => option.label,
-      optionsBuilder: (textEditingValue) {
-        final query = textEditingValue.text.trim().toLowerCase();
-        if (query.isEmpty) return allOptions.take(8);
-        return allOptions
-            .where((option) => option.label.toLowerCase().contains(query))
-            .take(8);
-      },
-      onSelected: (option) {
-        assignControllerText(widget.controller, option.label);
-        widget.onOptionSelected(option);
-      },
-      fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
-        return TextFormField(
-          controller: controller,
-          focusNode: focusNode,
-          onChanged: widget.onTextChanged,
-          onEditingComplete: () {
-            final query = controller.text.trim().toLowerCase();
-            for (final option in allOptions) {
-              if (option.label.toLowerCase() == query) {
-                assignControllerText(controller, option.label);
-                widget.onOptionSelected(option);
-                break;
-              }
-            }
-            focusNode.unfocus();
-          },
-          decoration: cotimaxDropdownDecoration(
-            hintText: widget.hintText,
-          ).copyWith(suffixIcon: const Icon(Icons.search_rounded)),
-        );
-      },
-      optionsViewBuilder: (context, onSelected, options) {
-        final matches = options.toList(growable: false);
-        if (matches.isEmpty) return const SizedBox.shrink();
-        return Align(
-          alignment: Alignment.topLeft,
-          child: Material(
-            elevation: 10,
-            color: AppColors.white,
-            borderRadius: cotimaxMenuBorderRadius,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420, maxHeight: 280),
-              child: ListView.separated(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                shrinkWrap: true,
-                itemCount: matches.length,
-                separatorBuilder: (_, _) => const Divider(height: 1),
-                itemBuilder: (context, index) {
-                  final option = matches[index];
-                  return InkWell(
-                    onTap: () => onSelected(option),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 10,
-                      ),
-                      child: Text(
-                        trText(option.label),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: AppColors.textPrimary,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  );
-                },
+    if (options.isEmpty) {
+      return _LookupEmptyState(
+        message: emptyStateMessage,
+        buttonLabel: buttonLabel,
+        onPressed: onAddPressed,
+      );
+    }
+
+    final selectedValue = options.any((option) => option.value == value)
+        ? value
+        : '';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        DropdownButtonFormField<String>(
+          initialValue: selectedValue,
+          isExpanded: true,
+          menuMaxHeight: 320,
+          borderRadius: cotimaxMenuBorderRadius,
+          dropdownColor: AppColors.white,
+          icon: cotimaxDropdownIcon,
+          style: cotimaxDropdownTextStyle,
+          decoration: cotimaxDropdownDecoration(hintText: hintText),
+          items: [
+            DropdownMenuItem(
+              value: '',
+              child: Text(
+                trText(emptyLabel),
+                overflow: TextOverflow.ellipsis,
+                style: cotimaxDropdownTextStyle,
               ),
             ),
-          ),
-        );
-      },
+            ...options.map(
+              (option) => DropdownMenuItem(
+                value: option.value,
+                child: Text(
+                  trText(option.label),
+                  overflow: TextOverflow.ellipsis,
+                  style: cotimaxDropdownTextStyle,
+                ),
+              ),
+            ),
+          ],
+          onChanged: (nextValue) => onChanged(nextValue ?? ''),
+        ),
+        SizedBox(height: 8),
+        TextButton.icon(
+          onPressed: onAddPressed,
+          icon: Icon(Icons.add_rounded, size: 16),
+          label: Text(trText(buttonLabel)),
+        ),
+      ],
     );
   }
 }
 
 class _LookupEmptyState extends StatelessWidget {
-  const _LookupEmptyState({
+  _LookupEmptyState({
     required this.message,
     required this.buttonLabel,
     required this.onPressed,
@@ -1299,7 +1643,7 @@ class _LookupEmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(12),
+      padding: EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppColors.background,
         borderRadius: BorderRadius.circular(10),
@@ -1310,17 +1654,17 @@ class _LookupEmptyState extends StatelessWidget {
         children: [
           Text(
             trText(message),
-            style: const TextStyle(
+            style: TextStyle(
               color: AppColors.textSecondary,
               fontSize: 12,
               fontWeight: FontWeight.w600,
               height: 1.4,
             ),
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: 10),
           TextButton.icon(
             onPressed: onPressed,
-            icon: const Icon(Icons.add_rounded, size: 16),
+            icon: Icon(Icons.add_rounded, size: 16),
             label: Text(trText(buttonLabel)),
           ),
         ],
@@ -1330,7 +1674,7 @@ class _LookupEmptyState extends StatelessWidget {
 }
 
 class _RangeChip extends StatelessWidget {
-  const _RangeChip({required this.label});
+  _RangeChip({required this.label});
 
   final String label;
 
@@ -1338,7 +1682,7 @@ class _RangeChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       label,
-      style: const TextStyle(
+      style: TextStyle(
         color: AppColors.textSecondary,
         fontSize: 11,
         fontWeight: FontWeight.w800,
@@ -1348,7 +1692,7 @@ class _RangeChip extends StatelessWidget {
 }
 
 class _ChartMetaItem extends StatelessWidget {
-  const _ChartMetaItem({
+  _ChartMetaItem({
     required this.icon,
     required this.label,
     required this.accent,
@@ -1364,10 +1708,10 @@ class _ChartMetaItem extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(icon, size: 15, color: accent),
-        const SizedBox(width: 6),
+        SizedBox(width: 6),
         Text(
           trText(label),
-          style: const TextStyle(
+          style: TextStyle(
             color: AppColors.textPrimary,
             fontSize: 12,
             fontWeight: FontWeight.w700,
@@ -1379,7 +1723,7 @@ class _ChartMetaItem extends StatelessWidget {
 }
 
 class _ProjectionToolbar extends StatelessWidget {
-  const _ProjectionToolbar({
+  _ProjectionToolbar({
     required this.projected,
     required this.selectedOption,
     required this.options,
@@ -1438,7 +1782,7 @@ class _ProjectionToolbar extends StatelessWidget {
         if (projected)
           PopupMenuButton<_ProjectionOption>(
             tooltip: 'Cambiar proyección',
-            offset: const Offset(0, 8),
+            offset: Offset(0, 8),
             onSelected: onOptionSelected,
             itemBuilder: (context) => options
                 .map(
@@ -1459,7 +1803,7 @@ class _ProjectionToolbar extends StatelessWidget {
 }
 
 class _DateRangeButton extends StatelessWidget {
-  const _DateRangeButton({
+  _DateRangeButton({
     required this.label,
     required this.accent,
     required this.onPressed,
@@ -1482,14 +1826,14 @@ class _DateRangeButton extends StatelessWidget {
       icon: Icon(Icons.date_range_rounded, size: 16, color: accent),
       label: Text(
         trText(label),
-        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
       ),
     );
   }
 }
 
 class _ProjectionModeButton extends StatelessWidget {
-  const _ProjectionModeButton({
+  _ProjectionModeButton({
     required this.label,
     required this.icon,
     required this.active,
@@ -1526,7 +1870,7 @@ class _ProjectionModeButton extends StatelessWidget {
 }
 
 class _ProjectionResetButton extends StatelessWidget {
-  const _ProjectionResetButton({
+  _ProjectionResetButton({
     required this.label,
     required this.accent,
     required this.onPressed,
@@ -1548,14 +1892,14 @@ class _ProjectionResetButton extends StatelessWidget {
       ),
       child: Text(
         trText(label),
-        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
       ),
     );
   }
 }
 
 class _ProjectionOptionButton extends StatelessWidget {
-  const _ProjectionOptionButton({required this.label, required this.accent});
+  _ProjectionOptionButton({required this.label, required this.accent});
 
   final String label;
   final Color accent;
@@ -1573,7 +1917,7 @@ class _ProjectionOptionButton extends StatelessWidget {
             fontSize: 13,
           ),
         ),
-        const SizedBox(width: 4),
+        SizedBox(width: 4),
         Icon(Icons.expand_more_rounded, color: accent, size: 18),
       ],
     );
@@ -1593,7 +1937,7 @@ class _ProjectionOption {
 }
 
 class _ProjectedChartData {
-  const _ProjectedChartData({
+  _ProjectedChartData({
     required this.labels,
     required this.values,
     required this.total,
@@ -1617,7 +1961,7 @@ const incomeProjectionOptions = <_ProjectionOption>[
 ];
 
 class _RankingIncomeTable extends StatelessWidget {
-  const _RankingIncomeTable({
+  _RankingIncomeTable({
     required this.title,
     required this.valueLabel,
     required this.rows,
@@ -1634,9 +1978,9 @@ class _RankingIncomeTable extends StatelessWidget {
     return CotimaxDataTable(
       title: title,
       columns: [
-        const DataColumn(label: Text('Nombre')),
-        DataColumn(label: Text(countLabel)),
-        DataColumn(label: Text(valueLabel)),
+        DataColumn(label: Text(trText('Nombre'))),
+        DataColumn(label: Text(trText(countLabel))),
+        DataColumn(label: Text(trText(valueLabel))),
       ],
       rows: rows
           .take(6)
@@ -1651,7 +1995,7 @@ class _RankingIncomeTable extends StatelessWidget {
                     children: [
                       if (entry.key < 3) ...[
                         rankingMedalIcon(entry.key),
-                        const SizedBox(width: 8),
+                        SizedBox(width: 8),
                       ],
                       Expanded(child: Text(entry.value.name)),
                     ],
@@ -1668,11 +2012,7 @@ class _RankingIncomeTable extends StatelessWidget {
 }
 
 class _RankingItem {
-  const _RankingItem({
-    required this.name,
-    required this.amount,
-    required this.count,
-  });
+  _RankingItem({required this.name, required this.amount, required this.count});
 
   final String name;
   final double amount;
@@ -1701,19 +2041,19 @@ LineChartData _incomeChartData({
       show: true,
       drawVerticalLine: false,
       getDrawingHorizontalLine: (_) =>
-          const FlLine(color: AppColors.border, strokeWidth: 1),
+          FlLine(color: AppColors.border, strokeWidth: 1),
     ),
     borderData: FlBorderData(show: false),
     titlesData: FlTitlesData(
-      topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-      rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+      topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+      rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
       leftTitles: AxisTitles(
         sideTitles: SideTitles(
           showTitles: true,
           reservedSize: 94,
           getTitlesWidget: (value, _) => Text(
             formatMxn(value),
-            style: const TextStyle(
+            style: TextStyle(
               color: AppColors.textMuted,
               fontSize: 11,
               fontWeight: FontWeight.w700,
@@ -1727,16 +2067,16 @@ LineChartData _incomeChartData({
           getTitlesWidget: (value, _) {
             final index = value.toInt();
             if (index < 0 || index >= labels.length) {
-              return const SizedBox.shrink();
+              return SizedBox.shrink();
             }
             if (!shouldShowChartLabel(index, labels.length, maxLabels: 4)) {
-              return const SizedBox.shrink();
+              return SizedBox.shrink();
             }
             return Padding(
-              padding: const EdgeInsets.only(top: 10),
+              padding: EdgeInsets.only(top: 10),
               child: Text(
                 labels[index],
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppColors.textMuted,
                   fontSize: 10,
                   fontWeight: FontWeight.w700,
@@ -1776,10 +2116,7 @@ LineChartData _incomeChartData({
             .map(
               (spot) => LineTooltipItem(
                 formatMxn(spot.y),
-                const TextStyle(
-                  color: AppColors.white,
-                  fontWeight: FontWeight.w800,
-                ),
+                TextStyle(color: AppColors.white, fontWeight: FontWeight.w800),
               ),
             )
             .toList(),
@@ -1817,7 +2154,7 @@ LineChartData _incomeChartData({
     final weekCount = (totalDays / 7).ceil();
     for (var index = 0; index < weekCount; index++) {
       final weekStart = start.add(Duration(days: index * 7));
-      final weekEnd = weekStart.add(const Duration(days: 6));
+      final weekEnd = weekStart.add(Duration(days: 6));
       labels.add(DateFormat('dd MMM', currentIntlLocale()).format(weekStart));
       values.add(
         ingresos
@@ -1878,7 +2215,7 @@ _ProjectedChartData _buildProjectedIncomeWeeks(
   var currentWeek = _startOfWeek(DateTime.now());
 
   for (var index = 0; index < horizon; index++) {
-    currentWeek = currentWeek.add(const Duration(days: 7));
+    currentWeek = currentWeek.add(Duration(days: 7));
     final projected = math
         .max(0, _weightedAverage(source) * (1 + (trend * 0.18)))
         .toDouble();
@@ -1934,7 +2271,7 @@ _ProjectedChartData _buildHistoricalIncomeWeeks(
     final weekStart = currentWeek.subtract(
       Duration(days: (weeks - 1 - index) * 7),
     );
-    final weekEnd = weekStart.add(const Duration(days: 6));
+    final weekEnd = weekStart.add(Duration(days: 6));
     labels.add(DateFormat('dd MMM', currentIntlLocale()).format(weekStart));
     values.add(
       ingresos
@@ -2033,7 +2370,7 @@ List<Ingreso> _filterIngresosByRange(
   final start = DateUtils.dateOnly(range.start);
   final end = DateUtils.dateOnly(
     range.end,
-  ).add(const Duration(hours: 23, minutes: 59, seconds: 59));
+  ).add(Duration(hours: 23, minutes: 59, seconds: 59));
   return ingresos
       .where((item) => !item.fecha.isBefore(start) && !item.fecha.isAfter(end))
       .toList();
@@ -2102,6 +2439,20 @@ List<_RankingItem> _incomeByProduct(
 
 String _paymentMethodLabel(PaymentMethod method) {
   return method.label;
+}
+
+String _expenseSourceLabel(Gasto? gasto) {
+  if (gasto == null) return '';
+  final desc = gasto.descripcion.trim();
+  final provider = gasto.proveedor.trim();
+  final focus = desc.isNotEmpty
+      ? desc
+      : (provider.isNotEmpty ? provider : trText('Gasto'));
+  final date = DateFormat(
+    'dd/MM/yyyy',
+    currentIntlLocale(),
+  ).format(gasto.fecha);
+  return '$focus · $date · ${formatMxn(gasto.monto)}';
 }
 
 class _MutableRanking {

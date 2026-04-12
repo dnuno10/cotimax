@@ -42,6 +42,8 @@ create table if not exists public.empresas (
   color_fondo text not null default '#F7F9FC',
   color_neutro text not null default '#1F2937',
   theme_seleccionado text not null default 'corporativo',
+  notas_default text not null default '',
+  notas_privadas_default text not null default '',
   terminos_default text not null default '',
   pie_pagina_default text not null default '',
   activo boolean not null default true,
@@ -56,6 +58,7 @@ create table if not exists public.usuarios (
   telefono text not null default '',
   correo text not null default '',
   rol text not null default 'usuario' check (rol in ('admin', 'usuario')),
+  modo_oscuro boolean not null default false,
   ultimo_acceso_at timestamptz,
   activo boolean not null default true,
   created_at timestamptz not null default timezone('utc', now()),
@@ -1600,8 +1603,10 @@ returns table (
   unidad_medida text,
   costo_unitario numeric,
   stock_disponible numeric,
+  proveedor_id uuid,
   proveedor_nombre text,
   sku text,
+  producto_ids text[],
   activo boolean,
   created_at timestamptz,
   updated_at timestamptz
@@ -1612,9 +1617,20 @@ set search_path = public
 as $$
   select
     m.id, m.nombre, m.descripcion, m.tipo_nombre, m.unidad_medida,
-    m.costo_unitario, m.stock_disponible, m.proveedor_nombre, m.sku, m.activo,
+    m.costo_unitario, m.stock_disponible, m.proveedor_id, m.proveedor_nombre,
+    m.sku,
+    coalesce(
+      array_agg(distinct p.id::text) filter (where p.id is not null),
+      '{}'::text[]
+    ) as producto_ids,
+    m.activo,
     m.created_at, m.updated_at
   from public.materiales_insumos m
+  left join public.producto_componentes pc on pc.material_id = m.id
+  left join public.productos_servicios p
+    on p.id = pc.producto_id
+    and p.deleted_at is null
+    and public.app_can_access_empresa(p.empresa_id)
   where m.deleted_at is null
     and public.app_can_access_empresa(m.empresa_id)
     and (
@@ -1623,6 +1639,10 @@ as $$
       or lower(m.sku) like '%' || lower(p_query) || '%'
       or lower(m.proveedor_nombre) like '%' || lower(p_query) || '%'
     )
+  group by
+    m.id, m.nombre, m.descripcion, m.tipo_nombre, m.unidad_medida,
+    m.costo_unitario, m.stock_disponible, m.proveedor_id, m.proveedor_nombre,
+    m.sku, m.activo, m.created_at, m.updated_at
   order by m.updated_at desc;
 $$;
 
@@ -1636,8 +1656,21 @@ declare
   v_empresa_id uuid := public.app_current_empresa_id();
   v_id uuid := coalesce(public.app_parse_uuid(p_payload ->> 'id'), gen_random_uuid());
   v_proveedor_id uuid := public.app_parse_uuid(p_payload ->> 'proveedor_id');
+  v_producto_ids uuid[] := '{}'::uuid[];
 begin
   perform public.app_require_company_access(v_empresa_id);
+
+  select coalesce(array_agg(producto_id), '{}'::uuid[])
+  into v_producto_ids
+  from (
+    select distinct public.app_parse_uuid(value) as producto_id
+    from jsonb_array_elements_text(coalesce(p_payload -> 'producto_ids', '[]'::jsonb))
+  ) selected_ids
+  join public.productos_servicios p
+    on p.id = selected_ids.producto_id
+   and p.empresa_id = v_empresa_id
+   and p.deleted_at is null
+  where selected_ids.producto_id is not null;
 
   insert into public.materiales_insumos (
     id, empresa_id, nombre, descripcion, tipo_nombre, unidad_medida,
@@ -1668,6 +1701,42 @@ begin
     proveedor_nombre = excluded.proveedor_nombre,
     sku = excluded.sku,
     activo = excluded.activo;
+
+  delete from public.producto_componentes pc
+  using public.productos_servicios p
+  where p.id = pc.producto_id
+    and p.empresa_id = v_empresa_id
+    and p.deleted_at is null
+    and pc.material_id = v_id
+    and not (pc.producto_id = any(v_producto_ids));
+
+  insert into public.producto_componentes (
+    producto_id, tipo, material_id, nombre_libre, cantidad, unidad_consumo,
+    costo_unitario_snapshot, orden
+  )
+  select
+    p.id,
+    'Material',
+    v_id,
+    '',
+    1,
+    coalesce(p_payload ->> 'unidad_medida', ''),
+    coalesce((p_payload ->> 'costo_unitario')::numeric, 0),
+    coalesce((
+      select max(existing.orden) + 1
+      from public.producto_componentes existing
+      where existing.producto_id = p.id
+    ), 0)
+  from public.productos_servicios p
+  where p.id = any(v_producto_ids)
+    and p.empresa_id = v_empresa_id
+    and p.deleted_at is null
+    and not exists (
+      select 1
+      from public.producto_componentes existing
+      where existing.producto_id = p.id
+        and existing.material_id = v_id
+    );
 
   return v_id;
 end;
@@ -2486,6 +2555,8 @@ begin
     'color_fondo', e.color_fondo,
     'color_neutro', e.color_neutro,
     'theme_seleccionado', e.theme_seleccionado,
+    'notas_default', e.notas_default,
+    'notas_privadas_default', e.notas_privadas_default,
     'terminos_default', e.terminos_default,
     'pie_pagina_default', e.pie_pagina_default,
     'created_at', e.created_at,
@@ -2539,6 +2610,11 @@ begin
       color_fondo = coalesce(p_payload ->> 'color_fondo', color_fondo),
       color_neutro = coalesce(p_payload ->> 'color_neutro', color_neutro),
       theme_seleccionado = coalesce(p_payload ->> 'theme_seleccionado', theme_seleccionado),
+      notas_default = coalesce(p_payload ->> 'notas_default', notas_default),
+      notas_privadas_default = coalesce(
+        p_payload ->> 'notas_privadas_default',
+        notas_privadas_default
+      ),
       terminos_default = coalesce(p_payload ->> 'terminos_default', terminos_default),
       pie_pagina_default = coalesce(p_payload ->> 'pie_pagina_default', pie_pagina_default)
   where id = v_empresa_id;
@@ -2579,6 +2655,60 @@ begin
     tasa_predeterminada = excluded.tasa_predeterminada;
 
   return v_empresa_id;
+end;
+$$;
+
+create or replace function public.get_usuario_actual()
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_payload jsonb;
+begin
+  if auth.uid() is null then
+    raise exception 'Usuario no autenticado';
+  end if;
+
+  select jsonb_build_object(
+    'id', u.id,
+    'nombre', u.nombre,
+    'telefono', u.telefono,
+    'correo', u.correo,
+    'rol', u.rol,
+    'modo_oscuro', u.modo_oscuro,
+    'activo', u.activo,
+    'ultimo_acceso_at', u.ultimo_acceso_at,
+    'created_at', u.created_at,
+    'updated_at', u.updated_at
+  )
+  into v_payload
+  from public.usuarios u
+  where u.id = auth.uid();
+
+  return coalesce(v_payload, '{}'::jsonb);
+end;
+$$;
+
+create or replace function public.update_usuario_actual(p_payload jsonb)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_usuario_id uuid := auth.uid();
+begin
+  if v_usuario_id is null then
+    raise exception 'Usuario no autenticado';
+  end if;
+
+  update public.usuarios
+  set modo_oscuro = coalesce((p_payload ->> 'modo_oscuro')::boolean, modo_oscuro)
+  where id = v_usuario_id;
+
+  return v_usuario_id;
 end;
 $$;
 
@@ -2693,6 +2823,8 @@ grant execute on function public.upsert_gasto(jsonb) to authenticated;
 grant execute on function public.delete_gasto(uuid) to authenticated;
 grant execute on function public.get_empresa_actual() to authenticated;
 grant execute on function public.update_empresa_actual(jsonb) to authenticated;
+grant execute on function public.get_usuario_actual() to authenticated;
+grant execute on function public.update_usuario_actual(jsonb) to authenticated;
 grant execute on function public.list_usuarios() to authenticated;
 grant execute on function public.list_planes() to authenticated;
 grant execute on function public.get_suscripcion_actual() to authenticated;

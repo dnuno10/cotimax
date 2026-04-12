@@ -32,7 +32,7 @@ String weekdaySummary(Iterable<int> values) {
 }
 
 class RecurrenceConfigurationCard extends StatelessWidget {
-  const RecurrenceConfigurationCard({
+  RecurrenceConfigurationCard({
     required this.title,
     required this.isRecurring,
     required this.frequency,
@@ -44,6 +44,7 @@ class RecurrenceConfigurationCard extends StatelessWidget {
     this.startDateLabel = 'Fecha de inicio',
     this.startDateHintText = 'AAAA-MM-DD',
     this.startDateHelperText,
+    this.onStartDateTap,
     this.titleIcon = FontAwesomeIcons.arrowsRotate,
     super.key,
   });
@@ -60,13 +61,14 @@ class RecurrenceConfigurationCard extends StatelessWidget {
   final String startDateLabel;
   final String startDateHintText;
   final String? startDateHelperText;
+  final VoidCallback? onStartDateTap;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.background,
+        color: AppColors.white,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: AppColors.border),
       ),
@@ -79,11 +81,11 @@ class RecurrenceConfigurationCard extends StatelessWidget {
                 child: Row(
                   children: [
                     FaIcon(titleIcon, size: 14, color: AppColors.textPrimary),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         trText(title),
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppColors.textPrimary,
                           fontWeight: FontWeight.w800,
                           fontSize: 15,
@@ -96,14 +98,14 @@ class RecurrenceConfigurationCard extends StatelessWidget {
               Switch(value: isRecurring, onChanged: onRecurringChanged),
             ],
           ),
-          const SizedBox(height: 4),
+          SizedBox(height: 4),
           Text(
             trText(
               isRecurring
                   ? 'Activa una regla para generar el movimiento de forma recurrente.'
                   : 'Desactiva esta opcion si el movimiento solo ocurre una vez.',
             ),
-            style: const TextStyle(
+            style: TextStyle(
               color: AppColors.textSecondary,
               fontSize: 12,
               fontWeight: FontWeight.w600,
@@ -111,22 +113,27 @@ class RecurrenceConfigurationCard extends StatelessWidget {
             ),
           ),
           if (isRecurring) ...[
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             if (startDateController != null) ...[
               FormFieldWrapper(
                 label: startDateLabel,
                 child: TextField(
                   controller: startDateController,
+                  readOnly: onStartDateTap != null,
+                  onTap: onStartDateTap,
                   decoration: InputDecoration(
                     hintText: trText(startDateHintText),
+                    suffixIcon: onStartDateTap == null
+                        ? null
+                        : const Icon(Icons.calendar_month_rounded),
                   ),
                 ),
               ),
               if (startDateHelperText != null) ...[
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 Text(
                   trText(startDateHelperText!),
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -134,7 +141,7 @@ class RecurrenceConfigurationCard extends StatelessWidget {
                   ),
                 ),
               ],
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
             ],
             FormFieldWrapper(
               label: 'Frecuencia',
@@ -163,7 +170,7 @@ class RecurrenceConfigurationCard extends StatelessWidget {
               ),
             ),
             if (frequency.supportsWeekdaySelection) ...[
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               FormFieldWrapper(
                 label: 'Dias de la semana',
                 child: Wrap(
@@ -180,10 +187,10 @@ class RecurrenceConfigurationCard extends StatelessWidget {
                       .toList(),
                 ),
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
               Text(
                 weekdaySummary(selectedWeekdays),
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppColors.textSecondary,
                   fontSize: 12,
                   fontWeight: FontWeight.w600,

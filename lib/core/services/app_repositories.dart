@@ -40,6 +40,14 @@ abstract class CotizacionesRepository {
 
 abstract class IngresosRepository {
   Future<List<Ingreso>> getAll();
+  Future<List<IngresoCategoria>> getCategorias();
+  Future<String> createCategoria({required String nombre, String descripcion});
+  Future<void> updateCategoria({
+    required String id,
+    required String nombre,
+    String descripcion,
+  });
+  Future<void> deleteCategoria(String id);
   Future<void> upsert(Ingreso ingreso);
   Future<void> delete(String id);
 }
@@ -47,7 +55,15 @@ abstract class IngresosRepository {
 abstract class GastosRepository {
   Future<List<Gasto>> getAll();
   Future<List<GastoRecurrente>> getRecurrentes();
+  Future<int> processRecurrentes({DateTime? until});
   Future<List<GastoCategoria>> getCategorias();
+  Future<String> createCategoria({required String nombre, String descripcion});
+  Future<void> updateCategoria({
+    required String id,
+    required String nombre,
+    String descripcion,
+  });
+  Future<void> deleteCategoria(String id);
   Future<void> upsert(Gasto gasto);
   Future<void> delete(String id);
 }
@@ -55,6 +71,8 @@ abstract class GastosRepository {
 abstract class ConfiguracionRepository {
   Future<EmpresaPerfil> getEmpresa();
   Future<void> updateEmpresa(EmpresaPerfil empresa);
+  Future<UsuarioActual> getUsuarioActual();
+  Future<void> updateUsuarioActualThemeMode(bool modoOscuro);
 }
 
 abstract class WorkspaceRepository {
@@ -77,7 +95,7 @@ abstract class PlanesRepository {
 }
 
 class SupabaseClientesRepository implements ClientesRepository {
-  const SupabaseClientesRepository(this._client);
+  SupabaseClientesRepository(this._client);
 
   final SupabaseClient _client;
 
@@ -131,7 +149,7 @@ class SupabaseClientesRepository implements ClientesRepository {
 }
 
 class SupabaseProveedoresRepository implements ProveedoresRepository {
-  const SupabaseProveedoresRepository(this._client);
+  SupabaseProveedoresRepository(this._client);
 
   final SupabaseClient _client;
 
@@ -179,7 +197,7 @@ class SupabaseProveedoresRepository implements ProveedoresRepository {
 }
 
 class SupabaseProductosRepository implements ProductosRepository {
-  const SupabaseProductosRepository(this._client);
+  SupabaseProductosRepository(this._client);
 
   final SupabaseClient _client;
 
@@ -204,7 +222,7 @@ class SupabaseProductosRepository implements ProductosRepository {
 }
 
 class SupabaseMaterialesRepository implements MaterialesRepository {
-  const SupabaseMaterialesRepository(this._client);
+  SupabaseMaterialesRepository(this._client);
 
   final SupabaseClient _client;
 
@@ -233,6 +251,7 @@ class SupabaseMaterialesRepository implements MaterialesRepository {
           'proveedor_id': material.proveedorId,
           'proveedor_nombre': material.proveedor,
           'sku': material.sku,
+          'producto_ids': material.productoIds,
           'activo': material.activo,
         },
       },
@@ -246,7 +265,7 @@ class SupabaseMaterialesRepository implements MaterialesRepository {
 }
 
 class SupabaseCotizacionesRepository implements CotizacionesRepository {
-  const SupabaseCotizacionesRepository(this._client);
+  SupabaseCotizacionesRepository(this._client);
 
   final SupabaseClient _client;
 
@@ -288,14 +307,50 @@ class SupabaseCotizacionesRepository implements CotizacionesRepository {
 }
 
 class SupabaseIngresosRepository implements IngresosRepository {
-  const SupabaseIngresosRepository(this._client);
+  SupabaseIngresosRepository(this._client);
 
   final SupabaseClient _client;
 
   @override
   Future<List<Ingreso>> getAll() async {
+    await _client.rpc('process_recurrent_ingresos');
     final response = await _client.rpc('list_ingresos');
     return _mapList(response, _ingresoFromRow);
+  }
+
+  @override
+  Future<List<IngresoCategoria>> getCategorias() async {
+    final response = await _client.rpc('list_ingreso_categorias');
+    return _mapList(response, _ingresoCategoriaFromRow);
+  }
+
+  @override
+  Future<String> createCategoria({
+    required String nombre,
+    String descripcion = '',
+  }) async {
+    final response = await _client.rpc(
+      'upsert_ingreso_categoria',
+      params: {'p_nombre': nombre, 'p_descripcion': descripcion},
+    );
+    return (response ?? '').toString();
+  }
+
+  @override
+  Future<void> updateCategoria({
+    required String id,
+    required String nombre,
+    String descripcion = '',
+  }) async {
+    await _client.rpc(
+      'update_ingreso_categoria',
+      params: {'p_id': id, 'p_nombre': nombre, 'p_descripcion': descripcion},
+    );
+  }
+
+  @override
+  Future<void> deleteCategoria(String id) async {
+    await _client.rpc('delete_ingreso_categoria', params: {'p_id': id});
   }
 
   @override
@@ -305,6 +360,7 @@ class SupabaseIngresosRepository implements IngresosRepository {
       params: {
         'p_payload': {
           'id': ingreso.id,
+          'ingreso_categoria_id': _nullIfEmpty(ingreso.ingresoCategoriaId),
           'cliente_id': _nullIfEmpty(ingreso.clienteId),
           'cotizacion_id': _nullIfEmpty(ingreso.cotizacionId),
           'monto': ingreso.monto,
@@ -317,6 +373,10 @@ class SupabaseIngresosRepository implements IngresosRepository {
           'recurrencia': ingreso.recurrencia.key,
           'dias_semana': ingreso.diasSemana,
           'icon_key': ingreso.iconKey,
+          'gasto_fuente_id': _nullIfEmpty(ingreso.gastoFuenteId),
+          'gasto_fuente_nombre_snapshot': _nullIfEmpty(
+            ingreso.gastoFuenteNombre,
+          ),
         },
       },
     );
@@ -329,26 +389,68 @@ class SupabaseIngresosRepository implements IngresosRepository {
 }
 
 class SupabaseGastosRepository implements GastosRepository {
-  const SupabaseGastosRepository(this._client);
+  SupabaseGastosRepository(this._client);
 
   final SupabaseClient _client;
 
   @override
   Future<List<Gasto>> getAll() async {
+    await _client.rpc('process_recurrent_gastos');
     final response = await _client.rpc('list_gastos');
     return _mapList(response, _gastoFromRow);
   }
 
   @override
   Future<List<GastoRecurrente>> getRecurrentes() async {
+    await _client.rpc('process_recurrent_gastos');
     final response = await _client.rpc('list_gastos_recurrentes');
     return _mapList(response, _gastoRecurrenteFromRow);
+  }
+
+  @override
+  Future<int> processRecurrentes({DateTime? until}) async {
+    final response = await _client.rpc(
+      'process_recurrent_gastos',
+      params: {'p_until': until?.toIso8601String()},
+    );
+    if (response is int) return response;
+    if (response is num) return response.toInt();
+    return int.tryParse(response?.toString() ?? '') ?? 0;
   }
 
   @override
   Future<List<GastoCategoria>> getCategorias() async {
     final response = await _client.rpc('list_gasto_categorias');
     return _mapList(response, _gastoCategoriaFromRow);
+  }
+
+  @override
+  Future<String> createCategoria({
+    required String nombre,
+    String descripcion = '',
+  }) async {
+    final response = await _client.rpc(
+      'upsert_gasto_categoria',
+      params: {'p_nombre': nombre, 'p_descripcion': descripcion},
+    );
+    return (response ?? '').toString();
+  }
+
+  @override
+  Future<void> updateCategoria({
+    required String id,
+    required String nombre,
+    String descripcion = '',
+  }) async {
+    await _client.rpc(
+      'update_gasto_categoria',
+      params: {'p_id': id, 'p_nombre': nombre, 'p_descripcion': descripcion},
+    );
+  }
+
+  @override
+  Future<void> deleteCategoria(String id) async {
+    await _client.rpc('delete_gasto_categoria', params: {'p_id': id});
   }
 
   @override
@@ -361,6 +463,7 @@ class SupabaseGastosRepository implements GastosRepository {
           'gasto_categoria_id': _nullIfEmpty(gasto.gastoCategoriaId),
           'monto': gasto.monto,
           'fecha': gasto.fecha.toIso8601String(),
+          'fecha_inicio': gasto.fechaInicioRecurrencia?.toIso8601String(),
           'descripcion': gasto.descripcion,
           'proveedor_nombre': gasto.proveedor,
           'referencia': gasto.referencia,
@@ -381,7 +484,7 @@ class SupabaseGastosRepository implements GastosRepository {
 }
 
 class SupabaseConfiguracionRepository implements ConfiguracionRepository {
-  const SupabaseConfiguracionRepository(this._client);
+  SupabaseConfiguracionRepository(this._client);
 
   final SupabaseClient _client;
 
@@ -402,6 +505,12 @@ class SupabaseConfiguracionRepository implements ConfiguracionRepository {
           'nombre_comercial': empresa.nombreComercial,
           'rfc': empresa.rfc,
           'direccion': empresa.direccion,
+          'calle': empresa.calle,
+          'apartamento_suite': empresa.apartamentoSuite,
+          'ciudad': empresa.ciudad,
+          'estado_provincia': empresa.estadoProvincia,
+          'codigo_postal': empresa.codigoPostal,
+          'pais': empresa.pais,
           'telefono': empresa.telefono,
           'correo': empresa.correo,
           'sitio_web': empresa.sitioWeb,
@@ -410,6 +519,23 @@ class SupabaseConfiguracionRepository implements ConfiguracionRepository {
           'color_fondo': empresa.colorFondo,
           'color_neutro': empresa.colorNeutro,
           'theme_seleccionado': empresa.themeSeleccionado,
+          'diseno_quote': {
+            'preset_diseno': empresa.themeSeleccionado,
+            'orientacion_pagina': empresa.quotePageOrientation,
+            'page_size': empresa.quotePageSize,
+            'font_size': empresa.quoteFontSize,
+            'logo_size_mode': empresa.quoteLogoSizeMode,
+            'logo_size_value': empresa.quoteLogoSizeValue,
+            'fuente_primaria': empresa.quotePrimaryFont,
+            'fuente_secundaria': empresa.quoteSecondaryFont,
+            'empty_columns_mode': empresa.quoteEmptyColumnsMode,
+            'show_paid_stamp': empresa.quoteShowPaidStamp,
+            'show_shipping_address': empresa.quoteShowShippingAddress,
+            'embed_attachments': empresa.quoteEmbedAttachments,
+            'show_page_number': empresa.quoteShowPageNumber,
+          },
+          'notas_default': empresa.notasDefault,
+          'notas_privadas_default': empresa.notasPrivadasDefault,
           'terminos_default': empresa.terminosDefault,
           'pie_pagina_default': empresa.piePaginaDefault,
           'localizacion': {
@@ -420,19 +546,41 @@ class SupabaseConfiguracionRepository implements ConfiguracionRepository {
             'formato_moneda': empresa.localizacion.formatoMoneda,
           },
           'impuestos': {
-            'tasas_linea': empresa.impuestos.tasasLinea,
-            'impuestos_sobre_gastos': empresa.impuestos.impuestosSobreGastos,
-            'impuestos_inclusivos': empresa.impuestos.impuestosInclusivos,
             'tasa_predeterminada': empresa.impuestos.tasaPredeterminada,
+            'tasas': empresa.impuestos.tasas
+                .map(
+                  (item) => {
+                    'id': item.id,
+                    'nombre': item.nombre,
+                    'porcentaje': item.porcentaje,
+                  },
+                )
+                .toList(growable: false),
           },
         },
+      },
+    );
+  }
+
+  @override
+  Future<UsuarioActual> getUsuarioActual() async {
+    final response = await _client.rpc('get_usuario_actual');
+    return _usuarioActualFromRow(Map<String, dynamic>.from(response as Map));
+  }
+
+  @override
+  Future<void> updateUsuarioActualThemeMode(bool modoOscuro) async {
+    await _client.rpc(
+      'update_usuario_actual',
+      params: {
+        'p_payload': {'modo_oscuro': modoOscuro},
       },
     );
   }
 }
 
 class SupabaseWorkspaceRepository implements WorkspaceRepository {
-  const SupabaseWorkspaceRepository(this._client);
+  SupabaseWorkspaceRepository(this._client);
 
   final SupabaseClient _client;
 
@@ -477,7 +625,7 @@ class SupabaseWorkspaceRepository implements WorkspaceRepository {
 }
 
 class SupabaseUsuariosRepository implements UsuariosRepository {
-  const SupabaseUsuariosRepository(this._client);
+  SupabaseUsuariosRepository(this._client);
 
   final SupabaseClient _client;
 
@@ -489,7 +637,7 @@ class SupabaseUsuariosRepository implements UsuariosRepository {
 }
 
 class SupabasePlanesRepository implements PlanesRepository {
-  const SupabasePlanesRepository(this._client);
+  SupabasePlanesRepository(this._client);
 
   final SupabaseClient _client;
 
@@ -520,6 +668,14 @@ String? _nullIfEmpty(String? value) {
   if (value == null) return null;
   final trimmed = value.trim();
   return trimmed.isEmpty ? null : trimmed;
+}
+
+List<String> _stringListFrom(dynamic value) {
+  if (value is! List) return const [];
+  return value
+      .map((item) => item?.toString().trim() ?? '')
+      .where((item) => item.isNotEmpty)
+      .toList();
 }
 
 DateTime _dateTimeFrom(dynamic value) {
@@ -602,10 +758,10 @@ MaterialInsumo _materialFromRow(Map<String, dynamic> row) {
     stockDisponible: _doubleFrom(
       row['stock_disponible'] ?? row['stockDisponible'],
     ),
-    proveedorId: row['proveedor_id'] as String?,
+    proveedorId: row['proveedor_id']?.toString(),
     proveedor: (row['proveedor_nombre'] ?? row['proveedor'] ?? '') as String,
     sku: (row['sku'] ?? '') as String,
-    productoIds: const [],
+    productoIds: _stringListFrom(row['producto_ids'] ?? row['productoIds']),
     activo: _boolFrom(row['activo'], fallback: true),
     createdAt: _dateTimeFrom(row['created_at']),
     updatedAt: _dateTimeFrom(row['updated_at']),
@@ -704,6 +860,7 @@ Ingreso _ingresoFromRow(Map<String, dynamic> row) {
       : const <int>[];
   return Ingreso(
     id: row['id'] as String,
+    ingresoCategoriaId: (row['ingreso_categoria_id'] ?? '') as String,
     clienteId: (row['cliente_id'] ?? '') as String,
     cotizacionId: (row['cotizacion_id'] ?? '') as String,
     monto: _doubleFrom(row['monto']),
@@ -726,6 +883,23 @@ Ingreso _ingresoFromRow(Map<String, dynamic> row) {
         ? null
         : _dateTimeFrom(row['fecha_inicio']),
     iconKey: (row['icon_key'] ?? 'wallet') as String,
+    gastoFuenteId: (row['gasto_fuente_id'] ?? '') as String,
+    gastoFuenteNombre:
+        (row['gasto_fuente_nombre'] ??
+                row['gasto_fuente_nombre_snapshot'] ??
+                '')
+            as String,
+    createdAt: _dateTimeFrom(row['created_at']),
+    updatedAt: _dateTimeFrom(row['updated_at']),
+  );
+}
+
+IngresoCategoria _ingresoCategoriaFromRow(Map<String, dynamic> row) {
+  return IngresoCategoria(
+    id: row['id'] as String,
+    nombre: (row['nombre'] ?? '') as String,
+    descripcion: (row['descripcion'] ?? '') as String,
+    activo: _boolFrom(row['activo'], fallback: true),
     createdAt: _dateTimeFrom(row['created_at']),
     updatedAt: _dateTimeFrom(row['updated_at']),
   );
@@ -751,6 +925,9 @@ Gasto _gastoFromRow(Map<String, dynamic> row) {
     gastoCategoriaId: (row['gasto_categoria_id'] ?? '') as String,
     monto: _doubleFrom(row['monto']),
     fecha: _dateTimeFrom(row['fecha']),
+    fechaInicioRecurrencia: row['fecha_inicio'] == null
+        ? null
+        : _dateTimeFrom(row['fecha_inicio']),
     descripcion: (row['descripcion'] ?? '') as String,
     proveedor: (row['proveedor_nombre'] ?? row['proveedor'] ?? '') as String,
     referencia: (row['referencia'] ?? '') as String,
@@ -801,6 +978,9 @@ EmpresaPerfil _empresaFromRow(Map<String, dynamic> row) {
   final impuestos = Map<String, dynamic>.from(
     row['impuestos'] as Map? ?? const {},
   );
+  final disenoQuote = Map<String, dynamic>.from(
+    row['diseno_quote'] as Map? ?? const {},
+  );
   return EmpresaPerfil(
     id: row['id'] as String,
     logoUrl: (row['logo_url'] ?? '') as String,
@@ -808,6 +988,12 @@ EmpresaPerfil _empresaFromRow(Map<String, dynamic> row) {
     nombreComercial: (row['nombre_comercial'] ?? '') as String,
     rfc: (row['rfc'] ?? '') as String,
     direccion: (row['direccion'] ?? '') as String,
+    calle: (row['calle'] ?? '') as String,
+    apartamentoSuite: (row['apartamento_suite'] ?? '') as String,
+    ciudad: (row['ciudad'] ?? '') as String,
+    estadoProvincia: (row['estado_provincia'] ?? '') as String,
+    codigoPostal: (row['codigo_postal'] ?? '') as String,
+    pais: (row['pais'] ?? '') as String,
     telefono: (row['telefono'] ?? '') as String,
     correo: (row['correo'] ?? '') as String,
     sitioWeb: (row['sitio_web'] ?? '') as String,
@@ -816,6 +1002,8 @@ EmpresaPerfil _empresaFromRow(Map<String, dynamic> row) {
     colorFondo: (row['color_fondo'] ?? '#F7F9FC') as String,
     colorNeutro: (row['color_neutro'] ?? '#1F2937') as String,
     themeSeleccionado: (row['theme_seleccionado'] ?? 'corporativo') as String,
+    notasDefault: (row['notas_default'] ?? '') as String,
+    notasPrivadasDefault: (row['notas_privadas_default'] ?? '') as String,
     terminosDefault: (row['terminos_default'] ?? '') as String,
     piePaginaDefault: (row['pie_pagina_default'] ?? '') as String,
     localizacion: ConfiguracionLocalizacion(
@@ -826,12 +1014,53 @@ EmpresaPerfil _empresaFromRow(Map<String, dynamic> row) {
       formatoMoneda: (localizacion['formato_moneda'] ?? '') as String,
     ),
     impuestos: ConfiguracionImpuestos(
+      tasaPredeterminada: (impuestos['tasa_predeterminada'] ?? '') as String,
+      tasas: ((impuestos['tasas'] as List?) ?? const [])
+          .map(
+            (item) => EmpresaTasaImpuesto(
+              id: (item['id'] ?? '') as String,
+              nombre: (item['nombre'] ?? '') as String,
+              porcentaje: ((item['porcentaje'] ?? 0) as num).toDouble(),
+            ),
+          )
+          .where((item) => item.id.trim().isNotEmpty)
+          .toList(growable: false),
       tasasLinea: (impuestos['tasas_linea'] ?? '') as String,
       impuestosSobreGastos:
           (impuestos['impuestos_sobre_gastos'] ?? '') as String,
       impuestosInclusivos: (impuestos['impuestos_inclusivos'] ?? '') as String,
-      tasaPredeterminada: (impuestos['tasa_predeterminada'] ?? '') as String,
     ),
+    createdAt: _dateTimeFrom(row['created_at']),
+    updatedAt: _dateTimeFrom(row['updated_at']),
+    quotePageOrientation:
+        (disenoQuote['orientacion_pagina'] ?? 'Retrato') as String,
+    quotePageSize: (disenoQuote['page_size'] ?? 'A4') as String,
+    quoteFontSize: (disenoQuote['font_size'] as num?)?.toInt() ?? 18,
+    quoteLogoSizeMode:
+        (disenoQuote['logo_size_mode'] ?? 'Porcentaje') as String,
+    quoteLogoSizeValue:
+        (disenoQuote['logo_size_value'] as num?)?.toDouble() ?? 24,
+    quotePrimaryFont: (disenoQuote['fuente_primaria'] ?? 'Arimo') as String,
+    quoteSecondaryFont: (disenoQuote['fuente_secundaria'] ?? 'Arimo') as String,
+    quoteEmptyColumnsMode:
+        (disenoQuote['empty_columns_mode'] ?? 'Espectaculo') as String,
+    quoteShowPaidStamp: _boolFrom(disenoQuote['show_paid_stamp']),
+    quoteShowShippingAddress: _boolFrom(disenoQuote['show_shipping_address']),
+    quoteEmbedAttachments: _boolFrom(disenoQuote['embed_attachments']),
+    quoteShowPageNumber: _boolFrom(disenoQuote['show_page_number']),
+  );
+}
+
+UsuarioActual _usuarioActualFromRow(Map<String, dynamic> row) {
+  return UsuarioActual(
+    id: row['id'] as String,
+    nombre: (row['nombre'] ?? '') as String,
+    telefono: (row['telefono'] ?? '') as String,
+    correo: (row['correo'] ?? '') as String,
+    rol: _enumByName(UserRole.values, row['rol']?.toString(), UserRole.usuario),
+    activo: _boolFrom(row['activo'], fallback: true),
+    modoOscuro: _boolFrom(row['modo_oscuro']),
+    ultimoAccesoAt: _dateTimeFrom(row['ultimo_acceso_at']),
     createdAt: _dateTimeFrom(row['created_at']),
     updatedAt: _dateTimeFrom(row['updated_at']),
   );

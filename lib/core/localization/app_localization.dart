@@ -8,10 +8,12 @@ class AppPresentationSettings {
   const AppPresentationSettings({
     required this.locale,
     required this.currencyCode,
+    required this.themeMode,
   });
 
   final Locale locale;
   final String currencyCode;
+  final ThemeMode themeMode;
 
   String get intlLocale =>
       locale.countryCode == null || locale.countryCode!.isEmpty
@@ -23,6 +25,7 @@ class AppPresentationSettings {
   static const fallback = AppPresentationSettings(
     locale: Locale('es', 'MX'),
     currencyCode: 'MXN',
+    themeMode: ThemeMode.light,
   );
 }
 
@@ -30,19 +33,49 @@ final appPresentationSettingsProvider = Provider<AppPresentationSettings>((
   ref,
 ) {
   final auth = ref.watch(authControllerProvider);
+  final themeModeOverride = ref.watch(themeModeOverrideProvider);
   if (!auth.isAuthenticated) {
     return AppPresentationSettings.fallback;
   }
 
   final empresa = ref.watch(empresaPerfilControllerProvider).valueOrNull;
+  final usuario = ref.watch(usuarioActualControllerProvider).valueOrNull;
+  final persistedThemeMode = (usuario?.modoOscuro ?? false)
+      ? ThemeMode.dark
+      : ThemeMode.light;
   if (empresa == null) {
-    return AppPresentationSettings.fallback;
+    return AppPresentationSettings(
+      locale: AppPresentationSettings.fallback.locale,
+      currencyCode: AppPresentationSettings.fallback.currencyCode,
+      themeMode: themeModeOverride ?? persistedThemeMode,
+    );
   }
 
   return AppPresentationSettings(
     locale: localeFromLanguageTag(empresa.localizacion.idioma),
     currencyCode: normalizeCurrencyCode(empresa.localizacion.moneda),
+    themeMode: themeModeOverride ?? persistedThemeMode,
   );
+});
+
+final themeModeOverrideProvider = StateProvider<ThemeMode?>((ref) => null);
+final themeChangeInProgressProvider = StateProvider<bool>((ref) => false);
+final themeOverlayVisibleProvider = Provider<bool>((ref) {
+  if (ref.watch(themeChangeInProgressProvider)) {
+    return true;
+  }
+
+  final auth = ref.watch(authControllerProvider);
+  if (!auth.isAuthenticated) {
+    return false;
+  }
+
+  if (ref.watch(themeModeOverrideProvider) != null) {
+    return false;
+  }
+
+  final usuarioActual = ref.watch(usuarioActualControllerProvider);
+  return usuarioActual.isLoading && usuarioActual.valueOrNull == null;
 });
 
 AppPresentationSettings _currentSettings = AppPresentationSettings.fallback;
@@ -217,6 +250,8 @@ final Map<String, String> _englishTranslations = {
   'Stock': 'Stock',
   'Proveedor': 'Supplier',
   'General': 'General',
+  'Gasto': 'Expense',
+  'Movs': 'Moves',
   'Producto terminado': 'Finished product',
   'Producto personalizado': 'Custom product',
   'Producto digital': 'Digital product',
@@ -805,15 +840,82 @@ final Map<String, String> _englishTranslations = {
       'Include attached images/PDFs in the invoice.',
   'Columnas vacías': 'Empty columns',
   'Numeración de páginas': 'Page numbering',
+  'Guardar valores por defecto': 'Save defaults',
+  'Modo oscuro': 'Dark mode',
+  'Notas privadas': 'Private notes',
+  'Pie de página': 'Footer',
+  'Términos': 'Terms',
+  'IVA': 'VAT',
+  'Impuestos inclusivos': 'Inclusive taxes',
+  'Impuestos sobre gastos': 'Taxes on expenses',
+  'Tasa predeterminada': 'Default rate',
+  'Dirección': 'Address',
+  'UTC (UTC+00:00)': 'UTC (UTC+00:00)',
+  'dd/MM/yyyy': 'dd/MM/yyyy',
+  'dd-MM-yyyy': 'dd-MM-yyyy',
+  'dd MMM yyyy': 'dd MMM yyyy',
+  'yyyy-MM-dd': 'yyyy-MM-dd',
+  'MM/dd/yyyy': 'MM/dd/yyyy',
+  'MMMM dd, yyyy': 'MMMM dd, yyyy',
   'Retrato': 'Portrait',
   'Horizontal': 'Landscape',
   'Porcentaje': 'Percentage',
   'Ocultar': 'Hide',
   'Espectaculo': 'Show',
   'Detalles de empresa': 'Company details',
+  'Configura tu empresa': 'Set up your company',
+  'Nombre de la empresa': 'Company name',
   'Nombre comercial': 'Trade name',
   'Nombre fiscal': 'Legal name',
   'Logo': 'Logo',
+  'Cargar logo': 'Upload logo',
+  'Cambiar logo': 'Change logo',
+  'Crear empresa': 'Create company',
+  'Creando...': 'Creating...',
+  'Nueva empresa': 'New company',
+  'Código de invitación': 'Invitation code',
+  'Código único del equipo': 'Unique team code',
+  'Ej. TEAM-4F8K2P': 'Ex. TEAM-4F8K2P',
+  'Elige cómo continuar': 'Choose how to continue',
+  'Unirse por invitación': 'Join by invitation',
+  'Unirse al equipo': 'Join the team',
+  'Uniendo...': 'Joining...',
+  'Copiar': 'Copy',
+  'Agregar producto': 'Add product',
+  'Añadir renglón': 'Add row',
+  'Cargando productos para sugerencias...':
+      'Loading products for suggestions...',
+  'No se pudieron cargar las sugerencias de productos.':
+      'Product suggestions could not be loaded.',
+  '+ Añadir contacto': '+ Add contact',
+  'SKU': 'SKU',
+  'Producto': 'Product',
+  'Servicio': 'Service',
+  'Depósito': 'Deposit',
+  'Base \$rango': 'Base \$rango',
+  'Eliminar \$entityLabel': 'Delete \$entityLabel',
+  '1 \$entityLabel seleccionado': '1 \$entityLabel selected',
+  '\$count \$plural seleccionados': '\$count \$plural selected',
+  'mes': 'month',
+  'usuario': 'user',
+  'Metodo de pago': 'Payment method',
+  'Transferencia': 'Transfer',
+  'Efectivo': 'Cash',
+  'Tarjeta': 'Card',
+  'Ninguna': 'None',
+  'Cada dia': 'Every day',
+  'Fin de semana': 'Weekend',
+  'Cada semana': 'Every week',
+  'Cada dos semanas': 'Every two weeks',
+  'Cada 4 semanas': 'Every 4 weeks',
+  'Cada mes': 'Every month',
+  'Cada 2 meses': 'Every 2 months',
+  'Cada 3 meses': 'Every 3 months',
+  'Cada 4 meses': 'Every 4 months',
+  'Cada 6 meses': 'Every 6 months',
+  'Cada año': 'Every year',
+  'Dias de la semana': 'Days of the week',
+  'Días de la semana': 'Days of the week',
   'Diseño claro, corporativo y centrado en lectura.':
       'Clean, corporate, reading-focused design.',
   'Encabezados más contrastados y tabla con más presencia.':
@@ -833,6 +935,98 @@ final Map<String, String> _englishTranslations = {
   'Auto-sync Bank Transactions':
       'Sincronización automática de movimientos bancarios',
   'REST API Access': 'Acceso a API REST',
+  'Cartera': 'Wallet',
+  'Pagos': 'Payments',
+  'Dinero': 'Money',
+  'Banco': 'Bank',
+  'Recibo': 'Receipt',
+  'Caja': 'Cashbox',
+  'Tienda': 'Store',
+  'Carrito': 'Cart',
+  'Bolsa': 'Bag',
+  'Inventario': 'Inventory',
+  'Envio': 'Shipping',
+  'Venta': 'Sale',
+  'Ahorro': 'Savings',
+  'Ingreso': 'Income',
+  'Internet': 'Internet',
+  'Egreso': 'Expense',
+  'Reporte': 'Report',
+  'Grafica': 'Chart',
+  'Barras': 'Bars',
+  'Ranking': 'Ranking',
+  'KPI': 'KPI',
+  'Web': 'Web',
+  'Equipo': 'Team',
+  'Persona': 'Person',
+  'Soporte': 'Support',
+  'Nomina': 'Payroll',
+  'Trabajo': 'Work',
+  'Negocio': 'Business',
+  'Oficina': 'Office',
+  'Renta': 'Rent',
+  'Obra': 'Construction',
+  'Herramienta': 'Tool',
+  'Ingenieria': 'Engineering',
+  'Plomeria': 'Plumbing',
+  'Electricidad': 'Electricity',
+  'Luz': 'Electric bill',
+  'Agua': 'Water',
+  'Gasolina': 'Fuel',
+  'Auto': 'Car',
+  'Viaje': 'Travel',
+  'Hospedaje': 'Lodging',
+  'Comida': 'Food',
+  'Cafe': 'Coffee',
+  'Alimentos': 'Groceries',
+  'Gym': 'Gym',
+  'Educacion': 'Education',
+  'Cursos': 'Courses',
+  'Computadora': 'Computer',
+  'Laptop': 'Laptop',
+  'Escritorio': 'Desk',
+  'Celular': 'Mobile',
+  'Audio': 'Audio',
+  'Impresion': 'Printing',
+  'Dispositivos': 'Devices',
+  'Nube': 'Cloud',
+  'Servidor': 'Server',
+  'Proteccion': 'Protection',
+  'Bloqueo': 'Lock',
+  'Validado': 'Validated',
+  'Documento': 'Document',
+  'Carpeta': 'Folder',
+  'QR': 'QR',
+  'Almacen': 'Warehouse',
+  'Sucursal': 'Branch',
+  'Mall': 'Mall',
+  'Regalo': 'Gift',
+  'Promocion': 'Promotion',
+  'Lealtad': 'Loyalty',
+  'Premium': 'Premium',
+  'Premio': 'Award',
+  'Evento': 'Event',
+  'Horario': 'Schedule',
+  'Calendario': 'Calendar',
+  'Hoy': 'Today',
+  'Alerta': 'Alert',
+  'Notificacion': 'Notification',
+  'Llamada': 'Call',
+  'Mensaje': 'Message',
+  'Conversacion': 'Conversation',
+  'Acuerdo': 'Agreement',
+  'Legal': 'Legal',
+  'Billetera': 'Wallet',
+  'Cobrado': 'Collected',
+  'Precio': 'Price',
+  'Calculo': 'Calculation',
+  'Linea de tiempo': 'Timeline',
+  'Favorito': 'Favorite',
+  'Confirmado': 'Confirmed',
+  'Objetivo': 'Goal',
+  'Rapido': 'Fast',
+  'Sostenible': 'Sustainable',
+  'Tendencia': 'Trend',
 };
 
 final Map<String, String> _spanishTranslations = {

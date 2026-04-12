@@ -1,7 +1,7 @@
 import 'package:cotimax/shared/enums/app_enums.dart';
 
 class ProductoComponenteInput {
-  const ProductoComponenteInput({
+   ProductoComponenteInput({
     required this.tipo,
     required this.materialId,
     required this.nombreLibre,
@@ -33,7 +33,7 @@ class ProductoComponenteInput {
 }
 
 class ProductoPrecioRangoInput {
-  const ProductoPrecioRangoInput({
+   ProductoPrecioRangoInput({
     required this.cantidadDesde,
     required this.cantidadHasta,
     required this.precio,
@@ -53,7 +53,7 @@ class ProductoPrecioRangoInput {
 }
 
 class ProductoUpsertPayload {
-  const ProductoUpsertPayload({
+   ProductoUpsertPayload({
     this.id,
     required this.tipo,
     required this.nombre,
@@ -123,7 +123,7 @@ class ProductoUpsertPayload {
 }
 
 class CotizacionLineaInput {
-  const CotizacionLineaInput({
+   CotizacionLineaInput({
     required this.productoServicioId,
     required this.concepto,
     required this.descripcion,
@@ -164,7 +164,7 @@ class CotizacionLineaInput {
 }
 
 class CotizacionUpsertPayload {
-  const CotizacionUpsertPayload({
+   CotizacionUpsertPayload({
     this.id,
     required this.clienteId,
     required this.fechaEmision,

@@ -1,24 +1,31 @@
+import 'dart:async';
+
 import 'package:cotimax/core/constants/app_colors.dart';
 import 'package:cotimax/core/localization/app_localization.dart';
 import 'package:cotimax/core/routing/route_paths.dart';
 import 'package:cotimax/core/services/backend_providers.dart';
 import 'package:cotimax/features/clientes/application/clientes_controller.dart';
+import 'package:cotimax/features/configuracion/application/configuracion_controller.dart';
 import 'package:cotimax/features/cotizaciones/application/cotizacion_pdf_service.dart';
 import 'package:cotimax/features/cotizaciones/application/cotizaciones_controller.dart';
+import 'package:cotimax/features/gastos/application/gastos_controller.dart';
+import 'package:cotimax/features/ingresos/application/ingresos_controller.dart';
 import 'package:cotimax/features/productos/application/productos_controller.dart';
 import 'package:cotimax/shared/enums/app_enums.dart';
 import 'package:cotimax/shared/models/domain_models.dart';
 import 'package:cotimax/shared/models/upsert_payloads.dart';
+import 'package:cotimax/shared/widgets/cotimax_rich_text_editor.dart';
 import 'package:cotimax/shared/widgets/cotimax_widgets.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:printing/printing.dart';
 
 class CotizacionesPage extends ConsumerStatefulWidget {
-  const CotizacionesPage({super.key});
+  CotizacionesPage({super.key});
 
   @override
   ConsumerState<CotizacionesPage> createState() => _CotizacionesPageState();
@@ -79,16 +86,16 @@ class _CotizacionesPageState extends ConsumerState<CotizacionesPage> {
           actions: [
             ElevatedButton.icon(
               onPressed: () => _openQuoteForm(context),
-              icon: const Icon(Icons.add),
+              icon: Icon(Icons.add),
               label: Text(trText('Nueva cotización')),
             ),
           ],
         ),
-        const SizedBox(height: 10),
+        SizedBox(height: 10),
         FilterBar(
           children: [
             Padding(
-              padding: const EdgeInsets.only(top: 20),
+              padding: EdgeInsets.only(top: 20),
               child: SizedBox(
                 width: 240,
                 child: SearchField(
@@ -100,7 +107,7 @@ class _CotizacionesPageState extends ConsumerState<CotizacionesPage> {
                 ),
               ),
             ),
-            const SizedBox(
+            SizedBox(
               width: 180,
               child: SelectField<String>(
                 label: 'Cliente',
@@ -108,7 +115,7 @@ class _CotizacionesPageState extends ConsumerState<CotizacionesPage> {
                 options: ['Todos', 'Cliente 1', 'Cliente 2'],
               ),
             ),
-            const SizedBox(
+            SizedBox(
               width: 180,
               child: SelectField<String>(
                 label: 'Estatus',
@@ -122,7 +129,7 @@ class _CotizacionesPageState extends ConsumerState<CotizacionesPage> {
                 ],
               ),
             ),
-            const SizedBox(
+            SizedBox(
               width: 180,
               child: SelectField<String>(
                 label: 'Usuario',
@@ -131,7 +138,7 @@ class _CotizacionesPageState extends ConsumerState<CotizacionesPage> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.only(top: 20),
+              padding: EdgeInsets.only(top: 20),
               child: _QuoteViewToggle(
                 mode: _viewMode,
                 onChanged: (mode) {
@@ -141,17 +148,17 @@ class _CotizacionesPageState extends ConsumerState<CotizacionesPage> {
             ),
           ],
         ),
-        const SizedBox(height: 10),
+        SizedBox(height: 10),
         cotizaciones.when(
           loading: () =>
-              const LoadingStateWidget(message: 'Cargando cotizaciones...'),
+              LoadingStateWidget(message: 'Cargando cotizaciones...'),
           error: (_, __) => ErrorStateWidget(
             message: 'No se pudieron cargar cotizaciones.',
             onRetry: () => ref.invalidate(cotizacionesControllerProvider),
           ),
           data: (items) {
             if (items.isEmpty) {
-              return const SectionCard(child: InlineEmptyMessage());
+              return SectionCard(child: InlineEmptyMessage());
             }
 
             if (_viewMode == _QuoteViewMode.kanban) {
@@ -435,6 +442,13 @@ class _CotizacionesPageState extends ConsumerState<CotizacionesPage> {
           .read(cotizacionesRepositoryProvider)
           .updateStatus(quote.id, status);
       ref.invalidate(cotizacionesControllerProvider);
+      if (status == QuoteStatus.aprobada) {
+        final ingreso = await _ensureIncomeForApprovedQuote(ref, quote);
+        ref.invalidate(ingresosControllerProvider);
+        if (context.mounted) {
+          await _promptLinkApprovedIncomeToExpense(context, ref, ingreso);
+        }
+      }
       if (context.mounted) {
         ToastHelper.show(
           context,
@@ -453,7 +467,7 @@ class _CotizacionesPageState extends ConsumerState<CotizacionesPage> {
       context: context,
       builder: (_) {
         return Dialog(
-          insetPadding: const EdgeInsets.all(24),
+          insetPadding: EdgeInsets.all(24),
           child: SizedBox(
             width: 1000,
             height: 760,
@@ -463,12 +477,180 @@ class _CotizacionesPageState extends ConsumerState<CotizacionesPage> {
       },
     );
   }
+
+  Future<Ingreso> _ensureIncomeForApprovedQuote(
+    WidgetRef ref,
+    Cotizacion quote,
+  ) async {
+    final ingresos =
+        ref.read(ingresosControllerProvider).valueOrNull ?? const <Ingreso>[];
+    for (final ingreso in ingresos) {
+      if (ingreso.cotizacionId == quote.id) {
+        return ingreso;
+      }
+    }
+
+    final now = DateTime.now();
+    final autoIngreso = Ingreso(
+      id: 'ing-auto-${now.microsecondsSinceEpoch}',
+      ingresoCategoriaId: '',
+      clienteId: quote.clienteId,
+      cotizacionId: quote.id,
+      monto: quote.total,
+      metodoPago: PaymentMethod.transferencia,
+      fecha: now,
+      referencia: quote.folio,
+      notas:
+          'Generado automáticamente al aprobar la cotización ${quote.folio}.',
+      recurrente: false,
+      recurrencia: RecurrenceFrequency.ninguna,
+      diasSemana: const <int>[],
+      fechaInicioRecurrencia: null,
+      iconKey: 'wallet',
+      createdAt: now,
+      updatedAt: now,
+    );
+    await ref.read(ingresosRepositoryProvider).upsert(autoIngreso);
+    return autoIngreso;
+  }
+
+  Future<void> _promptLinkApprovedIncomeToExpense(
+    BuildContext context,
+    WidgetRef ref,
+    Ingreso ingreso,
+  ) async {
+    final gastos =
+        ref.read(gastosControllerProvider).valueOrNull ?? const <Gasto>[];
+    if (gastos.isEmpty) return;
+
+    String selectedGastoId = ingreso.gastoFuenteId.trim();
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (dialogContext, setStateDialog) {
+            return AlertDialog(
+              title: Text(
+                tr(
+                  'Relacionar ingreso con fuente de gasto',
+                  'Link income to expense source',
+                ),
+              ),
+              content: SizedBox(
+                width: 480,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      tr(
+                        '¿Deseas vincular este ingreso con un gasto para medir impacto?',
+                        'Do you want to link this income with an expense to track impact?',
+                      ),
+                    ),
+                    SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      initialValue: selectedGastoId.isEmpty
+                          ? null
+                          : selectedGastoId,
+                      isExpanded: true,
+                      menuMaxHeight: 320,
+                      borderRadius: cotimaxMenuBorderRadius,
+                      dropdownColor: AppColors.white,
+                      icon: cotimaxDropdownIcon,
+                      style: cotimaxDropdownTextStyle,
+                      decoration: cotimaxDropdownDecoration(
+                        hintText: tr(
+                          'Selecciona un gasto',
+                          'Select an expense',
+                        ),
+                      ),
+                      items: [
+                        DropdownMenuItem<String>(
+                          value: '',
+                          child: Text(tr('Sin vincular', 'Not linked')),
+                        ),
+                        ...gastos.map(
+                          (item) => DropdownMenuItem<String>(
+                            value: item.id,
+                            child: Text(_expenseSourceLabel(item)),
+                          ),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        setStateDialog(() {
+                          selectedGastoId = value?.trim() ?? '';
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(false),
+                  child: Text(tr('Omitir', 'Skip')),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(true),
+                  child: Text(tr('Guardar vínculo', 'Save link')),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (result != true) return;
+    Gasto? gasto;
+    for (final item in gastos) {
+      if (item.id == selectedGastoId) {
+        gasto = item;
+        break;
+      }
+    }
+    final actualizado = Ingreso(
+      id: ingreso.id,
+      ingresoCategoriaId: ingreso.ingresoCategoriaId,
+      clienteId: ingreso.clienteId,
+      cotizacionId: ingreso.cotizacionId,
+      monto: ingreso.monto,
+      metodoPago: ingreso.metodoPago,
+      fecha: ingreso.fecha,
+      referencia: ingreso.referencia,
+      notas: ingreso.notas,
+      recurrente: ingreso.recurrente,
+      recurrencia: ingreso.recurrencia,
+      diasSemana: ingreso.diasSemana,
+      fechaInicioRecurrencia: ingreso.fechaInicioRecurrencia,
+      iconKey: ingreso.iconKey,
+      gastoFuenteId: selectedGastoId,
+      gastoFuenteNombre: selectedGastoId.isEmpty
+          ? ''
+          : _expenseSourceLabel(gasto),
+      createdAt: ingreso.createdAt,
+      updatedAt: DateTime.now(),
+    );
+    await ref.read(ingresosRepositoryProvider).upsert(actualizado);
+    ref.invalidate(ingresosControllerProvider);
+  }
+}
+
+String _expenseSourceLabel(Gasto? gasto) {
+  if (gasto == null) return '';
+  final desc = gasto.descripcion.trim();
+  final provider = gasto.proveedor.trim();
+  final focus = desc.isNotEmpty
+      ? desc
+      : (provider.isNotEmpty ? provider : trText('Gasto'));
+  return '$focus · ${formatMxn(gasto.monto)}';
 }
 
 enum _QuoteViewMode { table, kanban }
 
 class _QuotePdfPreviewDialog extends StatefulWidget {
-  const _QuotePdfPreviewDialog({required this.quote});
+  _QuotePdfPreviewDialog({required this.quote});
 
   final Cotizacion quote;
 
@@ -479,10 +661,19 @@ class _QuotePdfPreviewDialog extends StatefulWidget {
 class _QuotePdfPreviewDialogState extends State<_QuotePdfPreviewDialog> {
   late Future<Uint8List> _pdfFuture;
 
+  Future<Uint8List> _buildPdfFuture() {
+    return CotizacionPdfService.generate(widget.quote, useCache: true).timeout(
+      const Duration(seconds: 25),
+      onTimeout: () => throw TimeoutException(
+        'La generación del PDF tardó demasiado. Intenta nuevamente.',
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
-    _pdfFuture = CotizacionPdfService.generate(widget.quote);
+    _pdfFuture = _buildPdfFuture();
   }
 
   @override
@@ -491,7 +682,7 @@ class _QuotePdfPreviewDialogState extends State<_QuotePdfPreviewDialog> {
       future: _pdfFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return const Center(
+          return Center(
             child: SizedBox(
               width: 36,
               height: 36,
@@ -507,7 +698,7 @@ class _QuotePdfPreviewDialogState extends State<_QuotePdfPreviewDialog> {
             ),
             onRetry: () {
               setState(() {
-                _pdfFuture = CotizacionPdfService.generate(widget.quote);
+                _pdfFuture = _buildPdfFuture();
               });
             },
           );
@@ -519,6 +710,7 @@ class _QuotePdfPreviewDialogState extends State<_QuotePdfPreviewDialog> {
           canChangeOrientation: false,
           allowSharing: true,
           allowPrinting: true,
+          maxPageWidth: 420,
           pdfFileName: '${widget.quote.folio}.pdf',
         );
       },
@@ -527,7 +719,7 @@ class _QuotePdfPreviewDialogState extends State<_QuotePdfPreviewDialog> {
 }
 
 class _QuoteViewToggle extends StatelessWidget {
-  const _QuoteViewToggle({required this.mode, required this.onChanged});
+  _QuoteViewToggle({required this.mode, required this.onChanged});
 
   final _QuoteViewMode mode;
   final ValueChanged<_QuoteViewMode> onChanged;
@@ -535,7 +727,7 @@ class _QuoteViewToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(4),
+      padding: EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(10),
@@ -563,7 +755,7 @@ class _QuoteViewToggle extends StatelessWidget {
 }
 
 class _QuoteViewButton extends StatelessWidget {
-  const _QuoteViewButton({
+  _QuoteViewButton({
     required this.label,
     required this.icon,
     required this.active,
@@ -583,20 +775,20 @@ class _QuoteViewButton extends StatelessWidget {
       style: TextButton.styleFrom(
         backgroundColor: active ? AppColors.textPrimary : Colors.transparent,
         foregroundColor: foreground,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        padding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
       icon: Icon(icon, size: 16),
       label: Text(
         label,
-        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12),
+        style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12),
       ),
     );
   }
 }
 
 class _QuotesKanbanBoard extends StatelessWidget {
-  const _QuotesKanbanBoard({
+  _QuotesKanbanBoard({
     required this.items,
     required this.clientesById,
     required this.updatingQuoteIds,
@@ -634,7 +826,7 @@ class _QuotesKanbanBoard extends StatelessWidget {
           children: [
             for (var index = 0; index < columns.length; index++) ...[
               SizedBox(width: 312, child: columns[index]),
-              if (index != columns.length - 1) const SizedBox(width: 12),
+              if (index != columns.length - 1) SizedBox(width: 12),
             ],
           ],
         ),
@@ -644,7 +836,7 @@ class _QuotesKanbanBoard extends StatelessWidget {
 }
 
 class _QuoteKanbanColumn extends StatelessWidget {
-  const _QuoteKanbanColumn({
+  _QuoteKanbanColumn({
     required this.status,
     required this.items,
     required this.clientesById,
@@ -669,7 +861,7 @@ class _QuoteKanbanColumn extends StatelessWidget {
       builder: (context, candidateData, rejectedData) {
         final highlighted = candidateData.isNotEmpty;
         return AnimatedContainer(
-          duration: const Duration(milliseconds: 140),
+          duration: Duration(milliseconds: 140),
           decoration: BoxDecoration(
             color: highlighted
                 ? color.withValues(alpha: 0.08)
@@ -684,7 +876,7 @@ class _QuoteKanbanColumn extends StatelessWidget {
           child: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+                padding: EdgeInsets.fromLTRB(16, 14, 16, 12),
                 child: Row(
                   children: [
                     Container(
@@ -695,11 +887,11 @@ class _QuoteKanbanColumn extends StatelessWidget {
                         borderRadius: BorderRadius.circular(999),
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         _quoteStatusLabel(status),
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppColors.textPrimary,
                           fontWeight: FontWeight.w800,
                           fontSize: 14,
@@ -707,7 +899,7 @@ class _QuoteKanbanColumn extends StatelessWidget {
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(
+                      padding: EdgeInsets.symmetric(
                         horizontal: 10,
                         vertical: 4,
                       ),
@@ -727,16 +919,16 @@ class _QuoteKanbanColumn extends StatelessWidget {
                   ],
                 ),
               ),
-              const Divider(height: 1, color: AppColors.border),
+              Divider(height: 1, color: AppColors.border),
               Expanded(
                 child: items.isEmpty
                     ? Center(
                         child: Padding(
-                          padding: const EdgeInsets.all(16),
+                          padding: EdgeInsets.all(16),
                           child: Text(
                             'Arrastra aqui las cotizaciones ${_quoteStatusLabel(status).toLowerCase()}.',
                             textAlign: TextAlign.center,
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: AppColors.textSecondary,
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
@@ -746,9 +938,9 @@ class _QuoteKanbanColumn extends StatelessWidget {
                         ),
                       )
                     : ListView.separated(
-                        padding: const EdgeInsets.all(12),
+                        padding: EdgeInsets.all(12),
                         itemCount: items.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 10),
+                        separatorBuilder: (_, __) => SizedBox(height: 10),
                         itemBuilder: (context, index) {
                           final quote = items[index];
                           return _QuoteKanbanCard(
@@ -770,7 +962,7 @@ class _QuoteKanbanColumn extends StatelessWidget {
 }
 
 class _QuoteKanbanCard extends StatelessWidget {
-  const _QuoteKanbanCard({
+  _QuoteKanbanCard({
     required this.quote,
     required this.clientLabel,
     required this.isUpdating,
@@ -788,14 +980,14 @@ class _QuoteKanbanCard extends StatelessWidget {
     final card = Opacity(
       opacity: isUpdating ? 0.45 : 1,
       child: Container(
-        padding: const EdgeInsets.all(14),
+        padding: EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: AppColors.white,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(color: AppColors.border),
-          boxShadow: const [
+          boxShadow: [
             BoxShadow(
-              color: Color(0x0D101828),
+              color: AppColors.textPrimary.withValues(alpha: 0.08),
               blurRadius: 16,
               offset: Offset(0, 8),
             ),
@@ -813,16 +1005,16 @@ class _QuoteKanbanCard extends StatelessWidget {
                     children: [
                       Text(
                         quote.folio,
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppColors.textPrimary,
                           fontSize: 14,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      SizedBox(height: 4),
                       Text(
                         clientLabel,
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
@@ -833,37 +1025,43 @@ class _QuoteKanbanCard extends StatelessWidget {
                 ),
                 RowActionMenu(
                   onSelected: onOpenActions,
-                  actions: const [
-                    PopupMenuItem(value: 'edit', child: Text('Editar')),
+                  actions: [
+                    PopupMenuItem(value: 'edit', child: Text(trText('Editar'))),
                     PopupMenuItem(
                       value: 'preview',
-                      child: Text('Previsualizar'),
+                      child: Text(trText('Previsualizar')),
                     ),
-                    PopupMenuItem(value: 'pdf', child: Text('Descargar PDF')),
+                    PopupMenuItem(
+                      value: 'pdf',
+                      child: Text(trText('Descargar PDF')),
+                    ),
                     PopupMenuItem(
                       value: 'approved',
-                      child: Text('Marcar aprobada'),
+                      child: Text(trText('Marcar aprobada')),
                     ),
-                    PopupMenuItem(value: 'delete', child: Text('Eliminar')),
+                    PopupMenuItem(
+                      value: 'delete',
+                      child: Text(trText('Eliminar')),
+                    ),
                   ],
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             StatusBadge(status: quote.estatus),
-            const SizedBox(height: 14),
+            SizedBox(height: 14),
             _QuoteKanbanMetaRow(
               label: 'Total',
               value: '\$${quote.total.toStringAsFixed(2)}',
               valueColor: color,
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             _QuoteKanbanMetaRow(
               label: 'Emision',
               value:
                   '${quote.fechaEmision.day}/${quote.fechaEmision.month}/${quote.fechaEmision.year}',
             ),
-            const SizedBox(height: 6),
+            SizedBox(height: 6),
             _QuoteKanbanMetaRow(
               label: 'Vencimiento',
               value:
@@ -887,15 +1085,15 @@ class _QuoteKanbanCard extends StatelessWidget {
 }
 
 class _QuoteKanbanMetaRow extends StatelessWidget {
-  const _QuoteKanbanMetaRow({
+  _QuoteKanbanMetaRow({
     required this.label,
     required this.value,
-    this.valueColor = AppColors.textPrimary,
+    this.valueColor,
   });
 
   final String label;
   final String value;
-  final Color valueColor;
+  final Color? valueColor;
 
   @override
   Widget build(BuildContext context) {
@@ -904,7 +1102,7 @@ class _QuoteKanbanMetaRow extends StatelessWidget {
         Expanded(
           child: Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               color: AppColors.textSecondary,
               fontSize: 11,
               fontWeight: FontWeight.w700,
@@ -914,7 +1112,7 @@ class _QuoteKanbanMetaRow extends StatelessWidget {
         Text(
           value,
           style: TextStyle(
-            color: valueColor,
+            color: valueColor ?? AppColors.textPrimary,
             fontSize: 12,
             fontWeight: FontWeight.w800,
           ),
@@ -977,9 +1175,15 @@ const double _quoteUnitWidth = 130;
 const double _quoteQuantityWidth = 130;
 const double _quoteTaxWidth = 150;
 const double _quoteTotalWidth = 170;
-const double _quoteRetIsrRate = 0.10;
+const double _quoteRetIsrRate = 0.0125;
 
-double _extractTaxPercent(String raw, {double fallback = 16}) {
+String _formatQuoteRetIsrPercent(double rate) {
+  final percent = rate * 100;
+  final hasDecimals = percent % 1 != 0;
+  return percent.toStringAsFixed(hasDecimals ? 2 : 0);
+}
+
+double _extractTaxPercent(String raw, {double fallback = 0}) {
   final match = RegExp(r'(\d+(?:\.\d+)?)').firstMatch(raw);
   if (match == null) return fallback;
   return double.tryParse(match.group(1)!) ?? fallback;
@@ -1005,7 +1209,7 @@ String _nextQuoteFolioSuggestion(Iterable<String> folios) {
 }
 
 class _QuoteProductOption {
-  const _QuoteProductOption({
+  _QuoteProductOption({
     required this.id,
     required this.nombre,
     required this.descripcion,
@@ -1025,7 +1229,7 @@ class _QuoteProductOption {
 }
 
 class _QuoteForm extends ConsumerStatefulWidget {
-  const _QuoteForm({this.quote});
+  _QuoteForm({this.quote});
 
   final Cotizacion? quote;
 
@@ -1041,10 +1245,10 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
   late final TextEditingController _folioController;
   late final TextEditingController _ordenController;
   late final TextEditingController _descuentoValorController;
-  late final TextEditingController _notasController;
-  late final TextEditingController _notasPrivadasController;
-  late final TextEditingController _terminosController;
-  late final TextEditingController _piePaginaController;
+  late final quill.QuillController _notasController;
+  late final quill.QuillController _notasPrivadasController;
+  late final quill.QuillController _terminosController;
+  late final quill.QuillController _piePaginaController;
   late List<_QuoteLineDraft> _lineas;
   String? _selectedClientId;
   String _discountType = _quoteDiscountTypeOptions.first;
@@ -1053,9 +1257,12 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
   bool _loadingProductOptions = false;
   String? _productCatalogError;
   List<_QuoteProductOption> _productOptions = const [];
+  String? _selectedTaxRateId;
   String _currentSuggestedFolio = 'COT-0001';
   String _lastAutoGeneratedFolio = '';
+  bool _prefilledCompanyDefaults = false;
   QuoteStatus? _savingStatus;
+  bool _processingDialogAction = false;
 
   @override
   void initState() {
@@ -1070,17 +1277,17 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
     );
     _validaHastaController = seededTextController(
       quote == null
-          ? _formatDate(now.add(const Duration(days: 7)))
+          ? _formatDate(now.add(Duration(days: 7)))
           : '${quote.fechaVencimiento.day.toString().padLeft(2, '0')}/${quote.fechaVencimiento.month.toString().padLeft(2, '0')}/${quote.fechaVencimiento.year}',
     );
     _depositoController = seededTextController();
     _folioController = seededTextController(quote?.folio ?? '');
     _ordenController = seededTextController();
     _descuentoValorController = seededTextController('');
-    _notasController = seededTextController(quote?.notas);
-    _notasPrivadasController = seededTextController(quote?.notasPrivadas ?? '');
-    _terminosController = seededTextController(quote?.terminos);
-    _piePaginaController = seededTextController(quote?.piePagina);
+    _notasController = buildRichTextController(quote?.notas);
+    _notasPrivadasController = buildRichTextController(quote?.notasPrivadas);
+    _terminosController = buildRichTextController(quote?.terminos);
+    _piePaginaController = buildRichTextController(quote?.piePagina);
     _retIsr = quote?.retIsr ?? false;
     _selectedClientId = quote?.clienteId.isNotEmpty == true
         ? quote!.clienteId
@@ -1118,6 +1325,10 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
       _descuentoValorController,
       _folioController,
       _ordenController,
+    ]) {
+      controller.addListener(_triggerRebuild);
+    }
+    for (final controller in [
       _notasController,
       _notasPrivadasController,
       _terminosController,
@@ -1130,6 +1341,11 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
   void _triggerRebuild() {
     if (!mounted) return;
     setState(() {});
+  }
+
+  void _openQuoteDefaultValuesSettings() {
+    Navigator.of(context).pop();
+    context.go('${RoutePaths.configuracion}?main=empresa&company=defaults');
   }
 
   _QuoteLineDraft _buildLineDraft({
@@ -1260,39 +1476,36 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
       if (!mounted) return;
 
       final previousLines = _lineas;
-      final drafts = detalles.isEmpty
-          ? [_buildLineDraft()]
-          : detalles
-                .map(
-                  (item) => _buildLineDraft(
-                    productoServicioId: item.productoServicioId.isEmpty
-                        ? null
-                        : item.productoServicioId,
-                    concepto: item.concepto,
-                    descripcion: item.descripcion,
-                    costoUnitario: formatNumericValue(
-                      item.precioUnitario,
-                      decimalDigits: 2,
-                      useGrouping: true,
-                    ),
-                    cantidad: formatNumericValue(
-                      item.cantidad,
-                      decimalDigits:
-                          item.cantidad == item.cantidad.roundToDouble()
-                          ? 0
-                          : 2,
-                      useGrouping: false,
-                    ),
-                    impuesto: _formatEditableNumber(item.impuestoPorcentaje),
-                    total: formatNumericValue(
-                      item.importe,
-                      decimalDigits: 2,
-                      useGrouping: true,
-                    ),
-                    unidad: item.unidad,
-                  ),
-                )
-                .toList();
+      final drafts = detalles
+          .map(
+            (item) => _buildLineDraft(
+              productoServicioId: item.productoServicioId.isEmpty
+                  ? null
+                  : item.productoServicioId,
+              concepto: item.concepto,
+              descripcion: item.descripcion,
+              costoUnitario: formatNumericValue(
+                item.precioUnitario,
+                decimalDigits: 2,
+                useGrouping: true,
+              ),
+              cantidad: formatNumericValue(
+                item.cantidad,
+                decimalDigits: item.cantidad == item.cantidad.roundToDouble()
+                    ? 0
+                    : 2,
+                useGrouping: false,
+              ),
+              impuesto: _formatEditableNumber(item.impuestoPorcentaje),
+              total: formatNumericValue(
+                item.importe,
+                decimalDigits: 2,
+                useGrouping: true,
+              ),
+              unidad: item.unidad,
+            ),
+          )
+          .toList();
 
       if (quoteRow != null) {
         final subtotal = _doubleFromValue(quoteRow['subtotal']);
@@ -1332,19 +1545,19 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
           shownDiscount > 0 ? _formatEditableNumber(shownDiscount) : '',
         );
         _retIsr = quoteRow['ret_isr'] == true;
-        assignControllerText(
+        replaceRichTextControllerContent(
           _notasController,
           (quoteRow['notas'] ?? '') as String,
         );
-        assignControllerText(
+        replaceRichTextControllerContent(
           _notasPrivadasController,
           (quoteRow['notas_privadas'] ?? '') as String,
         );
-        assignControllerText(
+        replaceRichTextControllerContent(
           _terminosController,
           (quoteRow['terminos'] ?? '') as String,
         );
-        assignControllerText(
+        replaceRichTextControllerContent(
           _piePaginaController,
           (quoteRow['pie_pagina'] ?? '') as String,
         );
@@ -1372,6 +1585,7 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
 
   @override
   Widget build(BuildContext context) {
+    final empresa = ref.watch(empresaPerfilControllerProvider).valueOrNull;
     final clientesAsync = ref.watch(clientesControllerProvider);
     final clientesCatalogo = clientesAsync.valueOrNull ?? const <Cliente>[];
     final cotizacionesCatalogo =
@@ -1410,6 +1624,20 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
         clientesAsync.isLoading ||
         (_loadingProductOptions && _productOptions.isEmpty);
 
+    _applyCompanyDefaultsIfNeeded(empresa);
+    final availableTaxRates = _resolveAvailableTaxRates(empresa);
+    _syncSelectedTaxRate(availableTaxRates, empresa);
+    EmpresaTasaImpuesto? selectedTaxRate;
+    for (final rate in availableTaxRates) {
+      if (rate.id == _selectedTaxRateId) {
+        selectedTaxRate = rate;
+        break;
+      }
+    }
+    final taxRateOptions = availableTaxRates
+        .map((rate) => (value: rate.id, label: rate.displayLabel))
+        .toList(growable: false);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1434,7 +1662,7 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
                                   title: 'Cliente',
                                   icon: FontAwesomeIcons.userGroup,
                                   child: clientesAsync.when(
-                                    loading: () => const SizedBox(
+                                    loading: () => SizedBox(
                                       height: 72,
                                       child: Center(
                                         child: CircularProgressIndicator(),
@@ -1495,7 +1723,7 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
                                         helperText:
                                             'Monto que el cliente pagará por anticipado. Se refleja en pagado y saldo pendiente.',
                                         keyboardType:
-                                            const TextInputType.numberWithOptions(
+                                            TextInputType.numberWithOptions(
                                               decimal: true,
                                             ),
                                         inputFormatters: const [
@@ -1548,14 +1776,14 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
                                                 },
                                               ),
                                             ),
-                                            const SizedBox(width: 10),
+                                            SizedBox(width: 10),
                                             Expanded(
                                               flex: 3,
                                               child: TextFormField(
                                                 controller:
                                                     _descuentoValorController,
                                                 keyboardType:
-                                                    const TextInputType.numberWithOptions(
+                                                    TextInputType.numberWithOptions(
                                                       decimal: true,
                                                     ),
                                                 inputFormatters: const [
@@ -1586,9 +1814,9 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Expanded(child: blocks[0]),
-                                    const SizedBox(width: 10),
+                                    SizedBox(width: 10),
                                     Expanded(child: blocks[1]),
-                                    const SizedBox(width: 10),
+                                    SizedBox(width: 10),
                                     Expanded(child: blocks[2]),
                                   ],
                                 );
@@ -1597,48 +1825,59 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
                               return Column(
                                 children: [
                                   blocks[0],
-                                  const SizedBox(height: 10),
+                                  SizedBox(height: 10),
                                   blocks[1],
-                                  const SizedBox(height: 10),
+                                  SizedBox(height: 10),
                                   blocks[2],
                                 ],
                               );
                             },
                           ),
-                          const SizedBox(height: 10),
+                          SizedBox(height: 10),
                           _QuoteSection(
                             title: 'Productos',
                             icon: FontAwesomeIcons.boxOpen,
                             child: _buildProductsSection(),
                           ),
-                          const SizedBox(height: 10),
+                          SizedBox(height: 10),
                           LayoutBuilder(
                             builder: (context, constraints) {
                               final wide = constraints.maxWidth >= 980;
                               final notes = _QuoteSection(
                                 title: 'Notas y textos',
                                 icon: FontAwesomeIcons.noteSticky,
+                                trailing: TextButton.icon(
+                                  onPressed: _openQuoteDefaultValuesSettings,
+                                  icon: Icon(Icons.tune_rounded, size: 16),
+                                  label: Text(
+                                    trText('Configurar valores por defecto'),
+                                  ),
+                                ),
                                 child: Column(
                                   children: [
-                                    _QuoteFieldRow(
+                                    _QuoteRichFieldRow(
                                       label: 'Notas',
                                       controller: _notasController,
-                                      maxLines: 4,
+                                      placeholder:
+                                          'Escribe las notas de la cotización',
                                     ),
-                                    _QuoteFieldRow(
+                                    _QuoteRichFieldRow(
                                       label: 'Notas privadas',
                                       controller: _notasPrivadasController,
-                                      maxLines: 4,
+                                      placeholder:
+                                          'Escribe las notas privadas de la cotización',
                                     ),
-                                    _QuoteFieldRow(
+                                    _QuoteRichFieldRow(
                                       label: 'Términos',
                                       controller: _terminosController,
-                                      maxLines: 4,
+                                      placeholder:
+                                          'Escribe los términos de la cotización',
                                     ),
-                                    _QuoteFieldRow(
+                                    _QuoteRichFieldRow(
                                       label: 'Pie de página',
                                       controller: _piePaginaController,
-                                      maxLines: 3,
+                                      placeholder:
+                                          'Escribe el pie de página de la cotización',
                                     ),
                                   ],
                                 ),
@@ -1658,7 +1897,9 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
                                       value: formatMoney(discount),
                                     ),
                                     _QuoteSummaryRow(
-                                      label: 'Impuesto',
+                                      label: selectedTaxRate == null
+                                          ? 'Impuesto'
+                                          : 'Impuesto (${selectedTaxRate.nombre})',
                                       value: formatMoney(taxes),
                                     ),
                                     if (_retIsr)
@@ -1669,7 +1910,7 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
                                     if (_retIsr)
                                       _QuoteSummaryRow(
                                         label:
-                                            'RET ISR (${(_quoteRetIsrRate * 100).toStringAsFixed(0)}%)',
+                                            'RET ISR (${_formatQuoteRetIsrPercent(_quoteRetIsrRate)}%)',
                                         value: '-${formatMoney(retIsrAmount)}',
                                       ),
                                     _QuoteSummaryRow(
@@ -1685,7 +1926,27 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
                                       label: 'Saldo',
                                       value: formatMoney(balance),
                                     ),
-                                    const SizedBox(height: 10),
+                                    if (taxRateOptions.isNotEmpty)
+                                      Padding(
+                                        padding: EdgeInsets.only(top: 10),
+                                        child: _QuoteDropdownFieldRow(
+                                          label: 'Impuesto aplicado',
+                                          value: _selectedTaxRateId,
+                                          options: taxRateOptions,
+                                          onChanged: (value) {
+                                            if (value == null) return;
+                                            final selected = availableTaxRates
+                                                .where(
+                                                  (rate) => rate.id == value,
+                                                );
+                                            if (selected.isEmpty) return;
+                                            _applySelectedTaxRate(
+                                              selected.first,
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    SizedBox(height: 10),
                                     _QuoteSwitchRow(
                                       label: 'RET ISR',
                                       value: _retIsr,
@@ -1701,7 +1962,7 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Expanded(flex: 2, child: notes),
-                                    const SizedBox(width: 10),
+                                    SizedBox(width: 10),
                                     Expanded(child: summary),
                                   ],
                                 );
@@ -1710,7 +1971,7 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
                               return Column(
                                 children: [
                                   notes,
-                                  const SizedBox(height: 10),
+                                  SizedBox(height: 10),
                                   summary,
                                 ],
                               );
@@ -1723,7 +1984,7 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
                 ),
               ),
               if (showFormLoader)
-                const Positioned.fill(
+                Positioned.fill(
                   child: Center(
                     child: SizedBox(
                       width: 36,
@@ -1735,7 +1996,7 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
             ],
           ),
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         Align(
           alignment: Alignment.centerRight,
           child: Wrap(
@@ -1743,6 +2004,38 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
             runSpacing: 10,
             alignment: WrapAlignment.end,
             children: [
+              if (widget.quote != null)
+                OutlinedButton.icon(
+                  onPressed: _processingDialogAction || _savingStatus != null
+                      ? null
+                      : _previewFromDialog,
+                  icon: Icon(Icons.visibility_outlined),
+                  label: Text(trText('Previsualizar')),
+                ),
+              if (widget.quote != null)
+                OutlinedButton.icon(
+                  onPressed: _processingDialogAction || _savingStatus != null
+                      ? null
+                      : _downloadPdfFromDialog,
+                  icon: Icon(Icons.download_rounded),
+                  label: Text(trText('Descargar PDF')),
+                ),
+              if (widget.quote != null)
+                OutlinedButton.icon(
+                  onPressed: _processingDialogAction || _savingStatus != null
+                      ? null
+                      : _markApprovedFromDialog,
+                  icon: Icon(Icons.verified_rounded),
+                  label: Text(trText('Marcar aprobada')),
+                ),
+              if (widget.quote != null)
+                OutlinedButton.icon(
+                  onPressed: _processingDialogAction || _savingStatus != null
+                      ? null
+                      : _deleteFromDialog,
+                  icon: Icon(Icons.delete_outline_rounded),
+                  label: Text(trText('Eliminar')),
+                ),
               OutlinedButton(
                 onPressed: _savingStatus != null ? null : _handleCancel,
                 child: Text(trText('Cancelar')),
@@ -1752,7 +2045,7 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
                     ? null
                     : () => _save(QuoteStatus.enviada),
                 icon: _savingStatus == QuoteStatus.enviada
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 16,
                         height: 16,
                         child: CircularProgressIndicator(strokeWidth: 2),
@@ -1775,31 +2068,120 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
     );
   }
 
+  void _applyCompanyDefaultsIfNeeded(EmpresaPerfil? empresa) {
+    if (_prefilledCompanyDefaults || widget.quote != null || empresa == null) {
+      return;
+    }
+    _prefilledCompanyDefaults = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (!richTextControllerHasContent(_notasController)) {
+        replaceRichTextControllerContent(
+          _notasController,
+          empresa.notasDefault,
+        );
+      }
+      if (!richTextControllerHasContent(_notasPrivadasController)) {
+        replaceRichTextControllerContent(
+          _notasPrivadasController,
+          empresa.notasPrivadasDefault,
+        );
+      }
+      if (!richTextControllerHasContent(_terminosController)) {
+        replaceRichTextControllerContent(
+          _terminosController,
+          empresa.terminosDefault,
+        );
+      }
+      if (!richTextControllerHasContent(_piePaginaController)) {
+        replaceRichTextControllerContent(
+          _piePaginaController,
+          empresa.piePaginaDefault,
+        );
+      }
+    });
+  }
+
+  List<EmpresaTasaImpuesto> _resolveAvailableTaxRates(EmpresaPerfil? empresa) {
+    final rates = empresa?.impuestos.tasas ?? const <EmpresaTasaImpuesto>[];
+    if (rates.isNotEmpty) return rates;
+    return const <EmpresaTasaImpuesto>[];
+  }
+
+  void _syncSelectedTaxRate(
+    List<EmpresaTasaImpuesto> rates,
+    EmpresaPerfil? empresa,
+  ) {
+    if (rates.isEmpty) {
+      _selectedTaxRateId = null;
+      return;
+    }
+    final stillExists = rates.any((rate) => rate.id == _selectedTaxRateId);
+    if (stillExists) return;
+
+    final preferredId = empresa?.impuestos.tasaPredeterminada.trim() ?? '';
+    if (preferredId.isNotEmpty) {
+      final preferred = rates.where((rate) => rate.id == preferredId);
+      if (preferred.isNotEmpty) {
+        _selectedTaxRateId = preferred.first.id;
+        return;
+      }
+    }
+
+    final currentTax = _headerTaxPercent;
+    EmpresaTasaImpuesto nearest = rates.first;
+    var minDiff = (nearest.porcentaje - currentTax).abs();
+    for (final rate in rates.skip(1)) {
+      final diff = (rate.porcentaje - currentTax).abs();
+      if (diff < minDiff) {
+        nearest = rate;
+        minDiff = diff;
+      }
+    }
+    _selectedTaxRateId = nearest.id;
+  }
+
+  void _applySelectedTaxRate(EmpresaTasaImpuesto rate) {
+    for (final draft in _lineas) {
+      draft.syncing = true;
+      assignControllerText(
+        draft.impuestoController,
+        _formatEditableNumber(rate.porcentaje),
+      );
+      draft.syncing = false;
+      _recalculateLine(draft, notify: false);
+    }
+    if (!mounted) return;
+    setState(() {
+      _selectedTaxRateId = rate.id;
+    });
+  }
+
   Widget _buildProductsSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (_loadingProductOptions)
           Padding(
-            padding: const EdgeInsets.only(bottom: 14),
+            padding: EdgeInsets.only(bottom: 14),
             child: Row(
               children: [
-                const SizedBox(
+                SizedBox(
                   width: 18,
                   height: 18,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
-                const SizedBox(width: 10),
+                SizedBox(width: 10),
                 Text(
                   trText('Cargando productos para sugerencias...'),
-                  style: const TextStyle(color: AppColors.textSecondary),
+                  style: TextStyle(color: AppColors.textSecondary),
                 ),
               ],
             ),
           ),
         if (_productCatalogError != null)
           Padding(
-            padding: const EdgeInsets.only(bottom: 14),
+            padding: EdgeInsets.only(bottom: 14),
             child: Wrap(
               crossAxisAlignment: WrapCrossAlignment.center,
               spacing: 12,
@@ -1807,14 +2189,14 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
               children: [
                 Text(
                   trText('No se pudieron cargar las sugerencias de productos.'),
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppColors.error,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 OutlinedButton.icon(
                   onPressed: _loadProductOptions,
-                  icon: const Icon(Icons.refresh_rounded),
+                  icon: Icon(Icons.refresh_rounded),
                   label: Text(trText('Reintentar')),
                 ),
               ],
@@ -1824,7 +2206,7 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
             _productCatalogError == null &&
             _productOptions.isEmpty)
           Padding(
-            padding: const EdgeInsets.only(bottom: 14),
+            padding: EdgeInsets.only(bottom: 14),
             child: Wrap(
               crossAxisAlignment: WrapCrossAlignment.center,
               spacing: 12,
@@ -1834,52 +2216,56 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
                   trText(
                     'No hay productos registrados. Puedes capturar el concepto manualmente o agregar un producto.',
                   ),
-                  style: const TextStyle(color: AppColors.textSecondary),
+                  style: TextStyle(color: AppColors.textSecondary),
                 ),
                 OutlinedButton.icon(
                   onPressed: _goToCreateProduct,
-                  icon: const Icon(Icons.add_rounded),
+                  icon: Icon(Icons.add_rounded),
                   label: Text(trText('Agregar producto')),
                 ),
               ],
             ),
           ),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minWidth: 1320),
-            child: Column(
-              children: List.generate(
-                _lineas.length,
-                (index) => _QuoteLineRow(
-                  key: ValueKey('linea_$index'),
-                  draft: _lineas[index],
-                  productOptions: _productOptions,
-                  onConceptChanged: (value) =>
-                      _handleConceptChanged(index, value),
-                  onProductSelected: (productId) =>
-                      _seleccionarProducto(index, productId),
-                  onRemove: _lineas.length == 1
-                      ? null
-                      : () => _removerLinea(index),
+        if (_lineas.isEmpty)
+          EmptyFieldState(
+            hintText: 'Sin productos o conceptos.',
+            message:
+                'Esta cotización no tiene líneas registradas. Puedes agregar un artículo cuando lo necesites.',
+            buttonLabel: 'Añadir artículo',
+            onPressed: _agregarLinea,
+          )
+        else
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minWidth: 1320),
+              child: Column(
+                children: List.generate(
+                  _lineas.length,
+                  (index) => _QuoteLineRow(
+                    key: ValueKey('linea_$index'),
+                    draft: _lineas[index],
+                    productOptions: _productOptions,
+                    onConceptChanged: (value) =>
+                        _handleConceptChanged(index, value),
+                    onProductSelected: (productId) =>
+                        _seleccionarProducto(index, productId),
+                    onRemove: () => _removerLinea(index),
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-        const SizedBox(height: 14),
+        SizedBox(height: 14),
         Center(
           child: TextButton.icon(
             onPressed: _agregarLinea,
-            icon: const Icon(Icons.add, size: 18),
+            icon: Icon(Icons.add, size: 18),
             label: Text(trText('Añadir artículo')),
             style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               foregroundColor: AppColors.textPrimary,
-              textStyle: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-              ),
+              textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
             ),
           ),
         ),
@@ -2075,10 +2461,10 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
       descuentoValor: discount,
       impuestoPorcentaje: _headerTaxPercent,
       retIsr: _retIsr,
-      notas: _notasController.text.trim(),
-      notasPrivadas: _notasPrivadasController.text.trim(),
-      terminos: _terminosController.text.trim(),
-      piePagina: _piePaginaController.text.trim(),
+      notas: serializeRichTextController(_notasController),
+      notasPrivadas: serializeRichTextController(_notasPrivadasController),
+      terminos: serializeRichTextController(_terminosController),
+      piePagina: serializeRichTextController(_piePaginaController),
       estatus: status,
       lineas: List.generate(meaningfulLines.length, (index) {
         final item = meaningfulLines[index];
@@ -2127,6 +2513,86 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
         setState(() => _savingStatus = null);
       }
     }
+  }
+
+  Future<void> _previewFromDialog() async {
+    final quote = widget.quote;
+    if (quote == null) return;
+    await showDialog<void>(
+      context: context,
+      builder: (_) {
+        return Dialog(
+          insetPadding: EdgeInsets.all(24),
+          child: SizedBox(
+            width: 1000,
+            height: 760,
+            child: _QuotePdfPreviewDialog(quote: quote),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _downloadPdfFromDialog() async {
+    final quote = widget.quote;
+    if (quote == null) return;
+    setState(() => _processingDialogAction = true);
+    try {
+      final bytes = await CotizacionPdfService.generate(quote);
+      await Printing.sharePdf(bytes: bytes, filename: '${quote.folio}.pdf');
+      if (!mounted) return;
+      ToastHelper.showSuccess(context, 'PDF generado para ${quote.folio}.');
+    } catch (error) {
+      if (!mounted) return;
+      ToastHelper.showError(
+        context,
+        buildActionErrorMessage(error, 'No se pudo generar el PDF.'),
+      );
+    } finally {
+      if (mounted) setState(() => _processingDialogAction = false);
+    }
+  }
+
+  Future<void> _markApprovedFromDialog() async {
+    final quote = widget.quote;
+    if (quote == null) return;
+    setState(() => _processingDialogAction = true);
+    try {
+      await ref
+          .read(cotizacionesRepositoryProvider)
+          .updateStatus(quote.id, QuoteStatus.aprobada);
+      ref.invalidate(cotizacionesControllerProvider);
+      if (!mounted) return;
+      ToastHelper.showSuccess(context, 'Cotización marcada como aprobada.');
+      Navigator.of(context).pop();
+    } catch (error) {
+      if (!mounted) return;
+      ToastHelper.showError(
+        context,
+        buildActionErrorMessage(
+          error,
+          'No se pudo marcar como aprobada la cotización.',
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _processingDialogAction = false);
+    }
+  }
+
+  Future<void> _deleteFromDialog() async {
+    final quote = widget.quote;
+    if (quote == null) return;
+    final confirmed = await showDeleteConfirmation(
+      context,
+      entityLabel: 'cotización',
+      onConfirmAsync: () async {
+        await ref.read(cotizacionesRepositoryProvider).delete(quote.id);
+      },
+    );
+    if (!confirmed || !mounted) return;
+    ref.invalidate(cotizacionesControllerProvider);
+    ToastHelper.showSuccess(context, 'Cotización eliminada.');
+    Navigator.of(context).pop();
   }
 
   DateTime? _parseDate(String raw) {
@@ -2186,10 +2652,10 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
         _ordenController.text.trim().isNotEmpty ||
         (parseNumericText(_depositoController.text) ?? 0) > 0 ||
         (parseNumericText(_descuentoValorController.text) ?? 0) > 0 ||
-        _notasController.text.trim().isNotEmpty ||
-        _notasPrivadasController.text.trim().isNotEmpty ||
-        _terminosController.text.trim().isNotEmpty ||
-        _piePaginaController.text.trim().isNotEmpty ||
+        richTextControllerHasContent(_notasController) ||
+        richTextControllerHasContent(_notasPrivadasController) ||
+        richTextControllerHasContent(_terminosController) ||
+        richTextControllerHasContent(_piePaginaController) ||
         _lineas.any(_hasMeaningfulLineData);
   }
 
@@ -2270,7 +2736,17 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
   }
 
   String _defaultTaxText() {
-    final value = _headerTaxPercent > 0 ? _headerTaxPercent : 16.0;
+    if (_selectedTaxRateId != null && _selectedTaxRateId!.trim().isNotEmpty) {
+      final empresa = ref.read(empresaPerfilControllerProvider).valueOrNull;
+      final selected =
+          (empresa?.impuestos.tasas ?? const <EmpresaTasaImpuesto>[]).where(
+            (rate) => rate.id == _selectedTaxRateId,
+          );
+      if (selected.isNotEmpty) {
+        return _formatEditableNumber(selected.first.porcentaje);
+      }
+    }
+    final value = _headerTaxPercent > 0 ? _headerTaxPercent : 0.0;
     return _formatEditableNumber(value);
   }
 
@@ -2294,15 +2770,17 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
 }
 
 class _QuoteSection extends StatelessWidget {
-  const _QuoteSection({
+  _QuoteSection({
     required this.title,
     required this.icon,
     required this.child,
+    this.trailing,
   });
 
   final String title;
   final IconData icon;
   final Widget child;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -2315,18 +2793,18 @@ class _QuoteSection extends StatelessWidget {
       child: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+            padding: EdgeInsets.fromLTRB(16, 14, 16, 14),
             child: Row(
               children: [
                 Expanded(
                   child: Row(
                     children: [
                       FaIcon(icon, size: 14, color: AppColors.textPrimary),
-                      const SizedBox(width: 8),
+                      SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           trText(title),
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: AppColors.textPrimary,
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
@@ -2336,11 +2814,12 @@ class _QuoteSection extends StatelessWidget {
                     ],
                   ),
                 ),
+                if (trailing != null) trailing!,
               ],
             ),
           ),
           Container(height: 1, color: AppColors.border),
-          Padding(padding: const EdgeInsets.all(16), child: child),
+          Padding(padding: EdgeInsets.all(16), child: child),
         ],
       ),
     );
@@ -2348,10 +2827,9 @@ class _QuoteSection extends StatelessWidget {
 }
 
 class _QuoteFieldRow extends StatelessWidget {
-  const _QuoteFieldRow({
+  _QuoteFieldRow({
     required this.label,
     required this.controller,
-    this.maxLines = 1,
     this.hintText,
     this.helperText,
     this.suffixText,
@@ -2361,7 +2839,6 @@ class _QuoteFieldRow extends StatelessWidget {
 
   final String label;
   final TextEditingController controller;
-  final int maxLines;
   final String? hintText;
   final String? helperText;
   final String? suffixText;
@@ -2371,19 +2848,17 @@ class _QuoteFieldRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: EdgeInsets.only(bottom: 10),
       child: Row(
-        crossAxisAlignment: maxLines > 1
-            ? CrossAxisAlignment.start
-            : CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           SizedBox(
             width: 150,
             child: Padding(
-              padding: EdgeInsets.only(top: maxLines > 1 ? 12 : 0),
+              padding: EdgeInsets.only(top: 0),
               child: Text(
                 trText(label),
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppColors.textSecondary,
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
@@ -2394,7 +2869,6 @@ class _QuoteFieldRow extends StatelessWidget {
           Expanded(
             child: TextFormField(
               controller: controller,
-              maxLines: maxLines,
               keyboardType: keyboardType,
               inputFormatters: inputFormatters,
               decoration: InputDecoration(
@@ -2410,8 +2884,32 @@ class _QuoteFieldRow extends StatelessWidget {
   }
 }
 
+class _QuoteRichFieldRow extends StatelessWidget {
+  _QuoteRichFieldRow({
+    required this.label,
+    required this.controller,
+    required this.placeholder,
+  });
+
+  final String label;
+  final quill.QuillController controller;
+  final String placeholder;
+
+  @override
+  Widget build(BuildContext context) {
+    return _QuoteCustomFieldRow(
+      label: label,
+      child: CotimaxRichTextEditor(
+        controller: controller,
+        placeholder: placeholder,
+        editorHeight: 190,
+      ),
+    );
+  }
+}
+
 class _QuoteCustomFieldRow extends StatelessWidget {
-  const _QuoteCustomFieldRow({required this.label, required this.child});
+  _QuoteCustomFieldRow({required this.label, required this.child});
 
   final String label;
   final Widget child;
@@ -2419,17 +2917,17 @@ class _QuoteCustomFieldRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: EdgeInsets.only(bottom: 10),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
             width: 150,
             child: Padding(
-              padding: const EdgeInsets.only(top: 12),
+              padding: EdgeInsets.only(top: 12),
               child: Text(
                 trText(label),
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppColors.textSecondary,
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
@@ -2445,7 +2943,7 @@ class _QuoteCustomFieldRow extends StatelessWidget {
 }
 
 class _QuoteDropdownFieldRow extends StatelessWidget {
-  const _QuoteDropdownFieldRow({
+  _QuoteDropdownFieldRow({
     required this.label,
     required this.value,
     required this.options,
@@ -2474,7 +2972,7 @@ class _QuoteDropdownFieldRow extends StatelessWidget {
 }
 
 class _QuoteInlineDropdownField extends StatelessWidget {
-  const _QuoteInlineDropdownField({
+  _QuoteInlineDropdownField({
     required this.value,
     required this.options,
     required this.onChanged,
@@ -2515,7 +3013,7 @@ class _QuoteInlineDropdownField extends StatelessWidget {
 }
 
 class _QuoteLineRow extends StatelessWidget {
-  const _QuoteLineRow({
+  _QuoteLineRow({
     required super.key,
     required this.draft,
     required this.productOptions,
@@ -2533,7 +3031,7 @@ class _QuoteLineRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
+      padding: EdgeInsets.only(bottom: 14),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2548,21 +3046,19 @@ class _QuoteLineRow extends StatelessWidget {
               onSelected: (option) => onProductSelected(option.id),
             ),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           _QuoteFieldColumn(
             width: _quoteDescriptionWidth,
             label: 'Descripción',
             child: TextFormField(controller: draft.descripcionController),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           _QuoteFieldColumn(
             width: _quotePriceWidth,
             label: 'Coste unitario',
             child: TextFormField(
               controller: draft.costoUnitarioController,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
+              keyboardType: TextInputType.numberWithOptions(decimal: true),
               inputFormatters: const [
                 NumericTextInputFormatter(
                   useGrouping: true,
@@ -2572,7 +3068,7 @@ class _QuoteLineRow extends StatelessWidget {
               decoration: InputDecoration(suffixText: currentCurrencyCode()),
             ),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           _QuoteFieldColumn(
             width: _quoteUnitWidth,
             label: 'Unidad',
@@ -2581,44 +3077,38 @@ class _QuoteLineRow extends StatelessWidget {
               fallbackText: 'Sin unidad',
             ),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           _QuoteFieldColumn(
             width: _quoteQuantityWidth,
             label: 'Cantidad',
             child: TextFormField(
               controller: draft.cantidadController,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
+              keyboardType: TextInputType.numberWithOptions(decimal: true),
               inputFormatters: const [
                 NumericTextInputFormatter(maxDecimalDigits: 2),
               ],
             ),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           _QuoteFieldColumn(
             width: _quoteTaxWidth,
             label: 'Tasa de impuesto',
             child: TextFormField(
               controller: draft.impuestoController,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
+              keyboardType: TextInputType.numberWithOptions(decimal: true),
               inputFormatters: const [
                 NumericTextInputFormatter(maxDecimalDigits: 2),
               ],
             ),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           _QuoteFieldColumn(
             width: _quoteTotalWidth,
             label: 'Total',
             child: TextFormField(
               controller: draft.totalController,
               readOnly: true,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
+              keyboardType: TextInputType.numberWithOptions(decimal: true),
               inputFormatters: const [
                 NumericTextInputFormatter(
                   useGrouping: true,
@@ -2628,12 +3118,12 @@ class _QuoteLineRow extends StatelessWidget {
             ),
           ),
           if (onRemove != null) ...[
-            const SizedBox(width: 8),
+            SizedBox(width: 8),
             Padding(
-              padding: const EdgeInsets.only(top: 31),
+              padding: EdgeInsets.only(top: 31),
               child: IconButton(
                 onPressed: onRemove,
-                icon: const Icon(Icons.close, size: 18),
+                icon: Icon(Icons.close, size: 18),
                 splashRadius: 18,
               ),
             ),
@@ -2645,7 +3135,7 @@ class _QuoteLineRow extends StatelessWidget {
 }
 
 class _QuoteFieldColumn extends StatelessWidget {
-  const _QuoteFieldColumn({
+  _QuoteFieldColumn({
     required this.width,
     required this.label,
     required this.child,
@@ -2664,13 +3154,13 @@ class _QuoteFieldColumn extends StatelessWidget {
         children: [
           Text(
             trText(label),
-            style: const TextStyle(
+            style: TextStyle(
               color: AppColors.textSecondary,
               fontSize: 13,
               fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           child,
         ],
       ),
@@ -2679,10 +3169,7 @@ class _QuoteFieldColumn extends StatelessWidget {
 }
 
 class _QuoteReadOnlyField extends StatelessWidget {
-  const _QuoteReadOnlyField({
-    required this.controller,
-    required this.fallbackText,
-  });
+  _QuoteReadOnlyField({required this.controller, required this.fallbackText});
 
   final TextEditingController controller;
   final String fallbackText;
@@ -2704,7 +3191,7 @@ class _QuoteReadOnlyField extends StatelessWidget {
 }
 
 class _QuoteConceptAutocomplete extends StatefulWidget {
-  const _QuoteConceptAutocomplete({
+  _QuoteConceptAutocomplete({
     required this.draft,
     required this.productOptions,
     required this.onChanged,
@@ -2723,17 +3210,47 @@ class _QuoteConceptAutocomplete extends StatefulWidget {
 
 class _QuoteConceptAutocompleteState extends State<_QuoteConceptAutocomplete> {
   late final FocusNode _focusNode;
+  bool _isRefreshingOptions = false;
 
   @override
   void initState() {
     super.initState();
-    _focusNode = FocusNode();
+    _focusNode = FocusNode()..addListener(_handleFocusChange);
   }
 
   @override
   void dispose() {
+    _focusNode.removeListener(_handleFocusChange);
     _focusNode.dispose();
     super.dispose();
+  }
+
+  void _handleFocusChange() {
+    if (_focusNode.hasFocus) {
+      _showAllOptionsOnEmptyField();
+    }
+  }
+
+  void _showAllOptionsOnEmptyField() {
+    if (_isRefreshingOptions || widget.productOptions.isEmpty) return;
+
+    final controller = widget.draft.conceptoController;
+    if (controller.text.trim().isNotEmpty) return;
+
+    _isRefreshingOptions = true;
+    controller.value = const TextEditingValue(
+      text: ' ',
+      selection: TextSelection.collapsed(offset: 1),
+    );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      controller.value = const TextEditingValue(
+        text: '',
+        selection: TextSelection.collapsed(offset: 0),
+      );
+      _isRefreshingOptions = false;
+    });
   }
 
   @override
@@ -2745,18 +3262,16 @@ class _QuoteConceptAutocompleteState extends State<_QuoteConceptAutocomplete> {
       optionsBuilder: (textEditingValue) {
         final query = textEditingValue.text.trim().toLowerCase();
         if (widget.productOptions.isEmpty) {
-          return const Iterable<_QuoteProductOption>.empty();
+          return Iterable<_QuoteProductOption>.empty();
         }
         if (query.isEmpty) {
-          return widget.productOptions.take(8);
+          return widget.productOptions;
         }
-        return widget.productOptions
-            .where((option) {
-              final name = option.nombre.toLowerCase();
-              final description = option.descripcion.toLowerCase();
-              return name.contains(query) || description.contains(query);
-            })
-            .take(8);
+        return widget.productOptions.where((option) {
+          final name = option.nombre.toLowerCase();
+          final description = option.descripcion.toLowerCase();
+          return name.contains(query) || description.contains(query);
+        });
       },
       onSelected: widget.onSelected,
       fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) =>
@@ -2764,19 +3279,20 @@ class _QuoteConceptAutocompleteState extends State<_QuoteConceptAutocomplete> {
             controller: controller,
             focusNode: focusNode,
             onChanged: widget.onChanged,
+            onTap: _showAllOptionsOnEmptyField,
             decoration:
                 cotimaxDropdownDecoration(
                   hintText: 'Escribe o selecciona un producto',
                 ).copyWith(
                   suffixIcon: widget.productOptions.isEmpty
                       ? null
-                      : const Icon(Icons.search_rounded),
+                      : Icon(Icons.search_rounded),
                 ),
           ),
       optionsViewBuilder: (context, onSelected, options) {
         final matches = options.toList(growable: false);
         if (matches.isEmpty) {
-          return const SizedBox.shrink();
+          return SizedBox.shrink();
         }
         return Align(
           alignment: Alignment.topLeft,
@@ -2785,22 +3301,22 @@ class _QuoteConceptAutocompleteState extends State<_QuoteConceptAutocomplete> {
             color: AppColors.white,
             borderRadius: cotimaxMenuBorderRadius,
             child: ConstrainedBox(
-              constraints: const BoxConstraints(
+              constraints: BoxConstraints(
                 maxWidth: _quoteConceptWidth,
                 maxHeight: 280,
               ),
               child: ListView.separated(
-                padding: const EdgeInsets.symmetric(vertical: 8),
+                padding: EdgeInsets.symmetric(vertical: 8),
                 shrinkWrap: true,
                 itemCount: matches.length,
-                separatorBuilder: (_, _) => const Divider(height: 1),
+                separatorBuilder: (_, _) => Divider(height: 1),
                 itemBuilder: (context, index) {
                   final option = matches[index];
                   final description = option.descripcion.trim();
                   return InkWell(
                     onTap: () => onSelected(option),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(
+                      padding: EdgeInsets.symmetric(
                         horizontal: 14,
                         vertical: 10,
                       ),
@@ -2811,18 +3327,18 @@ class _QuoteConceptAutocompleteState extends State<_QuoteConceptAutocomplete> {
                             option.nombre,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: AppColors.textPrimary,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
                           if (description.isNotEmpty) ...[
-                            const SizedBox(height: 4),
+                            SizedBox(height: 4),
                             Text(
                               description,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 color: AppColors.textSecondary,
                                 fontSize: 12,
                               ),
@@ -2843,7 +3359,7 @@ class _QuoteConceptAutocompleteState extends State<_QuoteConceptAutocomplete> {
 }
 
 class _QuoteSummaryRow extends StatelessWidget {
-  const _QuoteSummaryRow({
+  _QuoteSummaryRow({
     required this.label,
     required this.value,
     this.strong = false,
@@ -2856,7 +3372,7 @@ class _QuoteSummaryRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
+      padding: EdgeInsets.only(bottom: 14),
       child: Row(
         children: [
           Expanded(
@@ -2884,7 +3400,7 @@ class _QuoteSummaryRow extends StatelessWidget {
 }
 
 class _QuoteSwitchRow extends StatelessWidget {
-  const _QuoteSwitchRow({
+  _QuoteSwitchRow({
     required this.label,
     required this.value,
     required this.onChanged,
@@ -2897,14 +3413,14 @@ class _QuoteSwitchRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: 2),
+      padding: EdgeInsets.only(top: 2),
       child: Row(
         children: [
           SizedBox(
             width: 150,
             child: Text(
               trText(label),
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 13,
                 fontWeight: FontWeight.w700,

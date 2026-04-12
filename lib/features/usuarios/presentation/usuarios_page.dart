@@ -10,7 +10,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class UsuariosPage extends ConsumerWidget {
-  const UsuariosPage({super.key});
+   UsuariosPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -19,15 +19,15 @@ class UsuariosPage extends ConsumerWidget {
 
     return ListView(
       children: [
-        const PageHeader(
+         PageHeader(
           title: 'Usuarios',
           subtitle: 'Administracion de usuarios, roles y empresas asignadas.',
         ),
-        const SizedBox(height: 12),
+         SizedBox(height: 12),
         plan.when(
           data: (sub) {
             if (sub.planId == 'starter' || sub.planId == 'pro') {
-              return const SectionCard(
+              return  SectionCard(
                 title: 'Bloqueo por plan',
                 child: Row(
                   children: [
@@ -44,18 +44,18 @@ class UsuariosPage extends ConsumerWidget {
             }
             final invitation = ref.watch(companyInvitationCodeProvider);
             return invitation.when(
-              loading: () => const SizedBox.shrink(),
-              error: (_, __) => const SizedBox.shrink(),
+              loading: () =>  SizedBox.shrink(),
+              error: (_, __) =>  SizedBox.shrink(),
               data: (code) => SectionCard(
                 title: tr('Código de invitación', 'Invitation code'),
                 child: Row(
                   children: [
-                    const Icon(Icons.key_outlined),
-                    const SizedBox(width: 10),
+                     Icon(Icons.key_outlined),
+                     SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         code.codigo,
-                        style: const TextStyle(
+                        style:  TextStyle(
                           color: AppColors.textPrimary,
                           fontSize: 15,
                           fontWeight: FontWeight.w800,
@@ -77,7 +77,7 @@ class UsuariosPage extends ConsumerWidget {
                           ),
                         );
                       },
-                      icon: const Icon(Icons.copy_rounded, size: 16),
+                      icon:  Icon(Icons.copy_rounded, size: 16),
                       label: Text(tr('Copiar', 'Copy')),
                     ),
                   ],
@@ -85,10 +85,10 @@ class UsuariosPage extends ConsumerWidget {
               ),
             );
           },
-          loading: () => const SizedBox.shrink(),
-          error: (_, __) => const SizedBox.shrink(),
+          loading: () =>  SizedBox.shrink(),
+          error: (_, __) =>  SizedBox.shrink(),
         ),
-        const SizedBox(height: 12),
+         SizedBox(height: 12),
         usuarios.when(
           loading: LoadingSkeleton.new,
           error: (_, __) => ErrorStateWidget(

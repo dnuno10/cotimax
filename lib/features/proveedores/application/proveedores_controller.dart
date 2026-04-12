@@ -15,3 +15,9 @@ final proveedoresControllerProvider = FutureProvider<List<Proveedor>>((
   final query = ref.watch(proveedoresSearchProvider);
   return ref.watch(proveedoresRepositoryProvider).getAll(query: query);
 });
+
+final proveedoresCatalogControllerProvider = FutureProvider<List<Proveedor>>((
+  ref,
+) async {
+  return ref.watch(proveedoresRepositoryProvider).getAll();
+});

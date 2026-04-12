@@ -14,3 +14,9 @@ final empresaPerfilControllerProvider = FutureProvider<EmpresaPerfil>((
 ) async {
   return ref.watch(configuracionRepositoryProvider).getEmpresa();
 });
+
+final usuarioActualControllerProvider = FutureProvider<UsuarioActual>((
+  ref,
+) async {
+  return ref.watch(configuracionRepositoryProvider).getUsuarioActual();
+});

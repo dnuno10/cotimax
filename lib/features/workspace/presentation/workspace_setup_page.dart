@@ -11,7 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 class WorkspaceSetupPage extends ConsumerStatefulWidget {
-  const WorkspaceSetupPage({super.key});
+   WorkspaceSetupPage({super.key});
 
   @override
   ConsumerState<WorkspaceSetupPage> createState() => _WorkspaceSetupPageState();
@@ -161,9 +161,9 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
             SafeArea(
               child: Center(
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 980),
+                  constraints:  BoxConstraints(maxWidth: 980),
                   child: Padding(
-                    padding: const EdgeInsets.all(18),
+                    padding:  EdgeInsets.all(18),
                     child: ClipRRect(
                       borderRadius: shellRadius,
                       child: Container(
@@ -177,17 +177,17 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
                                 alpha: 0.10,
                               ),
                               blurRadius: 30,
-                              offset: const Offset(0, 16),
+                              offset:  Offset(0, 16),
                             ),
                           ],
                         ),
                         child: statusAsync.when(
-                          loading: () => const Padding(
+                          loading: () =>  Padding(
                             padding: EdgeInsets.all(48),
                             child: Center(child: CircularProgressIndicator()),
                           ),
                           error: (_, __) => Padding(
-                            padding: const EdgeInsets.all(28),
+                            padding:  EdgeInsets.all(28),
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -197,24 +197,24 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
                                     'Configura tu empresa',
                                     'Set up your company',
                                   ),
-                                  style: const TextStyle(
+                                  style:  TextStyle(
                                     color: AppColors.textPrimary,
                                     fontSize: 28,
                                     fontWeight: FontWeight.w800,
                                   ),
                                 ),
-                                const SizedBox(height: 12),
+                                 SizedBox(height: 12),
                                 Text(
                                   tr(
                                     'No se pudo validar el espacio de trabajo. Reintenta para continuar.',
                                     'Could not validate the workspace. Retry to continue.',
                                   ),
-                                  style: const TextStyle(
+                                  style:  TextStyle(
                                     color: AppColors.textSecondary,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                const SizedBox(height: 20),
+                                 SizedBox(height: 20),
                                 FilledButton(
                                   onPressed: () =>
                                       ref.invalidate(workspaceStatusProvider),
@@ -225,7 +225,7 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
                           ),
                           data: (status) {
                             if (status.hasCompany) {
-                              return const SizedBox(
+                              return  SizedBox(
                                 height: 220,
                                 child: Center(
                                   child: CircularProgressIndicator(),
@@ -245,11 +245,11 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
 
                                 if (stacked) {
                                   return SingleChildScrollView(
-                                    padding: const EdgeInsets.all(20),
+                                    padding:  EdgeInsets.all(20),
                                     child: Column(
                                       children: [
                                         introPanel,
-                                        const SizedBox(height: 18),
+                                         SizedBox(height: 18),
                                         formPanel,
                                       ],
                                     ),
@@ -284,52 +284,58 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
 
   Widget _buildIntroPanel({required bool stacked}) {
     return Container(
-      padding: const EdgeInsets.all(28),
+      padding:  EdgeInsets.all(28),
       decoration: BoxDecoration(
         borderRadius: stacked
             ? BorderRadius.circular(14)
-            : const BorderRadius.only(
+            :  BorderRadius.only(
                 topLeft: Radius.circular(18),
                 bottomLeft: Radius.circular(18),
               ),
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFFF7FBFF), Color(0xFFEFF4FB)],
+          colors: [
+            AppColors.container,
+            Color.alphaBlend(
+              AppColors.primary.withValues(alpha: 0.05),
+              AppColors.background,
+            ),
+          ],
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(
+           Icon(
             Icons.apartment_rounded,
             color: AppColors.primary,
             size: 34,
           ),
-          const SizedBox(height: 18),
+           SizedBox(height: 18),
           Text(
             tr('Configura tu empresa', 'Set up your company'),
-            style: const TextStyle(
+            style:  TextStyle(
               color: AppColors.textPrimary,
               fontSize: 30,
               fontWeight: FontWeight.w800,
               height: 1.05,
             ),
           ),
-          const SizedBox(height: 10),
+           SizedBox(height: 10),
           Text(
             tr(
               'Este paso es obligatorio para activar el espacio de trabajo. Puedes registrar una empresa nueva o vincularte con un equipo existente.',
               'This step is required to activate the workspace. You can create a new company or connect to an existing team.',
             ),
-            style: const TextStyle(
+            style:  TextStyle(
               color: AppColors.textSecondary,
               fontWeight: FontWeight.w600,
               height: 1.5,
             ),
           ),
-          const SizedBox(height: 24),
+           SizedBox(height: 24),
           _WorkspaceBullet(
             icon: Icons.verified_user_outlined,
             text: tr(
@@ -337,7 +343,7 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
               'Access stays locked until setup is completed.',
             ),
           ),
-          const SizedBox(height: 12),
+           SizedBox(height: 12),
           _WorkspaceBullet(
             icon: Icons.badge_outlined,
             text: tr(
@@ -345,7 +351,7 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
               'The invitation code is used to link team members.',
             ),
           ),
-          const SizedBox(height: 12),
+           SizedBox(height: 12),
           _WorkspaceBullet(
             icon: Icons.image_outlined,
             text: tr(
@@ -360,19 +366,19 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
 
   Widget _buildFormPanel({required bool isCreateMode}) {
     return Padding(
-      padding: const EdgeInsets.all(24),
+      padding:  EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             tr('Elige cómo continuar', 'Choose how to continue'),
-            style: const TextStyle(
+            style:  TextStyle(
               color: AppColors.textPrimary,
               fontSize: 20,
               fontWeight: FontWeight.w800,
             ),
           ),
-          const SizedBox(height: 14),
+           SizedBox(height: 14),
           _WorkspaceModeButton(
             label: tr('Crear empresa', 'Create company'),
             description: tr(
@@ -384,7 +390,7 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
             fillColor: AppColors.primary,
             onTap: () => setState(() => _tabIndex = 0),
           ),
-          const SizedBox(height: 10),
+           SizedBox(height: 10),
           _WorkspaceModeButton(
             label: tr('Unirse por invitación', 'Join by invitation'),
             description: tr(
@@ -396,9 +402,9 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
             fillColor: AppColors.accent,
             onTap: () => setState(() => _tabIndex = 1),
           ),
-          const SizedBox(height: 22),
+           SizedBox(height: 22),
           AnimatedSwitcher(
-            duration: const Duration(milliseconds: 220),
+            duration:  Duration(milliseconds: 220),
             switchInCurve: Curves.easeOutCubic,
             switchOutCurve: Curves.easeOutCubic,
             child: isCreateMode ? _buildCreateCard() : _buildJoinCard(),
@@ -410,8 +416,8 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
 
   Widget _buildCreateCard() {
     return Container(
-      key: const ValueKey('create-company-card'),
-      padding: const EdgeInsets.all(20),
+      key:  ValueKey('create-company-card'),
+      padding:  EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppColors.background,
         borderRadius: BorderRadius.circular(14),
@@ -422,17 +428,17 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
         children: [
           Text(
             tr('Nueva empresa', 'New company'),
-            style: const TextStyle(
+            style:  TextStyle(
               color: AppColors.textPrimary,
               fontSize: 18,
               fontWeight: FontWeight.w800,
             ),
           ),
-          const SizedBox(height: 14),
+           SizedBox(height: 14),
           if (_logoDataUrl.isNotEmpty) ...[
             Center(
               child: Container(
-                padding: const EdgeInsets.all(10),
+                padding:  EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: AppColors.white,
                   borderRadius: BorderRadius.circular(12),
@@ -444,12 +450,12 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
                   child: Image.network(
                     _logoDataUrl,
                     fit: BoxFit.contain,
-                    errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                    errorBuilder: (_, __, ___) =>  SizedBox.shrink(),
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: 14),
+             SizedBox(height: 14),
           ],
           SizedBox(
             width: double.infinity,
@@ -459,7 +465,7 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
                 backgroundColor: AppColors.primary,
                 foregroundColor: AppColors.white,
               ),
-              icon: const Icon(Icons.upload_file_rounded),
+              icon:  Icon(Icons.upload_file_rounded),
               label: Text(
                 _logoDataUrl.isEmpty
                     ? tr('Cargar logo', 'Upload logo')
@@ -467,16 +473,16 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
               ),
             ),
           ),
-          const SizedBox(height: 16),
+           SizedBox(height: 16),
           Text(
             tr('Nombre de la empresa', 'Company name'),
-            style: const TextStyle(
+            style:  TextStyle(
               color: AppColors.textSecondary,
               fontWeight: FontWeight.w700,
               fontSize: 13,
             ),
           ),
-          const SizedBox(height: 8),
+           SizedBox(height: 8),
           TextFormField(
             controller: _companyNameController,
             enabled: !_isSubmitting,
@@ -489,7 +495,7 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
             textInputAction: TextInputAction.done,
             onFieldSubmitted: (_) => _createCompany(),
           ),
-          const SizedBox(height: 18),
+           SizedBox(height: 18),
           Align(
             alignment: Alignment.centerRight,
             child: FilledButton.icon(
@@ -499,12 +505,12 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
                 foregroundColor: AppColors.white,
               ),
               icon: _isSubmitting
-                  ? const SizedBox(
+                  ?  SizedBox(
                       width: 16,
                       height: 16,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Icon(Icons.add_rounded),
+                  :  Icon(Icons.add_rounded),
               label: Text(
                 _isSubmitting
                     ? tr('Creando...', 'Creating...')
@@ -519,8 +525,8 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
 
   Widget _buildJoinCard() {
     return Container(
-      key: const ValueKey('join-company-card'),
-      padding: const EdgeInsets.all(20),
+      key:  ValueKey('join-company-card'),
+      padding:  EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppColors.background,
         borderRadius: BorderRadius.circular(14),
@@ -531,22 +537,22 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
         children: [
           Text(
             tr('Código de invitación', 'Invitation code'),
-            style: const TextStyle(
+            style:  TextStyle(
               color: AppColors.textPrimary,
               fontSize: 18,
               fontWeight: FontWeight.w800,
             ),
           ),
-          const SizedBox(height: 14),
+           SizedBox(height: 14),
           Text(
             tr('Código único del equipo', 'Team invitation code'),
-            style: const TextStyle(
+            style:  TextStyle(
               color: AppColors.textSecondary,
               fontWeight: FontWeight.w700,
               fontSize: 13,
             ),
           ),
-          const SizedBox(height: 8),
+           SizedBox(height: 8),
           TextFormField(
             controller: _inviteCodeController,
             enabled: !_isSubmitting,
@@ -557,7 +563,7 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
             textInputAction: TextInputAction.done,
             onFieldSubmitted: (_) => _joinCompany(),
           ),
-          const SizedBox(height: 18),
+           SizedBox(height: 18),
           Align(
             alignment: Alignment.centerRight,
             child: FilledButton.icon(
@@ -567,12 +573,12 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
                 foregroundColor: AppColors.white,
               ),
               icon: _isSubmitting
-                  ? const SizedBox(
+                  ?  SizedBox(
                       width: 16,
                       height: 16,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Icon(Icons.group_add_rounded),
+                  :  Icon(Icons.group_add_rounded),
               label: Text(
                 _isSubmitting
                     ? tr('Uniendo...', 'Joining...')
@@ -587,7 +593,7 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
 }
 
 class _WorkspaceModeButton extends StatelessWidget {
-  const _WorkspaceModeButton({
+   _WorkspaceModeButton({
     required this.label,
     required this.description,
     required this.icon,
@@ -612,10 +618,10 @@ class _WorkspaceModeButton extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(14),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
+        duration:  Duration(milliseconds: 180),
         curve: Curves.easeOutCubic,
         width: double.infinity,
-        padding: const EdgeInsets.all(16),
+        padding:  EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: background,
           borderRadius: BorderRadius.circular(14),
@@ -627,7 +633,7 @@ class _WorkspaceModeButton extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Icon(icon, color: selected ? AppColors.white : fillColor, size: 22),
-            const SizedBox(width: 14),
+             SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -640,7 +646,7 @@ class _WorkspaceModeButton extends StatelessWidget {
                       fontSize: 15,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                   SizedBox(height: 4),
                   Text(
                     description,
                     style: TextStyle(
@@ -662,7 +668,7 @@ class _WorkspaceModeButton extends StatelessWidget {
 }
 
 class _WorkspaceBullet extends StatelessWidget {
-  const _WorkspaceBullet({required this.icon, required this.text});
+   _WorkspaceBullet({required this.icon, required this.text});
 
   final IconData icon;
   final String text;
@@ -673,11 +679,11 @@ class _WorkspaceBullet extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Icon(icon, size: 20, color: AppColors.primary),
-        const SizedBox(width: 12),
+         SizedBox(width: 12),
         Expanded(
           child: Text(
             text,
-            style: const TextStyle(
+            style:  TextStyle(
               color: AppColors.textPrimary,
               fontWeight: FontWeight.w600,
               height: 1.45,
@@ -690,7 +696,7 @@ class _WorkspaceBullet extends StatelessWidget {
 }
 
 class _WorkspaceGlow extends StatelessWidget {
-  const _WorkspaceGlow({required this.size, required this.color});
+   _WorkspaceGlow({required this.size, required this.color});
 
   final double size;
   final Color color;

@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 void main() {
   testWidgets('Cotimax login renders', (WidgetTester tester) async {
-    await tester.pumpWidget(const ProviderScope(child: CotimaxApp()));
+    await tester.pumpWidget( ProviderScope(child: CotimaxApp()));
     await tester.pumpAndSettle();
 
     expect(find.text('Cotimax'), findsOneWidget);

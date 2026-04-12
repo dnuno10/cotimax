@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AuthState {
-  const AuthState({
+   AuthState({
     required this.isAuthenticated,
     this.isLoading = false,
     this.error,
@@ -101,7 +101,7 @@ class AuthController extends Notifier<AuthState> {
 
   Future<void> signOut() async {
     await ref.read(authRepositoryProvider).signOut();
-    state = const AuthState(isAuthenticated: false);
+    state =  AuthState(isAuthenticated: false);
   }
 
   void resetOtpFlow() {

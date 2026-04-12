@@ -9,7 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-const List<({String value, String label})> clientCurrencyOptions = [
+List<({String value, String label})> clientCurrencyOptions = [
   (value: 'MXN', label: 'MXN - Peso mexicano'),
   (value: 'USD', label: 'USD - Dólar estadounidense'),
   (value: 'EUR', label: 'EUR - Euro'),
@@ -42,7 +42,7 @@ const List<({String value, String label})> clientCurrencyOptions = [
   (value: 'AED', label: 'AED - Dírham de Emiratos'),
 ];
 
-const List<({String value, String label})> clientLanguageOptions = [
+List<({String value, String label})> clientLanguageOptions = [
   (value: 'es-MX', label: 'Español'),
   (value: 'en-US', label: 'Inglés'),
 ];
@@ -221,7 +221,7 @@ const List<String> clientIndustryOptions = [
 ];
 
 class ClientesPage extends ConsumerStatefulWidget {
-  const ClientesPage({super.key});
+  ClientesPage({super.key});
 
   @override
   ConsumerState<ClientesPage> createState() => _ClientesPageState();
@@ -275,16 +275,16 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
             ...buildImportExportHeaderActions(context, entityLabel: 'clientes'),
             ElevatedButton.icon(
               onPressed: () => _openForm(context, null),
-              icon: const Icon(Icons.add),
+              icon: Icon(Icons.add),
               label: Text(trText('Nuevo cliente')),
             ),
           ],
         ),
-        const SizedBox(height: 10),
+        SizedBox(height: 10),
         FilterBar(
           children: [
             Padding(
-              padding: const EdgeInsets.only(top: 20),
+              padding: EdgeInsets.only(top: 20),
               child: SizedBox(
                 width: 320,
                 child: SearchField(
@@ -295,7 +295,7 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
                 ),
               ),
             ),
-            const SizedBox(
+            SizedBox(
               width: 220,
               child: SelectField<String>(
                 label: 'Estatus',
@@ -303,7 +303,7 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
                 options: ['Todos', 'Activos', 'Inactivos'],
               ),
             ),
-            const SizedBox(
+            SizedBox(
               width: 220,
               child: SelectField<String>(
                 label: 'Origen',
@@ -313,17 +313,16 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
             ),
           ],
         ),
-        const SizedBox(height: 10),
+        SizedBox(height: 10),
         clientesAsync.when(
-          loading: () =>
-              const LoadingStateWidget(message: 'Cargando clientes...'),
+          loading: () => LoadingStateWidget(message: 'Cargando clientes...'),
           error: (_, __) => ErrorStateWidget(
             message: 'No fue posible cargar clientes.',
             onRetry: () => ref.invalidate(clientesControllerProvider),
           ),
           data: (clientes) {
             if (clientes.isEmpty) {
-              return const SectionCard(child: InlineEmptyMessage());
+              return SectionCard(child: InlineEmptyMessage());
             }
 
             final allSelected = _selectedClienteIds.length == clientes.length;
@@ -570,7 +569,7 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
 }
 
 class _ClienteForm extends ConsumerStatefulWidget {
-  const _ClienteForm({this.cliente});
+  _ClienteForm({this.cliente});
 
   final Cliente? cliente;
 
@@ -602,6 +601,7 @@ class _ClienteFormState extends ConsumerState<_ClienteForm> {
   bool _exentoImpuestos = false;
   bool _activo = true;
   int _tabIndex = 0;
+  bool _numeroAutofilled = false;
 
   @override
   void initState() {
@@ -672,6 +672,11 @@ class _ClienteFormState extends ConsumerState<_ClienteForm> {
           .map((item) => item.numero),
     );
 
+    if (!_numeroAutofilled && _numeroController.text.trim().isEmpty) {
+      assignControllerText(_numeroController, numeroSugerido);
+      _numeroAutofilled = true;
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -684,7 +689,7 @@ class _ClienteFormState extends ConsumerState<_ClienteForm> {
               selected: _tabIndex == 0,
               onTap: () => setState(() => _tabIndex = 0),
             ),
-            const SizedBox(width: 18),
+            SizedBox(width: 18),
             _ClientTabButton(
               label: 'Configuración',
               selected: _tabIndex == 1,
@@ -692,9 +697,9 @@ class _ClienteFormState extends ConsumerState<_ClienteForm> {
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         Container(height: 1, color: AppColors.border),
-        const SizedBox(height: 10),
+        SizedBox(height: 10),
         Expanded(
           child: FocusTraversalGroup(
             policy: WidgetOrderTraversalPolicy(),
@@ -736,7 +741,7 @@ class _ClienteFormState extends ConsumerState<_ClienteForm> {
             ),
           ),
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         Align(
           alignment: Alignment.centerRight,
           child: Wrap(
@@ -749,7 +754,7 @@ class _ClienteFormState extends ConsumerState<_ClienteForm> {
               ElevatedButton.icon(
                 onPressed: _isSaving ? null : _save,
                 icon: _isSaving
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 16,
                         height: 16,
                         child: CircularProgressIndicator(strokeWidth: 2),
@@ -866,7 +871,7 @@ class _ClienteFormState extends ConsumerState<_ClienteForm> {
 }
 
 class _ClientCreateTab extends StatelessWidget {
-  const _ClientCreateTab({
+  _ClientCreateTab({
     required this.empresaController,
     required this.numeroController,
     required this.numeroSugerido,
@@ -977,10 +982,6 @@ class _ClientCreateTab extends StatelessWidget {
             _ClientSection(
               title: 'Contactos',
               icon: FontAwesomeIcons.addressBook,
-              trailing: OutlinedButton(
-                onPressed: () {},
-                child: Text(trText('+ Añadir contacto')),
-              ),
               child: Column(
                 children: [
                   _ClientFieldRow(
@@ -1002,7 +1003,7 @@ class _ClientCreateTab extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 10),
+            SizedBox(height: 10),
             _ClientSection(
               title: 'Dirección de envío',
               icon: FontAwesomeIcons.locationDot,
@@ -1040,20 +1041,20 @@ class _ClientCreateTab extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(child: left),
-              const SizedBox(width: 10),
+              SizedBox(width: 10),
               Expanded(child: right),
             ],
           );
         }
 
-        return Column(children: [left, const SizedBox(height: 10), right]);
+        return Column(children: [left, SizedBox(height: 10), right]);
       },
     );
   }
 }
 
 class _ClientConfigTab extends StatefulWidget {
-  const _ClientConfigTab({required this.notasController});
+  _ClientConfigTab({required this.notasController});
 
   final TextEditingController notasController;
 
@@ -1172,7 +1173,7 @@ class _ClientConfigTabState extends State<_ClientConfigTab> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(child: configSection),
-                  const SizedBox(width: 10),
+                  SizedBox(width: 10),
                   Expanded(child: classifySection),
                 ],
               )
@@ -1180,11 +1181,11 @@ class _ClientConfigTabState extends State<_ClientConfigTab> {
               Column(
                 children: [
                   configSection,
-                  const SizedBox(height: 10),
+                  SizedBox(height: 10),
                   classifySection,
                 ],
               ),
-            const SizedBox(height: 10),
+            SizedBox(height: 10),
             _ClientSection(
               title: 'Notas internas',
               icon: FontAwesomeIcons.noteSticky,
@@ -1206,7 +1207,7 @@ class _ClientConfigTabState extends State<_ClientConfigTab> {
 }
 
 class _ClientTabButton extends StatelessWidget {
-  const _ClientTabButton({
+  _ClientTabButton({
     required this.label,
     required this.selected,
     required this.onTap,
@@ -1221,7 +1222,7 @@ class _ClientTabButton extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.only(bottom: 10),
+        padding: EdgeInsets.only(bottom: 10),
         decoration: BoxDecoration(
           border: Border(
             bottom: BorderSide(
@@ -1244,17 +1245,15 @@ class _ClientTabButton extends StatelessWidget {
 }
 
 class _ClientSection extends StatelessWidget {
-  const _ClientSection({
+  _ClientSection({
     required this.title,
     required this.icon,
     required this.child,
-    this.trailing,
   });
 
   final String title;
   final IconData icon;
   final Widget child;
-  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -1267,18 +1266,18 @@ class _ClientSection extends StatelessWidget {
       child: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+            padding: EdgeInsets.fromLTRB(16, 14, 16, 14),
             child: Row(
               children: [
                 Expanded(
                   child: Row(
                     children: [
                       FaIcon(icon, size: 14, color: AppColors.textPrimary),
-                      const SizedBox(width: 8),
+                      SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           trText(title),
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: AppColors.textPrimary,
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
@@ -1288,12 +1287,11 @@ class _ClientSection extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (trailing != null) trailing!,
               ],
             ),
           ),
           Container(height: 1, color: AppColors.border),
-          Padding(padding: const EdgeInsets.all(16), child: child),
+          Padding(padding: EdgeInsets.all(16), child: child),
         ],
       ),
     );
@@ -1301,7 +1299,7 @@ class _ClientSection extends StatelessWidget {
 }
 
 class _ClientFieldRow extends StatelessWidget {
-  const _ClientFieldRow({
+  _ClientFieldRow({
     required this.label,
     this.controller,
     this.maxLines = 1,
@@ -1318,7 +1316,7 @@ class _ClientFieldRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: EdgeInsets.only(bottom: 10),
       child: Row(
         crossAxisAlignment: maxLines > 1
             ? CrossAxisAlignment.start
@@ -1330,7 +1328,7 @@ class _ClientFieldRow extends StatelessWidget {
               padding: EdgeInsets.only(top: maxLines > 1 ? 12 : 0),
               child: Text(
                 trText(label),
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppColors.textSecondary,
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
@@ -1361,7 +1359,7 @@ class _ClientFieldRow extends StatelessWidget {
 }
 
 class _ClientDropdownRow extends StatelessWidget {
-  const _ClientDropdownRow({
+  _ClientDropdownRow({
     required this.label,
     required this.value,
     required this.options,
@@ -1376,7 +1374,7 @@ class _ClientDropdownRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: EdgeInsets.only(bottom: 10),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -1384,7 +1382,7 @@ class _ClientDropdownRow extends StatelessWidget {
             width: 165,
             child: Text(
               trText(label),
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
@@ -1426,11 +1424,7 @@ class _ClientDropdownRow extends StatelessWidget {
 }
 
 class _ClientSwitchRow extends StatelessWidget {
-  const _ClientSwitchRow({
-    required this.label,
-    this.value = false,
-    this.onChanged,
-  });
+  _ClientSwitchRow({required this.label, this.value = false, this.onChanged});
 
   final String label;
   final bool value;
@@ -1439,14 +1433,14 @@ class _ClientSwitchRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: EdgeInsets.only(bottom: 10),
       child: Row(
         children: [
           SizedBox(
             width: 165,
             child: Text(
               trText(label),
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 13,
                 fontWeight: FontWeight.w700,

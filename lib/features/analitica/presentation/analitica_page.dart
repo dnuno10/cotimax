@@ -16,7 +16,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 class AnaliticaPage extends ConsumerStatefulWidget {
-  const AnaliticaPage({super.key});
+  AnaliticaPage({super.key});
 
   @override
   ConsumerState<AnaliticaPage> createState() => _AnaliticaPageState();
@@ -58,6 +58,20 @@ class _AnaliticaPageState extends ConsumerState<AnaliticaPage> {
     final recurrentes =
         ref.watch(gastosRecurrentesControllerProvider).valueOrNull ??
         const <GastoRecurrente>[];
+    final linkedIncomeByExpense = _incomeByLinkedExpense(ingresos);
+    final linkedExpenseTotal = gastos.fold<double>(
+      0,
+      (sum, item) =>
+          sum + (linkedIncomeByExpense.containsKey(item.id) ? item.monto : 0),
+    );
+    final linkedIncomeTotal = linkedIncomeByExpense.values.fold<double>(
+      0,
+      (sum, value) => sum + value,
+    );
+    final linkedDelta = linkedIncomeTotal - linkedExpenseTotal;
+    final linkedCoverage = linkedExpenseTotal == 0
+        ? 0.0
+        : linkedIncomeTotal / linkedExpenseTotal;
 
     final actualMonths = _buildHistoricalMonths(
       ingresos: ingresos,
@@ -131,7 +145,7 @@ class _AnaliticaPageState extends ConsumerState<AnaliticaPage> {
             subtitle:
                 'Lectura financiera avanzada con flujo libre, cobertura, burn multiple y proyecciones operativas.',
           ),
-          const SizedBox(height: 18),
+          SizedBox(height: 18),
           LayoutBuilder(
             builder: (context, constraints) {
               final stacked = constraints.maxWidth < 1180;
@@ -139,7 +153,7 @@ class _AnaliticaPageState extends ConsumerState<AnaliticaPage> {
                 return Column(
                   children: [
                     _WeeklyPulseCard(rows: weeklyRows),
-                    const SizedBox(height: 12),
+                    SizedBox(height: 12),
                     _MonthlyBarCard(rows: actualMonths),
                   ],
                 );
@@ -149,13 +163,13 @@ class _AnaliticaPageState extends ConsumerState<AnaliticaPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(child: _WeeklyPulseCard(rows: weeklyRows)),
-                  const SizedBox(width: 12),
+                  SizedBox(width: 12),
                   Expanded(child: _MonthlyBarCard(rows: actualMonths)),
                 ],
               );
             },
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           SectionCard(
             title: 'Indicadores clave',
             child: _AnalyticsSummaryStrip(
@@ -189,7 +203,35 @@ class _AnaliticaPageState extends ConsumerState<AnaliticaPage> {
               ],
             ),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
+          SectionCard(
+            title: 'Impacto de gastos vinculados',
+            child: _AnalyticsSummaryStrip(
+              items: [
+                _AnalyticsSummaryItem(
+                  title: 'Ingresos atribuidos',
+                  value: formatMxn(linkedIncomeTotal),
+                  subtitle: 'Ingresos relacionados a un gasto específico',
+                  accent: AppColors.primary,
+                ),
+                _AnalyticsSummaryItem(
+                  title: 'Diferencia neta',
+                  value: formatMxn(linkedDelta),
+                  subtitle: 'Ingresos vinculados menos gasto relacionado',
+                  accent: linkedDelta >= 0
+                      ? AppColors.success
+                      : AppColors.error,
+                ),
+                _AnalyticsSummaryItem(
+                  title: 'Cobertura vinculada',
+                  value: '${linkedCoverage.toStringAsFixed(2)}x',
+                  subtitle: 'Ingreso relacionado / gasto relacionado',
+                  accent: AppColors.accent,
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: 12),
           _ProjectionCard(
             rows: projectionRows,
             totalIngresos: totalForecastIngresos,
@@ -200,7 +242,7 @@ class _AnaliticaPageState extends ConsumerState<AnaliticaPage> {
               setState(() => _selectedProjection = value);
             },
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           SectionCard(
             title: 'Escenarios y lectura',
             child: _AnalyticsSummaryStrip(
@@ -226,7 +268,7 @@ class _AnaliticaPageState extends ConsumerState<AnaliticaPage> {
               ],
             ),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           _ResultsBreakdownList(
             rows: [...actualMonths, ...projectionRows],
             selectedProjection: _selectedProjection,
@@ -241,7 +283,7 @@ class _AnaliticaPageState extends ConsumerState<AnaliticaPage> {
 }
 
 class _AnalyticsSummaryItem {
-  const _AnalyticsSummaryItem({
+  _AnalyticsSummaryItem({
     required this.title,
     required this.value,
     required this.subtitle,
@@ -255,7 +297,7 @@ class _AnalyticsSummaryItem {
 }
 
 class _AnalyticsSummaryStrip extends StatelessWidget {
-  const _AnalyticsSummaryStrip({required this.items});
+  _AnalyticsSummaryStrip({required this.items});
 
   final List<_AnalyticsSummaryItem> items;
 
@@ -270,7 +312,7 @@ class _AnalyticsSummaryStrip extends StatelessWidget {
               for (var index = 0; index < items.length; index++) ...[
                 _AnalyticsSummaryEntry(item: items[index]),
                 if (index != items.length - 1)
-                  const Divider(height: 24, color: AppColors.border),
+                  Divider(height: 24, color: AppColors.border),
               ],
             ],
           );
@@ -285,7 +327,7 @@ class _AnalyticsSummaryStrip extends StatelessWidget {
                 Container(
                   width: 1,
                   height: 74,
-                  margin: const EdgeInsets.symmetric(horizontal: 16),
+                  margin: EdgeInsets.symmetric(horizontal: 16),
                   color: AppColors.border,
                 ),
             ],
@@ -297,7 +339,7 @@ class _AnalyticsSummaryStrip extends StatelessWidget {
 }
 
 class _AnalyticsSummaryEntry extends StatelessWidget {
-  const _AnalyticsSummaryEntry({required this.item});
+  _AnalyticsSummaryEntry({required this.item});
 
   final _AnalyticsSummaryItem item;
 
@@ -308,13 +350,13 @@ class _AnalyticsSummaryEntry extends StatelessWidget {
       children: [
         Text(
           trText(item.title),
-          style: const TextStyle(
+          style: TextStyle(
             color: AppColors.textSecondary,
             fontSize: 12,
             fontWeight: FontWeight.w800,
           ),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         Text(
           item.value,
           style: TextStyle(
@@ -324,10 +366,10 @@ class _AnalyticsSummaryEntry extends StatelessWidget {
             height: 1,
           ),
         ),
-        const SizedBox(height: 6),
+        SizedBox(height: 6),
         Text(
           trText(item.subtitle),
-          style: const TextStyle(
+          style: TextStyle(
             color: AppColors.textPrimary,
             fontSize: 12,
             fontWeight: FontWeight.w600,
@@ -340,7 +382,7 @@ class _AnalyticsSummaryEntry extends StatelessWidget {
 }
 
 class _WeeklyPulseCard extends StatelessWidget {
-  const _WeeklyPulseCard({required this.rows});
+  _WeeklyPulseCard({required this.rows});
 
   final List<_AnalyticsRow> rows;
 
@@ -356,7 +398,7 @@ class _WeeklyPulseCard extends StatelessWidget {
             ('Dinero libre', AppColors.success),
           ],
         ),
-        child: const InlineEmptyMessage(),
+        child: InlineEmptyMessage(),
       );
     }
 
@@ -385,7 +427,7 @@ class _WeeklyPulseCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Compara el gasto semanal contra la utilidad confirmada por cotizaciones aprobadas para entender cuanto dinero queda realmente libre.',
             style: TextStyle(
               color: AppColors.textSecondary,
@@ -394,7 +436,7 @@ class _WeeklyPulseCard extends StatelessWidget {
               height: 1.45,
             ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           SizedBox(
             height: 300,
             child: LineChart(
@@ -405,14 +447,14 @@ class _WeeklyPulseCard extends StatelessWidget {
                   show: true,
                   drawVerticalLine: false,
                   getDrawingHorizontalLine: (_) =>
-                      const FlLine(color: AppColors.border, strokeWidth: 1),
+                      FlLine(color: AppColors.border, strokeWidth: 1),
                 ),
                 borderData: FlBorderData(show: false),
                 titlesData: FlTitlesData(
-                  topTitles: const AxisTitles(
+                  topTitles: AxisTitles(
                     sideTitles: SideTitles(showTitles: false),
                   ),
-                  rightTitles: const AxisTitles(
+                  rightTitles: AxisTitles(
                     sideTitles: SideTitles(showTitles: false),
                   ),
                   leftTitles: AxisTitles(
@@ -421,7 +463,7 @@ class _WeeklyPulseCard extends StatelessWidget {
                       reservedSize: 94,
                       getTitlesWidget: (value, _) => Text(
                         formatMxn(value),
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppColors.textMuted,
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
@@ -435,13 +477,13 @@ class _WeeklyPulseCard extends StatelessWidget {
                       getTitlesWidget: (value, _) {
                         final index = value.toInt();
                         if (index < 0 || index >= rows.length) {
-                          return const SizedBox.shrink();
+                          return SizedBox.shrink();
                         }
                         return Padding(
-                          padding: const EdgeInsets.only(top: 10),
+                          padding: EdgeInsets.only(top: 10),
                           child: Text(
                             rows[index].label,
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: AppColors.textMuted,
                               fontSize: 10,
                               fontWeight: FontWeight.w700,
@@ -480,7 +522,7 @@ class _WeeklyPulseCard extends StatelessWidget {
                         .map(
                           (spot) => LineTooltipItem(
                             formatMxn(spot.y),
-                            const TextStyle(
+                            TextStyle(
                               color: AppColors.white,
                               fontWeight: FontWeight.w800,
                             ),
@@ -499,7 +541,7 @@ class _WeeklyPulseCard extends StatelessWidget {
 }
 
 class _MonthlyBarCard extends StatelessWidget {
-  const _MonthlyBarCard({required this.rows});
+  _MonthlyBarCard({required this.rows});
 
   final List<_AnalyticsRow> rows;
 
@@ -515,7 +557,7 @@ class _MonthlyBarCard extends StatelessWidget {
             ('Flujo de caja', AppColors.success),
           ],
         ),
-        child: const InlineEmptyMessage(),
+        child: InlineEmptyMessage(),
       );
     }
 
@@ -538,7 +580,7 @@ class _MonthlyBarCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Lectura mensual mas directa: cuanto entro, cuanto salio y cuanto flujo quedo despues de operar.',
             style: TextStyle(
               color: AppColors.textSecondary,
@@ -547,7 +589,7 @@ class _MonthlyBarCard extends StatelessWidget {
               height: 1.45,
             ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           SizedBox(
             height: 300,
             child: BarChart(
@@ -557,14 +599,14 @@ class _MonthlyBarCard extends StatelessWidget {
                   show: true,
                   drawVerticalLine: false,
                   getDrawingHorizontalLine: (_) =>
-                      const FlLine(color: AppColors.border, strokeWidth: 1),
+                      FlLine(color: AppColors.border, strokeWidth: 1),
                 ),
                 borderData: FlBorderData(show: false),
                 titlesData: FlTitlesData(
-                  topTitles: const AxisTitles(
+                  topTitles: AxisTitles(
                     sideTitles: SideTitles(showTitles: false),
                   ),
-                  rightTitles: const AxisTitles(
+                  rightTitles: AxisTitles(
                     sideTitles: SideTitles(showTitles: false),
                   ),
                   leftTitles: AxisTitles(
@@ -573,7 +615,7 @@ class _MonthlyBarCard extends StatelessWidget {
                       reservedSize: 94,
                       getTitlesWidget: (value, _) => Text(
                         formatMxn(value),
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppColors.textMuted,
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
@@ -587,13 +629,13 @@ class _MonthlyBarCard extends StatelessWidget {
                       getTitlesWidget: (value, _) {
                         final index = value.toInt();
                         if (index < 0 || index >= rows.length) {
-                          return const SizedBox.shrink();
+                          return SizedBox.shrink();
                         }
                         return Padding(
-                          padding: const EdgeInsets.only(top: 10),
+                          padding: EdgeInsets.only(top: 10),
                           child: Text(
                             rows[index].label,
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: AppColors.textMuted,
                               fontSize: 10,
                               fontWeight: FontWeight.w700,
@@ -627,7 +669,7 @@ class _MonthlyBarCard extends StatelessWidget {
                       final labels = ['Ingresos', 'Gastos', 'Flujo'];
                       return BarTooltipItem(
                         '${labels[rodIndex]} ${formatMxn(rod.toY)}',
-                        const TextStyle(
+                        TextStyle(
                           color: AppColors.white,
                           fontWeight: FontWeight.w800,
                         ),
@@ -645,7 +687,7 @@ class _MonthlyBarCard extends StatelessWidget {
 }
 
 class _ProjectionCard extends StatelessWidget {
-  const _ProjectionCard({
+  _ProjectionCard({
     required this.rows,
     required this.totalIngresos,
     required this.totalGastos,
@@ -673,7 +715,7 @@ class _ProjectionCard extends StatelessWidget {
             onChanged: onProjectionChanged,
           ),
         ),
-        child: const InlineEmptyMessage(),
+        child: InlineEmptyMessage(),
       );
     }
 
@@ -724,7 +766,7 @@ class _ProjectionCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           SizedBox(
             height: 320,
             child: LineChart(
@@ -735,14 +777,14 @@ class _ProjectionCard extends StatelessWidget {
                   show: true,
                   drawVerticalLine: false,
                   getDrawingHorizontalLine: (_) =>
-                      const FlLine(color: AppColors.border, strokeWidth: 1),
+                      FlLine(color: AppColors.border, strokeWidth: 1),
                 ),
                 borderData: FlBorderData(show: false),
                 titlesData: FlTitlesData(
-                  topTitles: const AxisTitles(
+                  topTitles: AxisTitles(
                     sideTitles: SideTitles(showTitles: false),
                   ),
-                  rightTitles: const AxisTitles(
+                  rightTitles: AxisTitles(
                     sideTitles: SideTitles(showTitles: false),
                   ),
                   leftTitles: AxisTitles(
@@ -751,7 +793,7 @@ class _ProjectionCard extends StatelessWidget {
                       reservedSize: 94,
                       getTitlesWidget: (value, _) => Text(
                         formatMxn(value),
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppColors.textMuted,
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
@@ -765,20 +807,20 @@ class _ProjectionCard extends StatelessWidget {
                       getTitlesWidget: (value, _) {
                         final index = value.toInt();
                         if (index < 0 || index >= rows.length) {
-                          return const SizedBox.shrink();
+                          return SizedBox.shrink();
                         }
                         if (!shouldShowChartLabel(
                           index,
                           rows.length,
                           maxLabels: 6,
                         )) {
-                          return const SizedBox.shrink();
+                          return SizedBox.shrink();
                         }
                         return Padding(
-                          padding: const EdgeInsets.only(top: 10),
+                          padding: EdgeInsets.only(top: 10),
                           child: Text(
                             rows[index].label,
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: AppColors.textMuted,
                               fontSize: 10,
                               fontWeight: FontWeight.w700,
@@ -816,7 +858,7 @@ class _ProjectionCard extends StatelessWidget {
                         .map(
                           (spot) => LineTooltipItem(
                             formatMxn(spot.y),
-                            const TextStyle(
+                            TextStyle(
                               color: AppColors.white,
                               fontWeight: FontWeight.w800,
                             ),
@@ -835,7 +877,7 @@ class _ProjectionCard extends StatelessWidget {
 }
 
 class _AnalyticsLegend extends StatelessWidget {
-  const _AnalyticsLegend({required this.items});
+  _AnalyticsLegend({required this.items});
 
   final List<(String, Color)> items;
 
@@ -857,10 +899,10 @@ class _AnalyticsLegend extends StatelessWidget {
                     borderRadius: BorderRadius.circular(999),
                   ),
                 ),
-                const SizedBox(width: 6),
+                SizedBox(width: 6),
                 Text(
                   trText(item.$1),
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
@@ -875,10 +917,7 @@ class _AnalyticsLegend extends StatelessWidget {
 }
 
 class _ProjectionRangeDropdown extends StatelessWidget {
-  const _ProjectionRangeDropdown({
-    required this.value,
-    required this.onChanged,
-  });
+  _ProjectionRangeDropdown({required this.value, required this.onChanged});
 
   final _ProjectionRangeOption value;
   final ValueChanged<_ProjectionRangeOption> onChanged;
@@ -895,10 +934,7 @@ class _ProjectionRangeDropdown extends StatelessWidget {
       style: cotimaxDropdownTextStyle,
       decoration: cotimaxDropdownDecoration(
         isDense: true,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 10,
-          vertical: 10,
-        ),
+        contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       ),
       items: projectionRangeOptions
           .map(
@@ -921,7 +957,7 @@ class _ProjectionRangeDropdown extends StatelessWidget {
 }
 
 class _ResultsBreakdownList extends StatelessWidget {
-  const _ResultsBreakdownList({
+  _ResultsBreakdownList({
     required this.rows,
     required this.selectedProjection,
     required this.onProjectionChanged,
@@ -943,7 +979,7 @@ class _ResultsBreakdownList extends StatelessWidget {
             onChanged: onProjectionChanged,
           ),
         ),
-        child: const InlineEmptyMessage(),
+        child: InlineEmptyMessage(),
       );
     }
 
@@ -1006,10 +1042,10 @@ class _ResultsBreakdownList extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           ...rows.map(
             (row) => Padding(
-              padding: const EdgeInsets.only(bottom: 2),
+              padding: EdgeInsets.only(bottom: 2),
               child: _ResultsExpansionRow(row: row),
             ),
           ),
@@ -1020,7 +1056,7 @@ class _ResultsBreakdownList extends StatelessWidget {
 }
 
 class _ResultsExpansionRow extends StatelessWidget {
-  const _ResultsExpansionRow({required this.row});
+  _ResultsExpansionRow({required this.row});
 
   final _AnalyticsRow row;
 
@@ -1033,12 +1069,12 @@ class _ResultsExpansionRow extends StatelessWidget {
     return Theme(
       data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
       child: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           border: Border(bottom: BorderSide(color: AppColors.border)),
         ),
         child: ExpansionTile(
-          tilePadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 6),
-          childrenPadding: const EdgeInsets.fromLTRB(8, 0, 8, 14),
+          tilePadding: EdgeInsets.symmetric(horizontal: 0, vertical: 6),
+          childrenPadding: EdgeInsets.fromLTRB(8, 0, 8, 14),
           iconColor: AppColors.textSecondary,
           collapsedIconColor: AppColors.textSecondary,
           leading: Icon(
@@ -1059,13 +1095,13 @@ class _ResultsExpansionRow extends StatelessWidget {
                   children: [
                     Text(
                       trText(row.label),
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppColors.textPrimary,
                         fontWeight: FontWeight.w800,
                         fontSize: 14,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    SizedBox(height: 4),
                     Text(
                       periodType,
                       style: TextStyle(
@@ -1082,7 +1118,7 @@ class _ResultsExpansionRow extends StatelessWidget {
               Expanded(
                 child: Text(
                   formatMxn(row.ingresos),
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppColors.textPrimary,
                     fontWeight: FontWeight.w700,
                     fontSize: 12,
@@ -1092,7 +1128,7 @@ class _ResultsExpansionRow extends StatelessWidget {
               Expanded(
                 child: Text(
                   formatMxn(row.gastos),
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppColors.textPrimary,
                     fontWeight: FontWeight.w700,
                     fontSize: 12,
@@ -1114,13 +1150,13 @@ class _ResultsExpansionRow extends StatelessWidget {
             ],
           ),
           subtitle: Padding(
-            padding: const EdgeInsets.only(top: 6),
+            padding: EdgeInsets.only(top: 6),
             child: Text(
               tr(
                 '$periodType • ${row.sections.length} secciones',
                 '$periodType • ${row.sections.length} sections',
               ),
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
@@ -1135,7 +1171,7 @@ class _ResultsExpansionRow extends StatelessWidget {
 }
 
 class _PeriodBreakdownBody extends StatelessWidget {
-  const _PeriodBreakdownBody({required this.row});
+  _PeriodBreakdownBody({required this.row});
 
   final _AnalyticsRow row;
 
@@ -1145,7 +1181,7 @@ class _PeriodBreakdownBody extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _PeriodMetricsStrip(row: row),
-        if (row.sections.isNotEmpty) const SizedBox(height: 14),
+        if (row.sections.isNotEmpty) SizedBox(height: 14),
         if (row.sections.isNotEmpty)
           Column(
             children: [
@@ -1163,7 +1199,7 @@ class _PeriodBreakdownBody extends StatelessWidget {
 }
 
 class _PeriodMetricsStrip extends StatelessWidget {
-  const _PeriodMetricsStrip({required this.row});
+  _PeriodMetricsStrip({required this.row});
 
   final _AnalyticsRow row;
 
@@ -1204,7 +1240,7 @@ class _PeriodMetricsStrip extends StatelessWidget {
 }
 
 class _PeriodMetricLine extends StatelessWidget {
-  const _PeriodMetricLine({
+  _PeriodMetricLine({
     required this.label,
     required this.value,
     required this.color,
@@ -1217,14 +1253,14 @@ class _PeriodMetricLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.09),
         borderRadius: BorderRadius.circular(10),
       ),
       child: RichText(
         text: TextSpan(
-          style: const TextStyle(
+          style: TextStyle(
             color: AppColors.textSecondary,
             fontSize: 11,
             fontWeight: FontWeight.w700,
@@ -1247,7 +1283,7 @@ class _PeriodMetricLine extends StatelessWidget {
 }
 
 class _BreakdownSectionCard extends StatelessWidget {
-  const _BreakdownSectionCard({required this.section, required this.isLast});
+  _BreakdownSectionCard({required this.section, required this.isLast});
 
   final _AnalyticsSection section;
   final bool isLast;
@@ -1257,12 +1293,12 @@ class _BreakdownSectionCard extends StatelessWidget {
     final tone = section.total >= 0 ? AppColors.success : AppColors.error;
 
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 14),
+      padding: EdgeInsets.symmetric(vertical: 14),
       decoration: BoxDecoration(
         border: Border(
           bottom: isLast
               ? BorderSide.none
-              : const BorderSide(color: AppColors.border),
+              : BorderSide(color: AppColors.border),
         ),
       ),
       child: Column(
@@ -1273,14 +1309,14 @@ class _BreakdownSectionCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   trText(section.title),
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppColors.textPrimary,
                     fontWeight: FontWeight.w800,
                     fontSize: 13,
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Text(
                 formatMxn(section.total),
                 style: TextStyle(
@@ -1291,19 +1327,19 @@ class _BreakdownSectionCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 4),
+          SizedBox(height: 4),
           Text(
             tr(
               '${section.items.length} movimientos',
               '${section.items.length} entries',
             ),
-            style: const TextStyle(
+            style: TextStyle(
               color: AppColors.textSecondary,
               fontWeight: FontWeight.w700,
               fontSize: 11,
             ),
           ),
-          if (section.items.isNotEmpty) const SizedBox(height: 12),
+          if (section.items.isNotEmpty) SizedBox(height: 12),
           for (var index = 0; index < section.items.length; index++)
             _BreakdownSectionItemTile(
               item: section.items[index],
@@ -1317,7 +1353,7 @@ class _BreakdownSectionCard extends StatelessWidget {
 }
 
 class _BreakdownSectionItemTile extends StatelessWidget {
-  const _BreakdownSectionItemTile({
+  _BreakdownSectionItemTile({
     required this.item,
     required this.isLast,
     required this.highlighted,
@@ -1332,7 +1368,7 @@ class _BreakdownSectionItemTile extends StatelessWidget {
     final positive = item.amount >= 0;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       decoration: BoxDecoration(
         color: highlighted
             ? AppColors.primary.withValues(alpha: 0.06)
@@ -1340,7 +1376,7 @@ class _BreakdownSectionItemTile extends StatelessWidget {
         border: Border(
           bottom: isLast
               ? BorderSide.none
-              : const BorderSide(color: AppColors.border),
+              : BorderSide(color: AppColors.border),
         ),
       ),
       child: Column(
@@ -1352,14 +1388,14 @@ class _BreakdownSectionItemTile extends StatelessWidget {
               Expanded(
                 child: Text(
                   trText(item.label),
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppColors.textPrimary,
                     fontWeight: FontWeight.w700,
                     fontSize: 12,
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Text(
                 formatMxn(item.amount),
                 style: TextStyle(
@@ -1371,10 +1407,10 @@ class _BreakdownSectionItemTile extends StatelessWidget {
             ],
           ),
           if (item.subtitle.isNotEmpty) ...[
-            const SizedBox(height: 4),
+            SizedBox(height: 4),
             Text(
               trText(item.subtitle),
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppColors.textSecondary,
                 fontWeight: FontWeight.w600,
                 fontSize: 11,
@@ -1402,7 +1438,7 @@ LineChartBarData _analyticsLine({
     isCurved: false,
     color: color,
     barWidth: 2.5,
-    dotData: const FlDotData(show: false),
+    dotData: FlDotData(show: false),
     belowBarData: BarAreaData(
       show: fillOpacity > 0,
       color: color.withValues(alpha: fillOpacity),
@@ -1627,7 +1663,7 @@ List<_AnalyticsRow> _buildForecastWeeks({
       : actualWeeks.last.period;
 
   for (var index = 0; index < horizon; index++) {
-    currentWeek = currentWeek.add(const Duration(days: 7));
+    currentWeek = currentWeek.add(Duration(days: 7));
     final projectedIngresos = math
         .max(0, _weightedAverage(incomeSeries) * (1 + (incomeTrend * 0.18)))
         .toDouble();
@@ -1714,7 +1750,7 @@ List<_AnalyticsRow> _buildWeeklyRows({
     final weekStart = currentWeek.subtract(
       Duration(days: (weeks - 1 - index) * 7),
     );
-    final weekEnd = weekStart.add(const Duration(days: 6));
+    final weekEnd = weekStart.add(Duration(days: 6));
     final ingresosSemana = ingresos
         .where(
           (item) =>
@@ -1900,8 +1936,18 @@ DateTime _startOfWeek(DateTime value) {
   ).subtract(Duration(days: value.weekday - 1));
 }
 
+Map<String, double> _incomeByLinkedExpense(List<Ingreso> ingresos) {
+  final map = <String, double>{};
+  for (final item in ingresos) {
+    final gastoId = item.gastoFuenteId.trim();
+    if (gastoId.isEmpty) continue;
+    map[gastoId] = (map[gastoId] ?? 0) + item.monto;
+  }
+  return map;
+}
+
 class _AnalyticsRow {
-  const _AnalyticsRow({
+  _AnalyticsRow({
     required this.period,
     required this.label,
     required this.ingresos,
@@ -1929,7 +1975,7 @@ class _AnalyticsRow {
 }
 
 class _AnalyticsSection {
-  const _AnalyticsSection({
+  _AnalyticsSection({
     required this.title,
     required this.total,
     required this.items,
@@ -1941,7 +1987,7 @@ class _AnalyticsSection {
 }
 
 class _AnalyticsSectionItem {
-  const _AnalyticsSectionItem({
+  _AnalyticsSectionItem({
     required this.label,
     required this.subtitle,
     required this.amount,

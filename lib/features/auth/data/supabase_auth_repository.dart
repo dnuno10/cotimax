@@ -2,7 +2,7 @@ import 'package:cotimax/features/auth/data/auth_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SupabaseAuthRepository implements AuthRepository {
-  const SupabaseAuthRepository(this._client);
+   SupabaseAuthRepository(this._client);
 
   final SupabaseClient _client;
 

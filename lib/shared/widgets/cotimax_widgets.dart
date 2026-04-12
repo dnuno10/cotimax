@@ -71,12 +71,12 @@ String formatMxn(num value) => formatMoney(value);
 
 const _microInteractionDuration = Duration(milliseconds: 180);
 const _microInteractionCurve = Curves.easeOutCubic;
-const TextStyle cotimaxDropdownTextStyle = TextStyle(
+TextStyle get cotimaxDropdownTextStyle => TextStyle(
   color: AppColors.textPrimary,
   fontSize: 13,
   fontWeight: FontWeight.w700,
 );
-const Icon cotimaxDropdownIcon = Icon(
+Icon get cotimaxDropdownIcon => Icon(
   Icons.keyboard_arrow_down_rounded,
   size: 18,
   color: AppColors.textSecondary,
@@ -96,8 +96,7 @@ InputDecoration cotimaxDropdownDecoration({
     helperText: helperText == null ? null : trText(helperText),
     isDense: isDense,
     contentPadding:
-        contentPadding ??
-        const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding ?? EdgeInsets.symmetric(horizontal: 16, vertical: 14),
   );
 }
 
@@ -289,7 +288,7 @@ class NumericTextInputFormatter extends TextInputFormatter {
     final sanitized = sanitizeNumericText(newValue.text);
 
     if (sanitized.isEmpty) {
-      return const TextEditingValue(
+      return TextEditingValue(
         text: '',
         selection: TextSelection.collapsed(offset: 0),
       );
@@ -361,17 +360,13 @@ bool shouldShowChartLabel(int index, int total, {int maxLabels = 5}) {
 }
 
 Widget rankingMedalIcon(int index, {double size = 14}) {
-  if (index > 2) return const SizedBox.shrink();
-  final colors = [
-    const Color(0xFFD4AF37),
-    const Color(0xFFC0C0C0),
-    const Color(0xFFCD7F32),
-  ];
+  if (index > 2) return SizedBox.shrink();
+  final colors = [Color(0xFFD4AF37), Color(0xFFC0C0C0), Color(0xFFCD7F32)];
   return FaIcon(FontAwesomeIcons.medal, size: size, color: colors[index]);
 }
 
 class AmountBadge extends StatelessWidget {
-  const AmountBadge({required this.amount, required this.positive, super.key});
+  AmountBadge({required this.amount, required this.positive, super.key});
 
   final double amount;
   final bool positive;
@@ -380,7 +375,7 @@ class AmountBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = positive ? AppColors.success : AppColors.error;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(999),
@@ -402,7 +397,7 @@ class _OpenCommandPaletteIntent extends Intent {
 }
 
 class AppShell extends StatefulWidget {
-  const AppShell({
+  AppShell({
     required this.child,
     required this.location,
     required this.title,
@@ -449,7 +444,7 @@ class _AppShellState extends State<AppShell> {
       child: TweenAnimationBuilder<double>(
         key: ValueKey(widget.location),
         tween: Tween(begin: 0.0, end: 1.0),
-        duration: const Duration(milliseconds: 220),
+        duration: Duration(milliseconds: 220),
         curve: Curves.easeOutCubic,
         builder: (context, value, child) {
           return Opacity(
@@ -542,7 +537,7 @@ class _AppShellState extends State<AppShell> {
 }
 
 class SidebarNavigation extends StatelessWidget {
-  const SidebarNavigation({
+  SidebarNavigation({
     required this.activePath,
     this.collapsed = false,
     this.mobile = false,
@@ -560,7 +555,7 @@ class SidebarNavigation extends StatelessWidget {
     final compact = mobile ? false : collapsed;
 
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 220),
+      duration: Duration(milliseconds: 220),
       curve: Curves.easeOutCubic,
       width: mobile
           ? double.infinity
@@ -569,11 +564,11 @@ class SidebarNavigation extends StatelessWidget {
           : 258,
       decoration: BoxDecoration(
         color: AppColors.white.withValues(alpha: 0.96),
-        border: const Border(right: BorderSide(color: AppColors.border)),
+        border: Border(right: BorderSide(color: AppColors.border)),
       ),
       child: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
+          padding: EdgeInsets.all(AppSpacing.md),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -588,11 +583,11 @@ class SidebarNavigation extends StatelessWidget {
                         fit: BoxFit.contain,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8),
                     Center(
                       child: IconButton(
                         onPressed: onToggleCollapsed,
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.keyboard_double_arrow_right_rounded,
                           size: 18,
                         ),
@@ -605,7 +600,7 @@ class SidebarNavigation extends StatelessWidget {
                   children: [
                     Expanded(
                       child: AnimatedAlign(
-                        duration: const Duration(milliseconds: 220),
+                        duration: Duration(milliseconds: 220),
                         alignment: compact
                             ? Alignment.center
                             : Alignment.centerLeft,
@@ -628,9 +623,9 @@ class SidebarNavigation extends StatelessWidget {
                       ),
                   ],
                 ),
-              const SizedBox(height: AppSpacing.md),
+              SizedBox(height: AppSpacing.md),
               Container(height: 1, color: AppColors.border),
-              const SizedBox(height: AppSpacing.md),
+              SizedBox(height: AppSpacing.md),
               if (!compact)
                 Text(
                   trText('COMERCIAL'),
@@ -641,13 +636,13 @@ class SidebarNavigation extends StatelessWidget {
                     letterSpacing: 1.2,
                   ),
                 ),
-              if (!compact) const SizedBox(height: 10),
+              if (!compact) SizedBox(height: 10),
               Expanded(
                 child: ListView(
                   children: [
                     ...primaryNavIndexes.map(
                       (index) => Padding(
-                        padding: const EdgeInsets.only(bottom: 4),
+                        padding: EdgeInsets.only(bottom: 4),
                         child: _NavItem(
                           entry: appNavEntries[index],
                           compact: compact,
@@ -661,10 +656,10 @@ class SidebarNavigation extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    SizedBox(height: 10),
                     Container(height: 1, color: AppColors.border),
                     if (!compact) ...[
-                      const SizedBox(height: 12),
+                      SizedBox(height: 12),
                       Text(
                         trText('ADMINISTRACION'),
                         style: TextStyle(
@@ -674,11 +669,11 @@ class SidebarNavigation extends StatelessWidget {
                           letterSpacing: 1.2,
                         ),
                       ),
-                      const SizedBox(height: 10),
+                      SizedBox(height: 10),
                     ],
                     ...secondaryNavIndexes.map(
                       (index) => Padding(
-                        padding: const EdgeInsets.only(bottom: 4),
+                        padding: EdgeInsets.only(bottom: 4),
                         child: _NavItem(
                           entry: appNavEntries[index],
                           compact: compact,
@@ -696,12 +691,12 @@ class SidebarNavigation extends StatelessWidget {
                 ),
               ),
               Container(height: 1, color: AppColors.border),
-              const SizedBox(height: AppSpacing.md),
+              SizedBox(height: AppSpacing.md),
               compact
                   ? Center(
                       child: IconButton(
                         onPressed: () => context.go(RoutePaths.login),
-                        icon: const FaIcon(
+                        icon: FaIcon(
                           FontAwesomeIcons.arrowRightFromBracket,
                           size: 14,
                         ),
@@ -717,7 +712,7 @@ class SidebarNavigation extends StatelessWidget {
                             color: AppColors.primary.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: const Text(
+                          child: Text(
                             'DN',
                             style: TextStyle(
                               fontSize: 11,
@@ -726,12 +721,12 @@ class SidebarNavigation extends StatelessWidget {
                             ),
                           ),
                         ),
-                        const SizedBox(width: 10),
+                        SizedBox(width: 10),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
+                              Text(
                                 'Daniel Nuno',
                                 style: TextStyle(
                                   color: AppColors.textPrimary,
@@ -742,7 +737,7 @@ class SidebarNavigation extends StatelessWidget {
                               SizedBox(height: 2),
                               Text(
                                 trText('Administrador'),
-                                style: const TextStyle(
+                                style: TextStyle(
                                   color: AppColors.textSecondary,
                                   fontWeight: FontWeight.w600,
                                   fontSize: 11,
@@ -753,7 +748,7 @@ class SidebarNavigation extends StatelessWidget {
                         ),
                         IconButton(
                           onPressed: () => context.go(RoutePaths.login),
-                          icon: const FaIcon(
+                          icon: FaIcon(
                             FontAwesomeIcons.arrowRightFromBracket,
                             size: 14,
                           ),
@@ -769,12 +764,7 @@ class SidebarNavigation extends StatelessWidget {
 }
 
 class Topbar extends StatelessWidget {
-  const Topbar({
-    required this.title,
-    this.onMenuTap,
-    this.onSearchTap,
-    super.key,
-  });
+  Topbar({required this.title, this.onMenuTap, this.onSearchTap, super.key});
 
   final String title;
   final VoidCallback? onMenuTap;
@@ -787,17 +777,17 @@ class Topbar extends StatelessWidget {
     final mobile = width < 900;
 
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 220),
+      duration: Duration(milliseconds: 220),
       curve: Curves.easeOutCubic,
       height: mobile ? 72 : 84,
       decoration: BoxDecoration(
         color: AppColors.white.withValues(alpha: 0.92),
-        border: const Border(bottom: BorderSide(color: AppColors.border)),
+        border: Border(bottom: BorderSide(color: AppColors.border)),
         boxShadow: [
           BoxShadow(
             color: AppColors.primary.withValues(alpha: 0.03),
             blurRadius: 18,
-            offset: const Offset(0, 6),
+            offset: Offset(0, 6),
           ),
         ],
       ),
@@ -807,21 +797,18 @@ class Topbar extends StatelessWidget {
       child: Row(
         children: [
           if (mobile)
-            IconButton(
-              onPressed: onMenuTap,
-              icon: const Icon(Icons.menu_rounded),
-            ),
+            IconButton(onPressed: onMenuTap, icon: Icon(Icons.menu_rounded)),
           if (mobile)
             IconButton(
               onPressed: onSearchTap,
-              icon: const Icon(Icons.search_rounded),
+              icon: Icon(Icons.search_rounded),
             ),
           Expanded(
             child: Align(
               alignment: Alignment.centerLeft,
               child: Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.w800,
                   fontSize: 22,
                   height: 1,
@@ -836,14 +823,14 @@ class Topbar extends StatelessWidget {
                 hint: trText('Busca clientes, folios, productos o acciones'),
                 readOnly: true,
                 onTap: onSearchTap,
-                suffix: const _CommandPaletteShortcutHint(),
+                suffix: _CommandPaletteShortcutHint(),
               ),
             ),
-          const SizedBox(width: AppSpacing.sm),
+          SizedBox(width: AppSpacing.sm),
           if (!compact)
             AnimatedContainer(
-              duration: const Duration(milliseconds: 220),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              duration: Duration(milliseconds: 220),
+              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
                 border: Border.all(color: AppColors.border),
                 borderRadius: BorderRadius.circular(AppSpacing.radius),
@@ -851,15 +838,15 @@ class Topbar extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  const FaIcon(
+                  FaIcon(
                     FontAwesomeIcons.calendarDays,
                     size: 13,
                     color: AppColors.textSecondary,
                   ),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8),
                   Text(
                     trText('Vista diaria'),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
                       color: AppColors.textPrimary,
                       fontWeight: FontWeight.w700,
@@ -868,20 +855,20 @@ class Topbar extends StatelessWidget {
                 ],
               ),
             ),
-          const SizedBox(width: AppSpacing.sm),
+          SizedBox(width: AppSpacing.sm),
           if (!mobile) ...[
             IconButton(
               onPressed: () {},
-              icon: const FaIcon(FontAwesomeIcons.bell, size: 14),
+              icon: FaIcon(FontAwesomeIcons.bell, size: 14),
             ),
-            const SizedBox(width: AppSpacing.sm),
+            SizedBox(width: AppSpacing.sm),
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.accent,
                 foregroundColor: AppColors.white,
               ),
               onPressed: () {},
-              icon: const FaIcon(FontAwesomeIcons.gem, size: 14),
+              icon: FaIcon(FontAwesomeIcons.gem, size: 14),
               label: Text(trText('Actualizar a Pro')),
             ),
           ],
@@ -892,18 +879,18 @@ class Topbar extends StatelessWidget {
 }
 
 class _CommandPaletteShortcutHint extends StatelessWidget {
-  const _CommandPaletteShortcutHint();
+  _CommandPaletteShortcutHint();
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: AppColors.background,
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: AppColors.border),
       ),
-      child: const Text(
+      child: Text(
         'Ctrl/Cmd + K',
         style: TextStyle(
           color: AppColors.textSecondary,
@@ -916,7 +903,7 @@ class _CommandPaletteShortcutHint extends StatelessWidget {
 }
 
 class BreadCrumbs extends StatelessWidget {
-  const BreadCrumbs({required this.items, super.key});
+  BreadCrumbs({required this.items, super.key});
 
   final List<String> items;
 
@@ -942,7 +929,7 @@ class BreadCrumbs extends StatelessWidget {
 }
 
 class PageHeader extends StatelessWidget {
-  const PageHeader({
+  PageHeader({
     required this.title,
     required this.subtitle,
     this.actions,
@@ -961,20 +948,20 @@ class PageHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               BreadCrumbs(items: [trText('Inicio'), trText(title)]),
-              const SizedBox(height: 10),
+              SizedBox(height: 10),
               Text(
                 trText(title),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.w800,
                   height: 1,
                 ),
               ),
               if (subtitle.trim().isNotEmpty) ...[
-                const SizedBox(height: 6),
+                SizedBox(height: 6),
                 Text(
                   trText(subtitle),
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppColors.textSecondary,
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
@@ -982,7 +969,7 @@ class PageHeader extends StatelessWidget {
                 ),
               ],
               if (actions != null) ...[
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
                 Wrap(spacing: 8, runSpacing: 8, children: actions!),
               ],
             ],
@@ -995,20 +982,20 @@ class PageHeader extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     BreadCrumbs(items: [trText('Inicio'), trText(title)]),
-                    const SizedBox(height: 10),
+                    SizedBox(height: 10),
                     Text(
                       trText(title),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.w800,
                         height: 1,
                       ),
                     ),
                     if (subtitle.trim().isNotEmpty) ...[
-                      const SizedBox(height: 6),
+                      SizedBox(height: 6),
                       Text(
                         trText(subtitle),
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppColors.textSecondary,
                           fontWeight: FontWeight.w600,
                           fontSize: 13,
@@ -1039,7 +1026,7 @@ List<Widget> buildImportExportHeaderActions(
           'Import for $translatedEntityLabel coming soon.',
         ),
       ),
-      icon: const Icon(Icons.file_upload_outlined),
+      icon: Icon(Icons.file_upload_outlined),
       label: Text(trText('Importar')),
     ),
     OutlinedButton.icon(
@@ -1050,14 +1037,14 @@ List<Widget> buildImportExportHeaderActions(
           'Export for $translatedEntityLabel coming soon.',
         ),
       ),
-      icon: const Icon(Icons.file_download_outlined),
+      icon: Icon(Icons.file_download_outlined),
       label: Text(trText('Exportar')),
     ),
   ];
 }
 
 class KpiStatCard extends StatelessWidget {
-  const KpiStatCard({
+  KpiStatCard({
     required this.label,
     required this.value,
     required this.delta,
@@ -1079,22 +1066,22 @@ class KpiStatCard extends StatelessWidget {
         children: [
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               color: AppColors.textMuted,
               fontSize: 12,
               fontWeight: FontWeight.w700,
             ),
           ),
-          const Spacer(),
+          Spacer(),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.w800,
               fontSize: 24,
               color: AppColors.textPrimary,
             ),
           ),
-          const SizedBox(height: 6),
+          SizedBox(height: 6),
           Row(
             children: [
               Icon(
@@ -1102,7 +1089,7 @@ class KpiStatCard extends StatelessWidget {
                 size: 14,
                 color: color,
               ),
-              const SizedBox(width: 4),
+              SizedBox(width: 4),
               Text(
                 delta,
                 style: TextStyle(
@@ -1119,8 +1106,124 @@ class KpiStatCard extends StatelessWidget {
   }
 }
 
+String? resolveContainerHelpText(String title) {
+  final normalized = title.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+  const helpByTitle = <String, String>{
+    'configuración general':
+        'Aquí defines la base visual de la cotización: plantilla, formato de página, tipografías, paleta de color y reglas de presentación.',
+    'cliente':
+        'Controla qué datos visibles del cliente se muestran en el documento final para mantener claridad y contexto comercial.',
+    'diseño de cotización':
+        'Agrupa los ajustes de identidad visual y estructura del PDF para que la cotización mantenga consistencia en todos los folios.',
+    'apariencia':
+        'Configura el tema visual general de la plataforma, incluyendo estilo, contraste y comportamiento de la interfaz.',
+    'módulos habilitados':
+        'Activa o desactiva funcionalidades del sistema para adaptar la operación a los procesos reales de tu empresa.',
+    'zona peligrosa':
+        'Incluye acciones sensibles o irreversibles; revisa cuidadosamente antes de confirmar cualquier cambio en esta sección.',
+    'detalles de empresa':
+        'Concentra la información fiscal, legal y de contacto que se reutiliza en documentos comerciales y configuraciones globales.',
+    'valores por defecto de cotización':
+        'Define los valores iniciales con los que se crean nuevas cotizaciones para ahorrar captura repetitiva y estandarizar salidas.',
+    'localización':
+        'Ajusta idioma, zona horaria, formato de fecha y moneda para que los datos se muestren con el estándar de tu operación.',
+    'impuestos':
+        'Administra tasas y comportamiento fiscal que se aplican en cálculos y totales de documentos comerciales.',
+    'resumen de cuenta':
+        'Muestra el estado general de la suscripción, consumo y límites principales para tomar decisiones de capacidad.',
+    'capacidad actual':
+        'Describe el uso disponible vs utilizado en recursos clave para anticipar límites y evitar bloqueos operativos.',
+    'tu plan':
+        'Presenta beneficios y condiciones del plan activo para entender alcance, restricciones y opciones de mejora.',
+    'método de pago':
+        'Centraliza la configuración de cobro del plan, vencimientos y datos necesarios para mantener la suscripción al día.',
+    'indicadores clave':
+        'Resume señales de salud financiera y operativa en métricas de lectura rápida para seguimiento ejecutivo.',
+    'impacto de gastos vinculados':
+        'Relaciona gastos con ingresos asociados para medir cobertura, retorno y efecto real sobre la rentabilidad.',
+    'escenarios y lectura':
+        'Compara escenarios conservador, base y expansivo para evaluar sensibilidad y tomar decisiones con contexto de riesgo.',
+    'pulso semanal':
+        'Visualiza comportamiento reciente semana a semana para detectar cambios de tendencia en etapas tempranas.',
+    'cierre mensual':
+        'Consolida resultados del periodo mensual para evaluar desempeño, desviaciones y cumplimiento de objetivos.',
+    'proyeccion operativa':
+        'Estimación de ingresos, gastos y resultado neto en el horizonte seleccionado con base en comportamiento histórico.',
+    'tabla de resultados':
+        'Desglose tabular de métricas y variaciones para análisis puntual, validación y comparación entre periodos.',
+    'ingresos totales':
+        'Presenta el acumulado de ingresos del periodo seleccionado y su evolución para evaluar crecimiento comercial.',
+    'gastos totales':
+        'Presenta el acumulado de egresos del periodo seleccionado para controlar consumo y disciplina presupuestal.',
+    'acciones rápidas':
+        'Atajos para ejecutar tareas frecuentes sin cambiar de pantalla y acelerar la operación diaria.',
+    'acciones rapidas':
+        'Atajos para ejecutar tareas frecuentes sin cambiar de pantalla y acelerar la operación diaria.',
+    'cotizaciones prioritarias':
+        'Lista oportunidades que requieren atención inmediata por monto, antigüedad o estado comercial.',
+    'top productos por utilidad':
+        'Ranking de productos que más contribuyen a la utilidad para orientar estrategia comercial y de margen.',
+    'rentabilidad por cliente':
+        'Compara utilidad por cliente para identificar cuentas más valiosas y oportunidades de mejora.',
+    'concentracion de ingresos':
+        'Mide dependencia de pocos clientes o líneas de negocio para gestionar riesgo de concentración.',
+    'ultimos ingresos':
+        'Registro reciente de ingresos para verificar captura, origen y comportamiento inmediato del flujo.',
+    'ultimos gastos':
+        'Registro reciente de gastos para revisar salidas de efectivo y detectar variaciones atípicas.',
+    'cotizaciones aprobadas con utilidad':
+        'Monitorea cotizaciones confirmadas con margen positivo para evaluar calidad del cierre comercial.',
+    'previsualizacion pdf':
+        'Muestra una vista previa del documento para validar diseño, estructura y legibilidad antes de compartir.',
+    'clientes':
+        'Gestiona el catálogo de clientes con su información comercial para cotizar y analizar desempeño por cuenta.',
+    'proveedores':
+        'Administra proveedores y condiciones para mejorar compras, costos y abastecimiento.',
+    'productos':
+        'Organiza productos, precios y atributos que se usan en cotizaciones y análisis de rentabilidad.',
+    'materiales':
+        'Controla materiales, costos y unidades para estimaciones y cálculo preciso de propuestas.',
+    'cotizaciones':
+        'Da seguimiento al ciclo comercial de cada propuesta desde creación hasta aprobación o cierre.',
+    'ingresos':
+        'Registra entradas de dinero y su clasificación para medir salud financiera y flujo de caja.',
+    'gastos':
+        'Registra salidas de dinero, categorías y recurrencia para mantener control del costo operativo.',
+    'analítica':
+        'Consolida métricas históricas y proyecciones para decisiones basadas en datos.',
+  };
+  return helpByTitle[normalized];
+}
+
+class ContainerHelpTooltip extends StatelessWidget {
+  const ContainerHelpTooltip({required this.message, super.key});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: trText(message),
+      child: Container(
+        width: 22,
+        height: 22,
+        decoration: BoxDecoration(
+          color: AppColors.background,
+          shape: BoxShape.circle,
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Icon(
+          Icons.help_outline_rounded,
+          size: 14,
+          color: AppColors.textSecondary,
+        ),
+      ),
+    );
+  }
+}
+
 class SectionCard extends StatelessWidget {
-  const SectionCard({
+  SectionCard({
     required this.child,
     this.title,
     this.titleIcon,
@@ -1135,13 +1238,15 @@ class SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final helpText = title == null ? null : resolveContainerHelpText(title!);
+
     return _MotionSurface(
       hoverOffset: 0,
       enablePress: false,
       child: Card(
         clipBehavior: Clip.antiAlias,
         child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
+          padding: EdgeInsets.all(AppSpacing.md),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1157,12 +1262,12 @@ class SectionCard extends StatelessWidget {
                               size: 16,
                               color: AppColors.textPrimary,
                             ),
-                            const SizedBox(width: 8),
+                            SizedBox(width: 8),
                           ],
                           Expanded(
                             child: Text(
                               trText(title!),
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontWeight: FontWeight.w800,
                                 fontSize: 17,
                                 color: AppColors.textPrimary,
@@ -1172,10 +1277,15 @@ class SectionCard extends StatelessWidget {
                         ],
                       ),
                     ),
-                    if (trailing != null) trailing!,
+                    if (trailing != null) ...[
+                      trailing!,
+                      if (helpText != null) SizedBox(width: 8),
+                    ],
+                    if (helpText != null)
+                      ContainerHelpTooltip(message: helpText),
                   ],
                 ),
-              if (title != null) const SizedBox(height: 14),
+              if (title != null) SizedBox(height: 14),
               child,
             ],
           ),
@@ -1186,7 +1296,7 @@ class SectionCard extends StatelessWidget {
 }
 
 class _MotionSurface extends StatefulWidget {
-  const _MotionSurface({
+  _MotionSurface({
     required this.child,
     this.hoverOffset = -1.5,
     this.pressedScale = 0.992,
@@ -1247,7 +1357,7 @@ class _MotionSurfaceState extends State<_MotionSurface> {
 }
 
 class SearchField extends StatelessWidget {
-  const SearchField({
+  SearchField({
     required this.hint,
     this.controller,
     this.focusNode,
@@ -1279,7 +1389,7 @@ class SearchField extends StatelessWidget {
       onTap: onTap,
       showCursor: !readOnly,
       decoration: InputDecoration(
-        prefixIcon: const Padding(
+        prefixIcon: Padding(
           padding: EdgeInsets.only(left: 14, right: 10),
           child: FaIcon(
             FontAwesomeIcons.magnifyingGlass,
@@ -1288,15 +1398,12 @@ class SearchField extends StatelessWidget {
           ),
         ),
         hintText: trText(hint),
-        prefixIconConstraints: const BoxConstraints(minWidth: 42),
+        prefixIconConstraints: BoxConstraints(minWidth: 42),
         suffixIcon: suffix == null
             ? null
-            : Padding(padding: const EdgeInsets.only(right: 12), child: suffix),
-        suffixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 14,
-        ),
+            : Padding(padding: EdgeInsets.only(right: 12), child: suffix),
+        suffixIconConstraints: BoxConstraints(minWidth: 0, minHeight: 0),
+        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
     );
 
@@ -1307,7 +1414,7 @@ class SearchField extends StatelessWidget {
 }
 
 class FilterBar extends StatelessWidget {
-  const FilterBar({required this.children, super.key});
+  FilterBar({required this.children, super.key});
 
   final List<Widget> children;
 
@@ -1330,10 +1437,7 @@ class FilterBar extends StatelessWidget {
 }
 
 class InlineEmptyMessage extends StatelessWidget {
-  const InlineEmptyMessage({
-    this.message = 'No hay datos que mostrar.',
-    super.key,
-  });
+  InlineEmptyMessage({this.message = 'No hay datos que mostrar.', super.key});
 
   final String message;
 
@@ -1342,11 +1446,11 @@ class InlineEmptyMessage extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 28),
+        padding: EdgeInsets.symmetric(vertical: 28),
         child: Text(
           trText(message),
           textAlign: TextAlign.center,
-          style: const TextStyle(
+          style: TextStyle(
             color: AppColors.textSecondary,
             fontWeight: FontWeight.w700,
             fontSize: 13,
@@ -1359,7 +1463,7 @@ class InlineEmptyMessage extends StatelessWidget {
 }
 
 class EmptyFieldState extends StatelessWidget {
-  const EmptyFieldState({
+  EmptyFieldState({
     required this.message,
     required this.buttonLabel,
     required this.onPressed,
@@ -1384,10 +1488,10 @@ class EmptyFieldState extends StatelessWidget {
             helperText: trText(message),
           ),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         TextButton.icon(
           onPressed: onPressed,
-          icon: const Icon(Icons.add_rounded, size: 16),
+          icon: Icon(Icons.add_rounded, size: 16),
           label: Text(trText(buttonLabel)),
         ),
       ],
@@ -1396,7 +1500,7 @@ class EmptyFieldState extends StatelessWidget {
 }
 
 class EmptyStateWidget extends StatelessWidget {
-  const EmptyStateWidget({
+  EmptyStateWidget({
     required this.title,
     required this.subtitle,
     this.action,
@@ -1414,7 +1518,7 @@ class EmptyStateWidget extends StatelessWidget {
       child: SectionCard(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 560),
+            constraints: BoxConstraints(maxWidth: 560),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.center,
@@ -1427,28 +1531,25 @@ class EmptyStateWidget extends StatelessWidget {
                     borderRadius: BorderRadius.circular(999),
                     border: Border.all(color: AppColors.border),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.inbox_outlined,
                     size: 28,
                     color: AppColors.textMuted,
                   ),
                 ),
-                const SizedBox(height: 10),
+                SizedBox(height: 10),
                 Text(
                   trText(title),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 18,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: 4),
                 Text(
                   trText(subtitle),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: AppColors.textSecondary),
+                  style: TextStyle(color: AppColors.textSecondary),
                 ),
-                if (action != null) const SizedBox(height: 12),
+                if (action != null) SizedBox(height: 12),
                 if (action != null) Center(child: action!),
               ],
             ),
@@ -1460,7 +1561,7 @@ class EmptyStateWidget extends StatelessWidget {
 }
 
 class ErrorStateWidget extends StatelessWidget {
-  const ErrorStateWidget({
+  ErrorStateWidget({
     required this.message,
     required this.onRetry,
     this.details,
@@ -1478,7 +1579,7 @@ class ErrorStateWidget extends StatelessWidget {
       child: SectionCard(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 640),
+            constraints: BoxConstraints(maxWidth: 640),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.center,
@@ -1491,32 +1592,29 @@ class ErrorStateWidget extends StatelessWidget {
                     borderRadius: BorderRadius.circular(999),
                     border: Border.all(color: AppColors.border),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.inbox_outlined,
                     size: 28,
                     color: AppColors.textMuted,
                   ),
                 ),
-                const SizedBox(height: 10),
+                SizedBox(height: 10),
                 Text(
                   trText('Ocurrio un error'),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 18,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: 4),
                 Text(
                   trText(message),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: AppColors.textSecondary),
+                  style: TextStyle(color: AppColors.textSecondary),
                 ),
                 if (details != null && details!.trim().isNotEmpty) ...[
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12),
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.all(12),
+                    padding: EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: AppColors.background,
                       borderRadius: BorderRadius.circular(10),
@@ -1525,7 +1623,7 @@ class ErrorStateWidget extends StatelessWidget {
                     child: SelectableText(
                       details!,
                       textAlign: TextAlign.left,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 12,
                         height: 1.4,
@@ -1533,10 +1631,10 @@ class ErrorStateWidget extends StatelessWidget {
                     ),
                   ),
                 ],
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
                 OutlinedButton.icon(
                   onPressed: onRetry,
-                  icon: const Icon(Icons.refresh),
+                  icon: Icon(Icons.refresh),
                   label: Text(trText('Reintentar')),
                 ),
               ],
@@ -1549,7 +1647,7 @@ class ErrorStateWidget extends StatelessWidget {
 }
 
 class LoadingStateWidget extends StatelessWidget {
-  const LoadingStateWidget({this.message, super.key});
+  LoadingStateWidget({this.message, super.key});
 
   final String? message;
 
@@ -1557,21 +1655,21 @@ class LoadingStateWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return SectionCard(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 120),
+        constraints: BoxConstraints(minHeight: 120),
         child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const SizedBox(
+              SizedBox(
                 width: 28,
                 height: 28,
                 child: CircularProgressIndicator(strokeWidth: 2.4),
               ),
               if (message != null) ...[
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
                 Text(
                   trText(message!),
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -1587,7 +1685,7 @@ class LoadingStateWidget extends StatelessWidget {
 }
 
 class LoadingSkeleton extends StatelessWidget {
-  const LoadingSkeleton({super.key});
+  LoadingSkeleton({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -1618,12 +1716,12 @@ class LoadingSkeleton extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 14),
-            const SkeletonBox(height: 56, radius: 20),
-            const SizedBox(height: 12),
+            SizedBox(height: 14),
+            SkeletonBox(height: 56, radius: 20),
+            SizedBox(height: 12),
             for (var index = 0; index < 5; index++) ...[
               SkeletonBox(height: index == 0 ? 72 : 58, radius: 18),
-              const SizedBox(height: 10),
+              SizedBox(height: 10),
             ],
           ],
         );
@@ -1633,12 +1731,7 @@ class LoadingSkeleton extends StatelessWidget {
 }
 
 class SkeletonBox extends StatefulWidget {
-  const SkeletonBox({
-    this.width,
-    required this.height,
-    this.radius = 14,
-    super.key,
-  });
+  SkeletonBox({this.width, required this.height, this.radius = 14, super.key});
 
   final double? width;
   final double height;
@@ -1652,7 +1745,7 @@ class _SkeletonBoxState extends State<SkeletonBox>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 920),
+    duration: Duration(milliseconds: 920),
   )..repeat(reverse: true);
 
   @override
@@ -1682,7 +1775,7 @@ class _SkeletonBoxState extends State<SkeletonBox>
 }
 
 class ConfirmDialog extends StatefulWidget {
-  const ConfirmDialog({
+  ConfirmDialog({
     required this.title,
     required this.message,
     this.onConfirmAsync,
@@ -1734,7 +1827,7 @@ class _ConfirmDialogState extends State<ConfirmDialog> {
         ElevatedButton(
           onPressed: _handleConfirm,
           child: _isSubmitting
-              ? const SizedBox(
+              ? SizedBox(
                   width: 16,
                   height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2),
@@ -1772,7 +1865,7 @@ Future<bool> showDeleteConfirmation(
 }
 
 class ModalBase extends StatelessWidget {
-  const ModalBase({
+  ModalBase({
     required this.title,
     required this.child,
     this.showCloseButton = true,
@@ -1793,7 +1886,7 @@ class ModalBase extends StatelessWidget {
     final maxWidth = size.width * 0.965;
     final minWidth = size.width < 1200 ? size.width * 0.92 : size.width * 0.88;
     return Dialog(
-      insetPadding: const EdgeInsets.all(12),
+      insetPadding: EdgeInsets.all(12),
       backgroundColor: AppColors.white,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
@@ -1813,13 +1906,13 @@ class ModalBase extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+                padding: EdgeInsets.fromLTRB(14, 14, 14, 12),
                 child: Row(
                   children: [
                     Expanded(
                       child: Text(
                         trText(title),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.w800,
                           fontSize: 18,
                           color: AppColors.textPrimary,
@@ -1841,7 +1934,7 @@ class ModalBase extends StatelessWidget {
               Container(height: 1, color: AppColors.border),
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+                  padding: EdgeInsets.fromLTRB(14, 12, 14, 14),
                   child: FocusTraversalGroup(
                     policy: WidgetOrderTraversalPolicy(),
                     child: SizedBox.expand(child: child),
@@ -1857,7 +1950,7 @@ class ModalBase extends StatelessWidget {
 }
 
 class SideDrawerForm extends StatelessWidget {
-  const SideDrawerForm({required this.title, required this.child, super.key});
+  SideDrawerForm({required this.title, required this.child, super.key});
 
   final String title;
   final Widget child;
@@ -1877,7 +1970,7 @@ class SideDrawerForm extends StatelessWidget {
 }
 
 class FormFieldWrapper extends StatelessWidget {
-  const FormFieldWrapper({required this.label, required this.child, super.key});
+  FormFieldWrapper({required this.label, required this.child, super.key});
 
   final String label;
   final Widget child;
@@ -1889,13 +1982,13 @@ class FormFieldWrapper extends StatelessWidget {
       children: [
         Text(
           trText(label),
-          style: const TextStyle(
+          style: TextStyle(
             fontWeight: FontWeight.w700,
             fontSize: 12,
             color: AppColors.textSecondary,
           ),
         ),
-        const SizedBox(height: 6),
+        SizedBox(height: 6),
         child,
       ],
     );
@@ -1903,11 +1996,7 @@ class FormFieldWrapper extends StatelessWidget {
 }
 
 class CurrencyInput extends StatelessWidget {
-  const CurrencyInput({
-    required this.controller,
-    this.label = 'Monto',
-    super.key,
-  });
+  CurrencyInput({required this.controller, this.label = 'Monto', super.key});
 
   final TextEditingController controller;
   final String label;
@@ -1918,7 +2007,7 @@ class CurrencyInput extends StatelessWidget {
       label: label,
       child: TextFormField(
         controller: controller,
-        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        keyboardType: TextInputType.numberWithOptions(decimal: true),
         inputFormatters: const [
           NumericTextInputFormatter(useGrouping: true, maxDecimalDigits: 2),
         ],
@@ -1929,7 +2018,7 @@ class CurrencyInput extends StatelessWidget {
 }
 
 class DatePickerField extends StatelessWidget {
-  const DatePickerField({
+  DatePickerField({
     required this.label,
     required this.value,
     required this.onTap,
@@ -1947,7 +2036,7 @@ class DatePickerField extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: InputDecorator(
-          decoration: const InputDecoration(),
+          decoration: InputDecoration(),
           child: Text(
             DateFormat('dd/MM/yyyy', currentIntlLocale()).format(value),
           ),
@@ -1957,8 +2046,82 @@ class DatePickerField extends StatelessWidget {
   }
 }
 
+Future<DateTime?> showCotimaxDatePicker({
+  required BuildContext context,
+  required DateTime initialDate,
+  required DateTime firstDate,
+  required DateTime lastDate,
+  DateTime? currentDate,
+  Locale? locale,
+  String? helpText,
+  String? cancelText,
+  String? confirmText,
+}) {
+  final baseTheme = Theme.of(context);
+  final scheme = baseTheme.colorScheme;
+
+  return showDatePicker(
+    context: context,
+    initialDate: initialDate,
+    firstDate: firstDate,
+    lastDate: lastDate,
+    currentDate: currentDate,
+    locale: locale,
+    helpText: helpText,
+    cancelText: cancelText,
+    confirmText: confirmText,
+    builder: (context, child) {
+      final themed = baseTheme.copyWith(
+        datePickerTheme: baseTheme.datePickerTheme.copyWith(
+          backgroundColor: scheme.surface,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: scheme.outline.withValues(alpha: 0.65)),
+          ),
+          headerBackgroundColor: scheme.primary.withValues(alpha: 0.10),
+          headerForegroundColor: scheme.onSurface,
+          dayForegroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
+              return scheme.onPrimary;
+            }
+            return scheme.onSurface;
+          }),
+          dayBackgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
+              return scheme.primary;
+            }
+            return null;
+          }),
+          todayBorder: BorderSide(color: scheme.primary, width: 1.4),
+          todayForegroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
+              return scheme.onPrimary;
+            }
+            return scheme.primary;
+          }),
+          yearForegroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
+              return scheme.onPrimary;
+            }
+            return scheme.onSurface;
+          }),
+          yearBackgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
+              return scheme.primary;
+            }
+            return null;
+          }),
+        ),
+      );
+
+      return Theme(data: themed, child: child ?? const SizedBox.shrink());
+    },
+  );
+}
+
 class SelectField<T> extends StatelessWidget {
-  const SelectField({
+  SelectField({
     required this.label,
     required this.value,
     required this.options,
@@ -2003,7 +2166,7 @@ class SelectField<T> extends StatelessWidget {
 }
 
 class MultiSelectField extends StatelessWidget {
-  const MultiSelectField({
+  MultiSelectField({
     required this.label,
     required this.options,
     required this.selected,
@@ -2036,7 +2199,7 @@ class MultiSelectField extends StatelessWidget {
 }
 
 class StatusBadge extends StatelessWidget {
-  const StatusBadge({required this.status, super.key});
+  StatusBadge({required this.status, super.key});
 
   final QuoteStatus status;
 
@@ -2051,7 +2214,7 @@ class StatusBadge extends StatelessWidget {
     final style = map[status]!;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 3),
       decoration: BoxDecoration(
         color: style.$1.withValues(alpha: 0.09),
         borderRadius: BorderRadius.circular(999),
@@ -2070,14 +2233,14 @@ class StatusBadge extends StatelessWidget {
 }
 
 class PlanBadge extends StatelessWidget {
-  const PlanBadge({required this.planName, super.key});
+  PlanBadge({required this.planName, super.key});
 
   final String planName;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: AppColors.accent),
@@ -2085,7 +2248,7 @@ class PlanBadge extends StatelessWidget {
       ),
       child: Text(
         planName,
-        style: const TextStyle(
+        style: TextStyle(
           color: AppColors.accent,
           fontWeight: FontWeight.w700,
           fontSize: 11,
@@ -2096,7 +2259,7 @@ class PlanBadge extends StatelessWidget {
 }
 
 class UsageProgressBar extends StatelessWidget {
-  const UsageProgressBar({
+  UsageProgressBar({
     required this.label,
     required this.used,
     required this.limit,
@@ -2115,9 +2278,9 @@ class UsageProgressBar extends StatelessWidget {
       children: [
         Text(
           '${trText(label)}: $used/${limit <= 0 ? trText('Ilimitado') : limit}',
-          style: const TextStyle(fontWeight: FontWeight.w600),
+          style: TextStyle(fontWeight: FontWeight.w600),
         ),
-        const SizedBox(height: 6),
+        SizedBox(height: 6),
         LinearProgressIndicator(
           value: limit <= 0 ? 0 : ratio,
           minHeight: 9,
@@ -2131,7 +2294,7 @@ class UsageProgressBar extends StatelessWidget {
 }
 
 class PdfPreviewCard extends StatelessWidget {
-  const PdfPreviewCard({required this.folio, super.key});
+  PdfPreviewCard({required this.folio, super.key});
 
   final String folio;
 
@@ -2149,7 +2312,7 @@ class PdfPreviewCard extends StatelessWidget {
         alignment: Alignment.center,
         child: Text(
           'Documento $folio',
-          style: const TextStyle(
+          style: TextStyle(
             color: AppColors.textSecondary,
             fontWeight: FontWeight.w600,
           ),
@@ -2160,7 +2323,7 @@ class PdfPreviewCard extends StatelessWidget {
 }
 
 class ChartCard extends StatelessWidget {
-  const ChartCard({required this.title, required this.child, super.key});
+  ChartCard({required this.title, required this.child, super.key});
 
   final String title;
   final Widget child;
@@ -2175,7 +2338,7 @@ class ChartCard extends StatelessWidget {
 }
 
 class RowActionMenu extends StatelessWidget {
-  const RowActionMenu({required this.actions, this.onSelected, super.key});
+  RowActionMenu({required this.actions, this.onSelected, super.key});
 
   final List<PopupMenuEntry<String>> actions;
   final ValueChanged<String>? onSelected;
@@ -2188,14 +2351,14 @@ class RowActionMenu extends StatelessWidget {
       tooltip: 'Más acciones',
       padding: EdgeInsets.zero,
       position: PopupMenuPosition.under,
-      offset: const Offset(0, 8),
+      offset: Offset(0, 8),
       color: AppColors.white,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       shadowColor: Colors.transparent,
       shape: RoundedRectangleBorder(
         borderRadius: cotimaxMenuBorderRadius,
-        side: const BorderSide(color: AppColors.border),
+        side: BorderSide(color: AppColors.border),
       ),
       child: Container(
         width: 34,
@@ -2206,7 +2369,7 @@ class RowActionMenu extends StatelessWidget {
           border: Border.all(color: AppColors.border),
         ),
         alignment: Alignment.center,
-        child: const Icon(
+        child: Icon(
           Icons.more_horiz_rounded,
           size: 18,
           color: AppColors.textSecondary,
@@ -2217,7 +2380,7 @@ class RowActionMenu extends StatelessWidget {
 }
 
 class PaginationWidget extends StatelessWidget {
-  const PaginationWidget({
+  PaginationWidget({
     required this.page,
     required this.totalPages,
     required this.onChanged,
@@ -2235,15 +2398,15 @@ class PaginationWidget extends StatelessWidget {
       children: [
         IconButton(
           onPressed: page <= 1 ? null : () => onChanged(page - 1),
-          icon: const Icon(Icons.first_page, size: 18),
+          icon: Icon(Icons.first_page, size: 18),
         ),
         IconButton(
           onPressed: page <= 1 ? null : () => onChanged(page - 1),
-          icon: const Icon(Icons.chevron_left, size: 18),
+          icon: Icon(Icons.chevron_left, size: 18),
         ),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          margin: const EdgeInsets.symmetric(horizontal: 8),
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          margin: EdgeInsets.symmetric(horizontal: 8),
           decoration: BoxDecoration(
             border: Border.all(color: AppColors.border),
             borderRadius: BorderRadius.circular(AppSpacing.radius),
@@ -2251,16 +2414,16 @@ class PaginationWidget extends StatelessWidget {
           ),
           child: Text(
             'Pagina $page / $totalPages',
-            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
           ),
         ),
         IconButton(
           onPressed: page >= totalPages ? null : () => onChanged(page + 1),
-          icon: const Icon(Icons.chevron_right, size: 18),
+          icon: Icon(Icons.chevron_right, size: 18),
         ),
         IconButton(
           onPressed: page >= totalPages ? null : () => onChanged(totalPages),
-          icon: const Icon(Icons.last_page, size: 18),
+          icon: Icon(Icons.last_page, size: 18),
         ),
       ],
     );
@@ -2268,7 +2431,7 @@ class PaginationWidget extends StatelessWidget {
 }
 
 class CotimaxDataTable extends StatelessWidget {
-  const CotimaxDataTable({
+  CotimaxDataTable({
     required this.columns,
     required this.rows,
     this.title,
@@ -2295,7 +2458,7 @@ class CotimaxDataTable extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (toolbar != null) ...[toolbar!, const SizedBox(height: 12)],
+          if (toolbar != null) ...[toolbar!, SizedBox(height: 12)],
           if (rows.isEmpty)
             _InlineEmptyTableState(title: emptyTitle, subtitle: emptySubtitle)
           else
@@ -2329,7 +2492,7 @@ class CotimaxDataTable extends StatelessWidget {
 }
 
 class TableSelectionToolbar extends StatelessWidget {
-  const TableSelectionToolbar({
+  TableSelectionToolbar({
     required this.count,
     required this.entityLabel,
     required this.onClear,
@@ -2356,7 +2519,7 @@ class TableSelectionToolbar extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         color: AppColors.background,
         borderRadius: BorderRadius.circular(AppSpacing.radius),
@@ -2369,7 +2532,7 @@ class TableSelectionToolbar extends StatelessWidget {
         children: [
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               color: AppColors.textPrimary,
               fontSize: 13,
               fontWeight: FontWeight.w800,
@@ -2378,12 +2541,12 @@ class TableSelectionToolbar extends StatelessWidget {
           if (onEdit != null)
             OutlinedButton.icon(
               onPressed: onEdit,
-              icon: const Icon(Icons.edit_rounded, size: 16),
+              icon: Icon(Icons.edit_rounded, size: 16),
               label: Text(trText('Editar')),
             ),
           OutlinedButton.icon(
             onPressed: onDelete,
-            icon: const Icon(Icons.delete_outline_rounded, size: 16),
+            icon: Icon(Icons.delete_outline_rounded, size: 16),
             label: Text(trText('Eliminar')),
           ),
           TextButton(onPressed: onClear, child: Text(trText('Limpiar'))),
@@ -2394,7 +2557,7 @@ class TableSelectionToolbar extends StatelessWidget {
 }
 
 class _InlineEmptyTableState extends StatelessWidget {
-  const _InlineEmptyTableState({required this.title, required this.subtitle});
+  _InlineEmptyTableState({required this.title, required this.subtitle});
 
   final String title;
   final String subtitle;
@@ -2403,7 +2566,7 @@ class _InlineEmptyTableState extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
+      padding: EdgeInsets.symmetric(horizontal: 18, vertical: 24),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(AppSpacing.radius),
         border: Border.all(color: AppColors.border),
@@ -2419,24 +2582,24 @@ class _InlineEmptyTableState extends StatelessWidget {
               borderRadius: BorderRadius.circular(999),
               border: Border.all(color: AppColors.border),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.insights_outlined,
               color: AppColors.textSecondary,
             ),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           Text(
             trText(title),
-            style: const TextStyle(
+            style: TextStyle(
               color: AppColors.textPrimary,
               fontWeight: FontWeight.w800,
               fontSize: 15,
             ),
           ),
-          const SizedBox(height: 4),
+          SizedBox(height: 4),
           Text(
             trText(subtitle),
-            style: const TextStyle(
+            style: TextStyle(
               color: AppColors.textSecondary,
               fontWeight: FontWeight.w600,
               fontSize: 12,
@@ -2450,7 +2613,7 @@ class _InlineEmptyTableState extends StatelessWidget {
 }
 
 class _NavItem extends StatelessWidget {
-  const _NavItem({
+  _NavItem({
     required this.entry,
     required this.compact,
     required this.selected,
@@ -2499,7 +2662,7 @@ class _NavItem extends StatelessWidget {
                 color: selected ? AppColors.white : AppColors.textSecondary,
               ),
               if (!compact) ...[
-                const SizedBox(width: 12),
+                SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     entry.$1,
@@ -2541,37 +2704,34 @@ class _NavItem extends StatelessWidget {
 }
 
 class _MobileBottomNavigation extends StatelessWidget {
-  const _MobileBottomNavigation({required this.activePath});
+  _MobileBottomNavigation({required this.activePath});
 
   final String activePath;
 
   @override
   Widget build(BuildContext context) {
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 180),
+      duration: Duration(milliseconds: 180),
       height: 78,
       decoration: BoxDecoration(
         color: AppColors.white.withValues(alpha: 0.96),
-        border: const Border(top: BorderSide(color: AppColors.border)),
+        border: Border(top: BorderSide(color: AppColors.border)),
       ),
       child: SafeArea(
         top: false,
         child: ListView(
           scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          padding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
           children: primaryNavIndexes.map((index) {
             final entry = appNavEntries[index];
             final selected = activePath.startsWith(entry.$3);
             return Padding(
-              padding: const EdgeInsets.only(right: 8),
+              padding: EdgeInsets.only(right: 8),
               child: InkWell(
                 borderRadius: BorderRadius.circular(10),
                 onTap: () => context.go(entry.$3),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
                     color: selected
                         ? AppColors.primary.withValues(alpha: 0.10)
@@ -2591,7 +2751,7 @@ class _MobileBottomNavigation extends StatelessWidget {
                             ? AppColors.primary
                             : AppColors.textSecondary,
                       ),
-                      const SizedBox(height: 4),
+                      SizedBox(height: 4),
                       Text(
                         entry.$1,
                         style: TextStyle(
@@ -2615,7 +2775,7 @@ class _MobileBottomNavigation extends StatelessWidget {
 }
 
 class _HoverCircleButton extends StatefulWidget {
-  const _HoverCircleButton({
+  _HoverCircleButton({
     required this.onTap,
     required this.icon,
     required this.baseColor,
@@ -2654,7 +2814,7 @@ class _HoverCircleButtonState extends State<_HoverCircleButton> {
         child: GestureDetector(
           onTap: widget.onTap,
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 140),
+            duration: Duration(milliseconds: 140),
             curve: _microInteractionCurve,
             width: widget.size,
             height: widget.size,
@@ -2701,7 +2861,7 @@ class ToastHelper {
 enum ToastVariant { exito, error, advertencia }
 
 class ToastViewport extends StatefulWidget {
-  const ToastViewport({required this.child, super.key});
+  ToastViewport({required this.child, super.key});
 
   final Widget child;
 
@@ -2731,7 +2891,7 @@ class ToastViewportState extends State<ToastViewport> {
     setState(() {
       _toast = _ToastMessage(id: _nextId++, message: message, variant: variant);
     });
-    _dismissTimer = Timer(const Duration(seconds: 4), dismiss);
+    _dismissTimer = Timer(Duration(seconds: 4), dismiss);
   }
 
   void dismiss() {
@@ -2766,13 +2926,13 @@ class ToastViewportState extends State<ToastViewport> {
           child: IgnorePointer(
             ignoring: _toast == null,
             child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 220),
-              reverseDuration: const Duration(milliseconds: 180),
+              duration: Duration(milliseconds: 220),
+              reverseDuration: Duration(milliseconds: 180),
               switchInCurve: Curves.easeOutCubic,
               switchOutCurve: Curves.easeInCubic,
               transitionBuilder: (child, animation) {
                 final slide = Tween<Offset>(
-                  begin: const Offset(0.18, 0),
+                  begin: Offset(0.18, 0),
                   end: Offset.zero,
                 ).animate(animation);
                 return FadeTransition(
@@ -2781,7 +2941,7 @@ class ToastViewportState extends State<ToastViewport> {
                 );
               },
               child: _toast == null
-                  ? const SizedBox.shrink(key: ValueKey('toast-empty'))
+                  ? SizedBox.shrink(key: ValueKey('toast-empty'))
                   : _ToastCard(
                       key: ValueKey(_toast!.id),
                       width: toastWidth,
@@ -2798,7 +2958,7 @@ class ToastViewportState extends State<ToastViewport> {
 }
 
 class _ToastMessage {
-  const _ToastMessage({
+  _ToastMessage({
     required this.id,
     required this.message,
     required this.variant,
@@ -2810,7 +2970,7 @@ class _ToastMessage {
 }
 
 class _ToastCard extends StatelessWidget {
-  const _ToastCard({
+  _ToastCard({
     required this.width,
     required this.message,
     required this.variant,
@@ -2844,7 +3004,7 @@ class _ToastCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(AppSpacing.radius),
           ),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            padding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -2857,13 +3017,13 @@ class _ToastCard extends StatelessWidget {
                   ),
                   child: Icon(iconData, color: AppColors.white, size: 18),
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: 12),
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.only(top: 4),
+                    padding: EdgeInsets.only(top: 4),
                     child: Text(
                       message,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppColors.white,
                         fontWeight: FontWeight.w700,
                         fontSize: 13,
@@ -2872,7 +3032,7 @@ class _ToastCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 InkWell(
                   onTap: onClose,
                   borderRadius: BorderRadius.circular(999),
@@ -2903,7 +3063,7 @@ Future<void> showCotimaxCommandPalette(BuildContext context) {
 }
 
 class _CommandPaletteDialog extends StatefulWidget {
-  const _CommandPaletteDialog({required this.originContext});
+  _CommandPaletteDialog({required this.originContext});
 
   final BuildContext originContext;
 
@@ -2939,14 +3099,14 @@ class _CommandPaletteDialogState extends State<_CommandPaletteDialog> {
   Widget build(BuildContext context) {
     final matches = _filterCommandPaletteEntries(_entries, _query);
     return Dialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 28),
+      insetPadding: EdgeInsets.symmetric(horizontal: 18, vertical: 28),
       backgroundColor: AppColors.white,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       clipBehavior: Clip.antiAlias,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 760, maxHeight: 680),
+        constraints: BoxConstraints(maxWidth: 760, maxHeight: 680),
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: AppColors.white,
@@ -2955,14 +3115,14 @@ class _CommandPaletteDialogState extends State<_CommandPaletteDialog> {
               BoxShadow(
                 color: AppColors.textPrimary.withValues(alpha: 0.12),
                 blurRadius: 34,
-                offset: const Offset(0, 20),
+                offset: Offset(0, 20),
               ),
             ],
           ),
           child: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
+                padding: EdgeInsets.fromLTRB(20, 18, 20, 12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -2980,11 +3140,11 @@ class _CommandPaletteDialogState extends State<_CommandPaletteDialog> {
                         ),
                         IconButton(
                           onPressed: () => Navigator.of(context).pop(),
-                          icon: const Icon(Icons.close_rounded),
+                          icon: Icon(Icons.close_rounded),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8),
                     SearchField(
                       hint:
                           'Busca clientes, cotizaciones, productos, módulos o acciones',
@@ -2995,9 +3155,9 @@ class _CommandPaletteDialogState extends State<_CommandPaletteDialog> {
                         if (matches.isEmpty) return;
                         _selectEntry(matches.first);
                       },
-                      suffix: const _CommandPaletteShortcutHint(),
+                      suffix: _CommandPaletteShortcutHint(),
                     ),
-                    const SizedBox(height: 12),
+                    SizedBox(height: 12),
                     Row(
                       children: [
                         Text(
@@ -3009,13 +3169,13 @@ class _CommandPaletteDialogState extends State<_CommandPaletteDialog> {
                                 ? 'Suggestions ready to navigate'
                                 : '${matches.length} relevant results',
                           ),
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: AppColors.textSecondary,
                             fontWeight: FontWeight.w700,
                             fontSize: 12,
                           ),
                         ),
-                        const Spacer(),
+                        Spacer(),
                         Text(
                           trText('Enter abre el primero'),
                           style: TextStyle(
@@ -3032,7 +3192,7 @@ class _CommandPaletteDialogState extends State<_CommandPaletteDialog> {
               Container(height: 1, color: AppColors.border),
               Expanded(
                 child: matches.isEmpty
-                    ? const Padding(
+                    ? Padding(
                         padding: EdgeInsets.all(18),
                         child: _InlineEmptyTableState(
                           title: 'No encontramos coincidencias.',
@@ -3041,7 +3201,7 @@ class _CommandPaletteDialogState extends State<_CommandPaletteDialog> {
                         ),
                       )
                     : ListView.separated(
-                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        padding: EdgeInsets.symmetric(vertical: 6),
                         itemCount: matches.length,
                         separatorBuilder: (_, __) =>
                             Container(height: 1, color: AppColors.border),
@@ -3074,7 +3234,7 @@ class _CommandPaletteDialogState extends State<_CommandPaletteDialog> {
 }
 
 class _CommandPaletteTile extends StatelessWidget {
-  const _CommandPaletteTile({required this.entry, required this.onTap});
+  _CommandPaletteTile({required this.entry, required this.onTap});
 
   final _CommandPaletteEntry entry;
   final VoidCallback onTap;
@@ -3086,7 +3246,7 @@ class _CommandPaletteTile extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
+          padding: EdgeInsets.fromLTRB(18, 14, 18, 14),
           child: Row(
             children: [
               Container(
@@ -3098,7 +3258,7 @@ class _CommandPaletteTile extends StatelessWidget {
                 ),
                 child: Icon(entry.icon, color: entry.color, size: 18),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -3107,24 +3267,24 @@ class _CommandPaletteTile extends StatelessWidget {
                       trText(entry.title),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppColors.textPrimary,
                         fontWeight: FontWeight.w800,
                         fontSize: 14,
                       ),
                     ),
-                    const SizedBox(height: 3),
+                    SizedBox(height: 3),
                     Row(
                       children: [
                         _CommandPaletteScopeBadge(entry: entry),
                         if (entry.subtitle.isNotEmpty) ...[
-                          const SizedBox(width: 8),
+                          SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               trText(entry.subtitle),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 color: AppColors.textSecondary,
                                 fontWeight: FontWeight.w600,
                                 fontSize: 12,
@@ -3137,8 +3297,8 @@ class _CommandPaletteTile extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 10),
-              const Icon(
+              SizedBox(width: 10),
+              Icon(
                 Icons.arrow_outward_rounded,
                 size: 16,
                 color: AppColors.textMuted,
@@ -3152,7 +3312,7 @@ class _CommandPaletteTile extends StatelessWidget {
 }
 
 class _CommandPaletteScopeBadge extends StatelessWidget {
-  const _CommandPaletteScopeBadge({required this.entry});
+  _CommandPaletteScopeBadge({required this.entry});
 
   final _CommandPaletteEntry entry;
 
@@ -3189,7 +3349,7 @@ extension on _CommandPaletteKind {
 }
 
 class _CommandPaletteEntry {
-  const _CommandPaletteEntry({
+  _CommandPaletteEntry({
     required this.kind,
     required this.title,
     required this.subtitle,
@@ -3351,7 +3511,7 @@ int _commandPaletteScore(_CommandPaletteEntry entry, String query) {
 }
 
 class ImageUploadField extends StatelessWidget {
-  const ImageUploadField({super.key});
+  ImageUploadField({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -3359,7 +3519,7 @@ class ImageUploadField extends StatelessWidget {
       label: 'Logo',
       child: OutlinedButton.icon(
         onPressed: () {},
-        icon: const Icon(Icons.upload_file),
+        icon: Icon(Icons.upload_file),
         label: Text(trText('Subir imagen')),
       ),
     );
@@ -3367,11 +3527,7 @@ class ImageUploadField extends StatelessWidget {
 }
 
 class ColorPickerSimple extends StatelessWidget {
-  const ColorPickerSimple({
-    required this.label,
-    required this.value,
-    super.key,
-  });
+  ColorPickerSimple({required this.label, required this.value, super.key});
 
   final String label;
   final Color value;
@@ -3390,10 +3546,10 @@ class ColorPickerSimple extends StatelessWidget {
               border: Border.all(color: AppColors.border),
             ),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           Text(
             '#${value.toARGB32().toRadixString(16).substring(2).toUpperCase()}',
-            style: const TextStyle(fontWeight: FontWeight.w700),
+            style: TextStyle(fontWeight: FontWeight.w700),
           ),
         ],
       ),
@@ -3402,7 +3558,7 @@ class ColorPickerSimple extends StatelessWidget {
 }
 
 class SummaryCards extends StatelessWidget {
-  const SummaryCards({required this.items, super.key});
+  SummaryCards({required this.items, super.key});
 
   final List<(String label, String value)> items;
 
@@ -3416,7 +3572,7 @@ class SummaryCards extends StatelessWidget {
         : 1;
     return GridView.builder(
       shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
+      physics: NeverScrollableScrollPhysics(),
       itemCount: items.length,
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: columns,
@@ -3433,19 +3589,16 @@ class SummaryCards extends StatelessWidget {
             children: [
               Text(
                 item.$1,
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppColors.textSecondary,
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               Text(
                 item.$2,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 22,
-                ),
+                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 22),
               ),
             ],
           ),
@@ -3456,7 +3609,7 @@ class SummaryCards extends StatelessWidget {
 }
 
 class LimitUsageWidget extends StatelessWidget {
-  const LimitUsageWidget({
+  LimitUsageWidget({
     required this.plan,
     required this.clientes,
     required this.productos,
@@ -3479,13 +3632,13 @@ class LimitUsageWidget extends StatelessWidget {
             used: clientes,
             limit: plan.limiteClientes,
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           UsageProgressBar(
             label: 'Productos',
             used: productos,
             limit: plan.limiteProductos,
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(

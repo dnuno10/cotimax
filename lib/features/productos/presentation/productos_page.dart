@@ -115,22 +115,19 @@ const List<String> _productUnitOptions = [
   'tubo',
 ];
 
-List<String> _parseConfiguredTaxValues(String raw) {
-  return raw
-      .split(RegExp(r'[\n,;|]+'))
-      .map((item) => item.trim())
-      .where((item) => item.isNotEmpty)
-      .toList();
-}
-
 List<String> _buildConfiguredTaxOptions(EmpresaPerfil? empresa) {
   if (empresa == null) return const [];
   final impuestos = empresa.impuestos;
+  EmpresaTasaImpuesto? defaultRate;
+  for (final item in impuestos.tasas) {
+    if (item.nombre == impuestos.tasaPredeterminada) {
+      defaultRate = item;
+      break;
+    }
+  }
   final values = <String>[
-    ..._parseConfiguredTaxValues(impuestos.tasaPredeterminada),
-    ..._parseConfiguredTaxValues(impuestos.tasasLinea),
-    ..._parseConfiguredTaxValues(impuestos.impuestosSobreGastos),
-    ..._parseConfiguredTaxValues(impuestos.impuestosInclusivos),
+    if (defaultRate != null) defaultRate.displayLabel,
+    ...impuestos.tasas.map((item) => item.displayLabel),
   ];
   final seen = <String>{};
   final deduped = <String>[];
@@ -161,7 +158,7 @@ List<String> _optionsWithCurrent(List<String> options, String currentValue) {
 }
 
 class ProductosPage extends ConsumerStatefulWidget {
-  const ProductosPage({super.key});
+  ProductosPage({super.key});
 
   @override
   ConsumerState<ProductosPage> createState() => _ProductosPageState();
@@ -217,16 +214,16 @@ class _ProductosPageState extends ConsumerState<ProductosPage> {
             ),
             ElevatedButton.icon(
               onPressed: () => _openForm(context),
-              icon: const Icon(Icons.add),
+              icon: Icon(Icons.add),
               label: Text(trText('Nuevo item')),
             ),
           ],
         ),
-        const SizedBox(height: 10),
+        SizedBox(height: 10),
         FilterBar(
           children: [
             Padding(
-              padding: const EdgeInsets.only(top: 20),
+              padding: EdgeInsets.only(top: 20),
               child: SizedBox(
                 width: 320,
                 child: SearchField(
@@ -237,7 +234,7 @@ class _ProductosPageState extends ConsumerState<ProductosPage> {
                 ),
               ),
             ),
-            const SizedBox(
+            SizedBox(
               width: 180,
               child: SelectField<String>(
                 label: 'Tipo',
@@ -245,7 +242,7 @@ class _ProductosPageState extends ConsumerState<ProductosPage> {
                 options: ['Todos', 'Producto', 'Servicio'],
               ),
             ),
-            const SizedBox(
+            SizedBox(
               width: 220,
               child: SelectField<String>(
                 label: 'Categoria',
@@ -253,7 +250,7 @@ class _ProductosPageState extends ConsumerState<ProductosPage> {
                 options: ['Todas', 'Software', 'Consultoria'],
               ),
             ),
-            const SizedBox(
+            SizedBox(
               width: 180,
               child: SelectField<String>(
                 label: 'Activo',
@@ -263,12 +260,11 @@ class _ProductosPageState extends ConsumerState<ProductosPage> {
             ),
           ],
         ),
-        const SizedBox(height: 10),
+        SizedBox(height: 10),
         asyncData.when(
-          loading: () =>
-              const LoadingStateWidget(message: 'Cargando productos...'),
+          loading: () => LoadingStateWidget(message: 'Cargando productos...'),
           error: (error, _) => shouldCreate
-              ? const LoadingStateWidget(message: 'Preparando formulario...')
+              ? LoadingStateWidget(message: 'Preparando formulario...')
               : ErrorStateWidget(
                   message: 'No fue posible cargar productos.',
                   details: error.toString(),
@@ -276,7 +272,7 @@ class _ProductosPageState extends ConsumerState<ProductosPage> {
                 ),
           data: (items) {
             if (items.isEmpty) {
-              return const SectionCard(child: InlineEmptyMessage());
+              return SectionCard(child: InlineEmptyMessage());
             }
 
             final allSelected = _selectedProductoIds.length == items.length;
@@ -367,7 +363,17 @@ class _ProductosPageState extends ConsumerState<ProductosPage> {
                             actions: [
                               PopupMenuItem(
                                 value: 'edit',
-                                child: Text(trText('Editar')),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.edit_rounded,
+                                      size: 16,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                    SizedBox(width: 8),
+                                    Text(trText('Editar')),
+                                  ],
+                                ),
                               ),
                               PopupMenuItem(
                                 value: 'dup',
@@ -499,7 +505,7 @@ class _ProductosPageState extends ConsumerState<ProductosPage> {
 }
 
 class _ProductoForm extends ConsumerStatefulWidget {
-  const _ProductoForm({this.item});
+  _ProductoForm({this.item});
 
   final ProductoServicio? item;
 
@@ -649,7 +655,7 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
               selected: _tabIndex == 0,
               onTap: () => setState(() => _tabIndex = 0),
             ),
-            const SizedBox(width: 18),
+            SizedBox(width: 18),
             _ProductTabButton(
               label: 'Materiales y consumibles',
               selected: _tabIndex == 1,
@@ -657,12 +663,12 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         Container(height: 1, color: AppColors.border),
-        const SizedBox(height: 10),
+        SizedBox(height: 10),
         Expanded(
           child: _isHydrating
-              ? const LoadingStateWidget(message: 'Cargando producto...')
+              ? LoadingStateWidget(message: 'Cargando producto...')
               : Scrollbar(
                   controller: _scrollController,
                   child: SingleChildScrollView(
@@ -673,14 +679,14 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
                   ),
                 ),
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         _ProductProfitSummary(
           precio: _precioActual,
           costoBase: _costoBaseActual,
           utilidad: _utilidadActual,
           autoCalculo: _autoCalcularCostoBase,
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         Align(
           alignment: Alignment.centerRight,
           child: Wrap(
@@ -693,7 +699,7 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
               ElevatedButton.icon(
                 onPressed: _isSaving ? null : _save,
                 icon: _isSaving
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 16,
                         height: 16,
                         child: CircularProgressIndicator(strokeWidth: 2),
@@ -760,7 +766,7 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
             label: 'Precio',
             controller: _precioController,
             suffixText: currentCurrencyCode(),
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            keyboardType: TextInputType.numberWithOptions(decimal: true),
             inputFormatters: const [
               NumericTextInputFormatter(useGrouping: true, maxDecimalDigits: 2),
             ],
@@ -777,7 +783,7 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
               onAdd: _agregarPrecioPorRango,
               onRemove: (index) => _removerPrecioPorRango(index),
             ),
-            const SizedBox(height: 10),
+            SizedBox(height: 10),
           ],
           _ProductoSwitchRow(
             label: 'Calcular costo base automaticamente',
@@ -799,7 +805,7 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
                 : 'Captura manual del costo base del producto.',
             helperActionLabel: 'Ver materiales y consumibles',
             onHelperAction: _goToMaterialsTab,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            keyboardType: TextInputType.numberWithOptions(decimal: true),
             inputFormatters: const [
               NumericTextInputFormatter(useGrouping: true, maxDecimalDigits: 2),
             ],
@@ -809,7 +815,7 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
             controller: _cantidadDefaultController,
             helper:
                 'Será la cantidad predeterminada a mostrar al seleccionar el producto en la cotización.',
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            keyboardType: TextInputType.numberWithOptions(decimal: true),
             inputFormatters: const [
               NumericTextInputFormatter(maxDecimalDigits: 2),
             ],
@@ -817,7 +823,7 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
           _ProductoFieldRow(
             label: 'Cantidad maxima',
             controller: _cantidadMaximaController,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            keyboardType: TextInputType.numberWithOptions(decimal: true),
             inputFormatters: const [
               NumericTextInputFormatter(maxDecimalDigits: 2),
             ],
@@ -909,13 +915,13 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
           title: 'Materiales y consumibles',
           trailing: TextButton.icon(
             onPressed: _agregarMaterial,
-            icon: const Icon(Icons.add, size: 16),
+            icon: Icon(Icons.add, size: 16),
             label: Text(trText('Añadir renglón')),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Registra insumos y consumibles para calcular el costo base del producto.',
                 style: TextStyle(
                   color: AppColors.textSecondary,
@@ -923,24 +929,31 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              const SizedBox(height: 10),
-              ...List.generate(
-                _materiales.length,
-                (index) => _MaterialRow(
-                  key: ValueKey('material_$index'),
-                  index: index,
-                  draft: _materiales[index],
-                  materialesCatalogo: materialesCatalogo,
-                  onTipoChanged: (value) =>
-                      _seleccionarTipoMaterial(index, value),
-                  onMaterialChanged: (value) =>
-                      _seleccionarMaterialCatalogo(index, value),
-                  onAddMaterial: _goToCreateMaterial,
-                  onRemove: _materiales.length == 1
-                      ? null
-                      : () => _removerMaterial(index),
+              SizedBox(height: 10),
+              if (_materiales.isEmpty)
+                EmptyFieldState(
+                  hintText: 'Sin materiales y consumibles.',
+                  message:
+                      'Este producto no tiene renglones registrados. Puedes agregar uno cuando lo necesites.',
+                  buttonLabel: 'Añadir renglón',
+                  onPressed: _agregarMaterial,
+                )
+              else
+                ...List.generate(
+                  _materiales.length,
+                  (index) => _MaterialRow(
+                    key: ValueKey('material_$index'),
+                    index: index,
+                    draft: _materiales[index],
+                    materialesCatalogo: materialesCatalogo,
+                    onTipoChanged: (value) =>
+                        _seleccionarTipoMaterial(index, value),
+                    onMaterialChanged: (value) =>
+                        _seleccionarMaterialCatalogo(index, value),
+                    onAddMaterial: _goToCreateMaterial,
+                    onRemove: () => _removerMaterial(index),
+                  ),
                 ),
-              ),
             ],
           ),
         ),
@@ -1261,18 +1274,7 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
     for (final item in _materiales) {
       item.dispose();
     }
-    _materiales = drafts.isEmpty
-        ? [
-            _MaterialDraft(
-              materialId: null,
-              nombre: '',
-              tipo: 'Material',
-              cantidad: '',
-              costoUnitario: '',
-              unidad: '',
-            ),
-          ]
-        : drafts;
+    _materiales = drafts;
     for (final item in _materiales) {
       _attachDraftCalculationListeners(item);
     }
@@ -1387,7 +1389,7 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
 }
 
 class _ProductTabButton extends StatelessWidget {
-  const _ProductTabButton({
+  _ProductTabButton({
     required this.label,
     required this.selected,
     required this.onTap,
@@ -1402,7 +1404,7 @@ class _ProductTabButton extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.only(bottom: 10),
+        padding: EdgeInsets.only(bottom: 10),
         decoration: BoxDecoration(
           border: Border(
             bottom: BorderSide(
@@ -1425,11 +1427,7 @@ class _ProductTabButton extends StatelessWidget {
 }
 
 class _ProductoSection extends StatelessWidget {
-  const _ProductoSection({
-    required this.title,
-    required this.child,
-    this.trailing,
-  });
+  _ProductoSection({required this.title, required this.child, this.trailing});
 
   final String title;
   final Widget child;
@@ -1446,13 +1444,13 @@ class _ProductoSection extends StatelessWidget {
       child: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+            padding: EdgeInsets.fromLTRB(16, 14, 16, 14),
             child: Row(
               children: [
                 Expanded(
                   child: Text(
                     trText(title),
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: AppColors.textPrimary,
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
@@ -1464,7 +1462,7 @@ class _ProductoSection extends StatelessWidget {
             ),
           ),
           Container(height: 1, color: AppColors.border),
-          Padding(padding: const EdgeInsets.all(16), child: child),
+          Padding(padding: EdgeInsets.all(16), child: child),
         ],
       ),
     );
@@ -1472,7 +1470,7 @@ class _ProductoSection extends StatelessWidget {
 }
 
 class _ProductoFieldRow extends StatelessWidget {
-  const _ProductoFieldRow({
+  _ProductoFieldRow({
     required this.label,
     required this.controller,
     this.maxLines = 1,
@@ -1500,10 +1498,10 @@ class _ProductoFieldRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final actionButton = helperActionLabel != null && onHelperAction != null
         ? Padding(
-            padding: const EdgeInsets.only(top: 4),
+            padding: EdgeInsets.only(top: 4),
             child: TextButton.icon(
               onPressed: onHelperAction,
-              icon: const Icon(Icons.layers_outlined, size: 16),
+              icon: Icon(Icons.layers_outlined, size: 16),
               label: Text(trText(helperActionLabel!)),
             ),
           )
@@ -1532,20 +1530,20 @@ class _ProductoFieldRow extends StatelessWidget {
         final stacked = constraints.maxWidth < 760;
 
         return Padding(
-          padding: const EdgeInsets.only(bottom: 10),
+          padding: EdgeInsets.only(bottom: 10),
           child: stacked
               ? Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       trText(label),
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    SizedBox(height: 6),
                     field,
                   ],
                 )
@@ -1560,7 +1558,7 @@ class _ProductoFieldRow extends StatelessWidget {
                         padding: EdgeInsets.only(top: maxLines > 1 ? 12 : 0),
                         child: Text(
                           trText(label),
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: AppColors.textSecondary,
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
@@ -1578,7 +1576,7 @@ class _ProductoFieldRow extends StatelessWidget {
 }
 
 class _ProductoTypeFieldRow extends StatelessWidget {
-  const _ProductoTypeFieldRow({required this.value, required this.onChanged});
+  _ProductoTypeFieldRow({required this.value, required this.onChanged});
 
   final ProductType value;
   final ValueChanged<ProductType?> onChanged;
@@ -1614,7 +1612,7 @@ class _ProductoTypeFieldRow extends StatelessWidget {
         );
 
         return Padding(
-          padding: const EdgeInsets.only(bottom: 10),
+          padding: EdgeInsets.only(bottom: 10),
           child: stacked
               ? Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1627,7 +1625,7 @@ class _ProductoTypeFieldRow extends StatelessWidget {
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    SizedBox(height: 6),
                     field,
                   ],
                 )
@@ -1654,7 +1652,7 @@ class _ProductoTypeFieldRow extends StatelessWidget {
 }
 
 class _ProductoDropdownFieldRow extends StatelessWidget {
-  const _ProductoDropdownFieldRow({
+  _ProductoDropdownFieldRow({
     required this.label,
     required this.value,
     required this.options,
@@ -1700,20 +1698,20 @@ class _ProductoDropdownFieldRow extends StatelessWidget {
         );
 
         return Padding(
-          padding: const EdgeInsets.only(bottom: 10),
+          padding: EdgeInsets.only(bottom: 10),
           child: stacked
               ? Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       trText(label),
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    SizedBox(height: 6),
                     field,
                   ],
                 )
@@ -1723,7 +1721,7 @@ class _ProductoDropdownFieldRow extends StatelessWidget {
                       width: 220,
                       child: Text(
                         label,
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
@@ -1740,7 +1738,7 @@ class _ProductoDropdownFieldRow extends StatelessWidget {
 }
 
 class _ProductoSwitchRow extends StatelessWidget {
-  const _ProductoSwitchRow({
+  _ProductoSwitchRow({
     required this.label,
     required this.value,
     required this.onChanged,
@@ -1759,24 +1757,24 @@ class _ProductoSwitchRow extends StatelessWidget {
         final stacked = constraints.maxWidth < 760;
 
         return Padding(
-          padding: const EdgeInsets.only(bottom: 4),
+          padding: EdgeInsets.only(bottom: 4),
           child: stacked
               ? Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       label,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                     if (helper != null) ...[
-                      const SizedBox(height: 4),
+                      SizedBox(height: 4),
                       Text(
                         helper!,
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppColors.textMuted,
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -1784,7 +1782,7 @@ class _ProductoSwitchRow extends StatelessWidget {
                         ),
                       ),
                     ],
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8),
                     Switch(value: value, onChanged: onChanged),
                   ],
                 )
@@ -1798,17 +1796,17 @@ class _ProductoSwitchRow extends StatelessWidget {
                         children: [
                           Text(
                             label,
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: AppColors.textSecondary,
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
                           if (helper != null) ...[
-                            const SizedBox(height: 4),
+                            SizedBox(height: 4),
                             Text(
                               helper!,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 color: AppColors.textMuted,
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
@@ -1819,7 +1817,7 @@ class _ProductoSwitchRow extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     Switch(value: value, onChanged: onChanged),
                   ],
                 ),
@@ -1830,7 +1828,7 @@ class _ProductoSwitchRow extends StatelessWidget {
 }
 
 class _ProductoPriceRangesSection extends StatelessWidget {
-  const _ProductoPriceRangesSection({
+  _ProductoPriceRangesSection({
     required this.drafts,
     required this.onAdd,
     required this.onRemove,
@@ -1846,13 +1844,13 @@ class _ProductoPriceRangesSection extends StatelessWidget {
       title: 'Precio por rangos',
       trailing: TextButton.icon(
         onPressed: onAdd,
-        icon: const Icon(Icons.add, size: 16),
+        icon: Icon(Icons.add, size: 16),
         label: Text(trText('Agregar rango')),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Define precios por cantidad cuando el producto use precio dinamico.',
             style: TextStyle(
               color: AppColors.textSecondary,
@@ -1860,7 +1858,7 @@ class _ProductoPriceRangesSection extends StatelessWidget {
               fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: 10),
           ...List.generate(
             drafts.length,
             (index) => _PrecioRangoRow(
@@ -1877,7 +1875,7 @@ class _ProductoPriceRangesSection extends StatelessWidget {
 }
 
 class _ProductoCustomFieldRow extends StatelessWidget {
-  const _ProductoCustomFieldRow({required this.label, required this.child});
+  _ProductoCustomFieldRow({required this.label, required this.child});
 
   final String label;
   final Widget child;
@@ -1889,20 +1887,20 @@ class _ProductoCustomFieldRow extends StatelessWidget {
         final stacked = constraints.maxWidth < 760;
 
         return Padding(
-          padding: const EdgeInsets.only(bottom: 10),
+          padding: EdgeInsets.only(bottom: 10),
           child: stacked
               ? Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       trText(label),
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    SizedBox(height: 6),
                     child,
                   ],
                 )
@@ -1912,10 +1910,10 @@ class _ProductoCustomFieldRow extends StatelessWidget {
                     SizedBox(
                       width: 220,
                       child: Padding(
-                        padding: const EdgeInsets.only(top: 12),
+                        padding: EdgeInsets.only(top: 12),
                         child: Text(
                           trText(label),
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: AppColors.textSecondary,
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
@@ -1933,7 +1931,7 @@ class _ProductoCustomFieldRow extends StatelessWidget {
 }
 
 class _ProductProfitSummary extends StatelessWidget {
-  const _ProductProfitSummary({
+  _ProductProfitSummary({
     required this.precio,
     required this.costoBase,
     required this.utilidad,
@@ -1969,15 +1967,11 @@ class _ProductProfitSummary extends StatelessWidget {
 }
 
 class _ProfitMetric extends StatelessWidget {
-  const _ProfitMetric({
-    required this.label,
-    required this.value,
-    this.valueColor = AppColors.textPrimary,
-  });
+  _ProfitMetric({required this.label, required this.value, this.valueColor});
 
   final String label;
   final String value;
-  final Color valueColor;
+  final Color? valueColor;
 
   @override
   Widget build(BuildContext context) {
@@ -1986,17 +1980,17 @@ class _ProfitMetric extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             color: AppColors.textSecondary,
             fontSize: 12,
             fontWeight: FontWeight.w700,
           ),
         ),
-        const SizedBox(height: 4),
+        SizedBox(height: 4),
         Text(
           value,
           style: TextStyle(
-            color: valueColor,
+            color: valueColor ?? AppColors.textPrimary,
             fontSize: 16,
             fontWeight: FontWeight.w800,
           ),
@@ -2007,7 +2001,7 @@ class _ProfitMetric extends StatelessWidget {
 }
 
 class _CompactFieldRow extends StatelessWidget {
-  const _CompactFieldRow({required this.label, required this.controller});
+  _CompactFieldRow({required this.label, required this.controller});
 
   final String label;
   final TextEditingController controller;
@@ -2015,14 +2009,14 @@ class _CompactFieldRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: EdgeInsets.only(bottom: 10),
       child: Row(
         children: [
           SizedBox(
             width: 130,
             child: Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
@@ -2032,7 +2026,7 @@ class _CompactFieldRow extends StatelessWidget {
           Expanded(
             child: TextFormField(
               controller: controller,
-              decoration: const InputDecoration(),
+              decoration: InputDecoration(),
             ),
           ),
         ],
@@ -2042,7 +2036,7 @@ class _CompactFieldRow extends StatelessWidget {
 }
 
 class _CompactDropdownRow extends StatelessWidget {
-  const _CompactDropdownRow({
+  _CompactDropdownRow({
     required this.label,
     required this.value,
     required this.options,
@@ -2057,14 +2051,14 @@ class _CompactDropdownRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: EdgeInsets.only(bottom: 10),
       child: Row(
         children: [
           SizedBox(
             width: 130,
             child: Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
@@ -2103,7 +2097,7 @@ class _CompactDropdownRow extends StatelessWidget {
 }
 
 class _CompactSelectRow extends StatelessWidget {
-  const _CompactSelectRow({
+  _CompactSelectRow({
     required this.label,
     required this.value,
     required this.options,
@@ -2128,17 +2122,17 @@ class _CompactSelectRow extends StatelessWidget {
     final hasOptions = options.isNotEmpty;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: EdgeInsets.only(bottom: 10),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
             width: 130,
             child: Padding(
-              padding: const EdgeInsets.only(top: 14),
+              padding: EdgeInsets.only(top: 14),
               child: Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppColors.textSecondary,
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
@@ -2187,7 +2181,7 @@ class _CompactSelectRow extends StatelessWidget {
 }
 
 class _MaterialRow extends StatelessWidget {
-  const _MaterialRow({
+  _MaterialRow({
     required super.key,
     required this.index,
     required this.draft,
@@ -2222,8 +2216,8 @@ class _MaterialRow extends StatelessWidget {
     ];
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
+      margin: EdgeInsets.only(bottom: 10),
+      padding: EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(10),
@@ -2236,7 +2230,7 @@ class _MaterialRow extends StatelessWidget {
               Expanded(
                 child: Text(
                   'Material ${index + 1}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
@@ -2246,7 +2240,7 @@ class _MaterialRow extends StatelessWidget {
               if (onRemove != null)
                 IconButton(
                   onPressed: onRemove,
-                  icon: const Icon(Icons.close, size: 18),
+                  icon: Icon(Icons.close, size: 18),
                   splashRadius: 18,
                 ),
             ],
@@ -2280,24 +2274,20 @@ class _MaterialRow extends StatelessWidget {
                 child: _CompactFieldColumn(
                   label: 'Cantidad',
                   controller: draft.cantidadController,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
+                  keyboardType: TextInputType.numberWithOptions(decimal: true),
                   inputFormatters: const [
                     NumericTextInputFormatter(maxDecimalDigits: 2),
                   ],
                 ),
               ),
-              const SizedBox(width: 10),
+              SizedBox(width: 10),
               Expanded(
                 child: _CompactFieldColumn(
                   label: 'Costo unitario',
                   controller: draft.costoUnitarioController,
                   enabled: false,
                   suffixText: currentCurrencyCode(),
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
+                  keyboardType: TextInputType.numberWithOptions(decimal: true),
                   inputFormatters: const [
                     NumericTextInputFormatter(
                       useGrouping: true,
@@ -2306,7 +2296,7 @@ class _MaterialRow extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 10),
+              SizedBox(width: 10),
               Expanded(
                 child: _CompactFieldColumn(
                   label: 'Unidad de consumo',
@@ -2323,7 +2313,7 @@ class _MaterialRow extends StatelessWidget {
 }
 
 class _PrecioRangoRow extends StatelessWidget {
-  const _PrecioRangoRow({
+  _PrecioRangoRow({
     required super.key,
     required this.index,
     required this.draft,
@@ -2337,8 +2327,8 @@ class _PrecioRangoRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
+      margin: EdgeInsets.only(bottom: 10),
+      padding: EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(10),
@@ -2351,7 +2341,7 @@ class _PrecioRangoRow extends StatelessWidget {
               Expanded(
                 child: Text(
                   'Rango ${index + 1}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
@@ -2361,7 +2351,7 @@ class _PrecioRangoRow extends StatelessWidget {
               if (onRemove != null)
                 IconButton(
                   onPressed: onRemove,
-                  icon: const Icon(Icons.close, size: 18),
+                  icon: Icon(Icons.close, size: 18),
                   splashRadius: 18,
                 ),
             ],
@@ -2372,36 +2362,30 @@ class _PrecioRangoRow extends StatelessWidget {
                 child: _CompactFieldColumn(
                   label: 'Desde',
                   controller: draft.desdeController,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
+                  keyboardType: TextInputType.numberWithOptions(decimal: true),
                   inputFormatters: const [
                     NumericTextInputFormatter(maxDecimalDigits: 2),
                   ],
                 ),
               ),
-              const SizedBox(width: 10),
+              SizedBox(width: 10),
               Expanded(
                 child: _CompactFieldColumn(
                   label: 'Hasta',
                   controller: draft.hastaController,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
+                  keyboardType: TextInputType.numberWithOptions(decimal: true),
                   inputFormatters: const [
                     NumericTextInputFormatter(maxDecimalDigits: 2),
                   ],
                 ),
               ),
-              const SizedBox(width: 10),
+              SizedBox(width: 10),
               Expanded(
                 child: _CompactFieldColumn(
                   label: 'Precio',
                   controller: draft.precioController,
                   suffixText: currentCurrencyCode(),
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
+                  keyboardType: TextInputType.numberWithOptions(decimal: true),
                   inputFormatters: const [
                     NumericTextInputFormatter(
                       useGrouping: true,
@@ -2419,7 +2403,7 @@ class _PrecioRangoRow extends StatelessWidget {
 }
 
 class _CompactFieldColumn extends StatelessWidget {
-  const _CompactFieldColumn({
+  _CompactFieldColumn({
     required this.label,
     required this.controller,
     this.enabled = true,
@@ -2442,13 +2426,13 @@ class _CompactFieldColumn extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             color: AppColors.textSecondary,
             fontSize: 12,
             fontWeight: FontWeight.w700,
           ),
         ),
-        const SizedBox(height: 6),
+        SizedBox(height: 6),
         TextFormField(
           controller: controller,
           enabled: enabled,

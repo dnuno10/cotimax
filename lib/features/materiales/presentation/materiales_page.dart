@@ -115,7 +115,7 @@ String? _matchLocalizedChoice(String? raw, List<_LocalizedChoice> choices) {
 }
 
 class MaterialesPage extends ConsumerStatefulWidget {
-  const MaterialesPage({super.key});
+  MaterialesPage({super.key});
 
   @override
   ConsumerState<MaterialesPage> createState() => _MaterialesPageState();
@@ -158,16 +158,16 @@ class _MaterialesPageState extends ConsumerState<MaterialesPage> {
             ),
             ElevatedButton.icon(
               onPressed: () => _openForm(context, null),
-              icon: const Icon(Icons.add),
+              icon: Icon(Icons.add),
               label: Text(trText('Nuevo material')),
             ),
           ],
         ),
-        const SizedBox(height: 10),
+        SizedBox(height: 10),
         FilterBar(
           children: [
             Padding(
-              padding: const EdgeInsets.only(top: 20),
+              padding: EdgeInsets.only(top: 20),
               child: SizedBox(
                 width: 320,
                 child: SearchField(
@@ -202,10 +202,9 @@ class _MaterialesPageState extends ConsumerState<MaterialesPage> {
             ),
           ],
         ),
-        const SizedBox(height: 10),
+        SizedBox(height: 10),
         materialesAsync.when(
-          loading: () =>
-              const LoadingStateWidget(message: 'Cargando materiales...'),
+          loading: () => LoadingStateWidget(message: 'Cargando materiales...'),
           error: (_, __) => ErrorStateWidget(
             message: 'No fue posible cargar materiales.',
             onRetry: () => ref.invalidate(materialesControllerProvider),
@@ -240,7 +239,7 @@ class _MaterialesPageState extends ConsumerState<MaterialesPage> {
             }).toList();
 
             if (materialesFiltrados.isEmpty) {
-              return const SectionCard(
+              return SectionCard(
                 child: InlineEmptyMessage(
                   message:
                       'No hay materiales que coincidan con los filtros actuales.',
@@ -338,7 +337,7 @@ class _MaterialesPageState extends ConsumerState<MaterialesPage> {
                               Text(material.nombre),
                               Text(
                                 material.sku,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   color: AppColors.textSecondary,
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
@@ -373,7 +372,17 @@ class _MaterialesPageState extends ConsumerState<MaterialesPage> {
                             actions: [
                               PopupMenuItem(
                                 value: 'edit',
-                                child: Text(trText('Editar')),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.edit_rounded,
+                                      size: 16,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                    SizedBox(width: 8),
+                                    Text(trText('Editar')),
+                                  ],
+                                ),
                                 onTap: () => _openForm(context, material),
                               ),
                               PopupMenuItem(
@@ -480,7 +489,7 @@ class _MaterialesPageState extends ConsumerState<MaterialesPage> {
 }
 
 class _MaterialForm extends ConsumerStatefulWidget {
-  const _MaterialForm({this.material});
+  _MaterialForm({this.material});
 
   final MaterialInsumo? material;
 
@@ -580,7 +589,7 @@ class _MaterialFormState extends ConsumerState<_MaterialForm> {
               selected: _tabIndex == 0,
               onTap: () => setState(() => _tabIndex = 0),
             ),
-            const SizedBox(width: 18),
+            SizedBox(width: 18),
             _MaterialTabButton(
               label: 'Productos relacionados',
               selected: _tabIndex == 1,
@@ -588,9 +597,9 @@ class _MaterialFormState extends ConsumerState<_MaterialForm> {
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         Container(height: 1, color: AppColors.border),
-        const SizedBox(height: 10),
+        SizedBox(height: 10),
         Expanded(
           child: Scrollbar(
             controller: _scrollController,
@@ -600,7 +609,7 @@ class _MaterialFormState extends ConsumerState<_MaterialForm> {
             ),
           ),
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         Align(
           alignment: Alignment.centerRight,
           child: Wrap(
@@ -613,7 +622,7 @@ class _MaterialFormState extends ConsumerState<_MaterialForm> {
               ElevatedButton.icon(
                 onPressed: _isSaving ? null : _save,
                 icon: _isSaving
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 16,
                         height: 16,
                         child: CircularProgressIndicator(strokeWidth: 2),
@@ -718,7 +727,7 @@ class _MaterialFormState extends ConsumerState<_MaterialForm> {
             controller: _costoController,
             suffixText: currentCurrencyCode(),
             helper: 'Captura el costo de una sola unidad de medida.',
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            keyboardType: TextInputType.numberWithOptions(decimal: true),
             inputFormatters: const [
               NumericTextInputFormatter(useGrouping: true, maxDecimalDigits: 2),
             ],
@@ -726,13 +735,13 @@ class _MaterialFormState extends ConsumerState<_MaterialForm> {
           _MaterialFieldRow(
             label: 'Stock disponible',
             controller: _stockController,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            keyboardType: TextInputType.numberWithOptions(decimal: true),
             inputFormatters: const [
               NumericTextInputFormatter(maxDecimalDigits: 2),
             ],
           ),
           proveedoresAsync.when(
-            loading: () => const _MaterialFieldRow(
+            loading: () => _MaterialFieldRow(
               label: 'Proveedor',
               child: SizedBox(
                 height: 20,
@@ -855,7 +864,7 @@ class _MaterialFormState extends ConsumerState<_MaterialForm> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Selecciona los productos que requieren este material para su produccion.',
             style: TextStyle(
               color: AppColors.textSecondary,
@@ -863,20 +872,20 @@ class _MaterialFormState extends ConsumerState<_MaterialForm> {
               fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           SearchField(
             controller: _productosSearchController,
             hint: 'Buscar producto por nombre, SKU o categoria',
             onChanged: (value) =>
                 setState(() => _productosQuery = value.trim()),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           Wrap(
             spacing: 8,
             runSpacing: 8,
             children: productos.isEmpty
                 ? [
-                    const Text(
+                    Text(
                       'No hay productos que coincidan con la busqueda.',
                       style: TextStyle(
                         color: AppColors.textSecondary,
@@ -901,12 +910,12 @@ class _MaterialFormState extends ConsumerState<_MaterialForm> {
                       )
                       .toList(),
           ),
-          const SizedBox(height: 14),
+          SizedBox(height: 14),
           Text(
             _productoIds.isEmpty
                 ? 'Sin productos relacionados'
                 : '${_productoIds.length} producto(s) relacionados',
-            style: const TextStyle(
+            style: TextStyle(
               color: AppColors.textPrimary,
               fontSize: 13,
               fontWeight: FontWeight.w700,
@@ -1033,7 +1042,7 @@ class _MaterialFormState extends ConsumerState<_MaterialForm> {
 }
 
 class _MaterialTabButton extends StatelessWidget {
-  const _MaterialTabButton({
+  _MaterialTabButton({
     required this.label,
     required this.selected,
     required this.onTap,
@@ -1048,7 +1057,7 @@ class _MaterialTabButton extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.only(bottom: 10),
+        padding: EdgeInsets.only(bottom: 10),
         decoration: BoxDecoration(
           border: Border(
             bottom: BorderSide(
@@ -1071,7 +1080,7 @@ class _MaterialTabButton extends StatelessWidget {
 }
 
 class _MaterialSection extends StatelessWidget {
-  const _MaterialSection({
+  _MaterialSection({
     required this.title,
     required this.icon,
     required this.child,
@@ -1092,18 +1101,18 @@ class _MaterialSection extends StatelessWidget {
       child: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+            padding: EdgeInsets.fromLTRB(16, 14, 16, 14),
             child: Row(
               children: [
                 Expanded(
                   child: Row(
                     children: [
                       FaIcon(icon, size: 14, color: AppColors.textPrimary),
-                      const SizedBox(width: 8),
+                      SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           trText(title),
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: AppColors.textPrimary,
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
@@ -1117,7 +1126,7 @@ class _MaterialSection extends StatelessWidget {
             ),
           ),
           Container(height: 1, color: AppColors.border),
-          Padding(padding: const EdgeInsets.all(16), child: child),
+          Padding(padding: EdgeInsets.all(16), child: child),
         ],
       ),
     );
@@ -1125,7 +1134,7 @@ class _MaterialSection extends StatelessWidget {
 }
 
 class _MaterialFieldRow extends StatelessWidget {
-  const _MaterialFieldRow({
+  _MaterialFieldRow({
     required this.label,
     this.controller,
     this.child,
@@ -1148,7 +1157,7 @@ class _MaterialFieldRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: EdgeInsets.only(bottom: 10),
       child: Row(
         crossAxisAlignment: maxLines > 1
             ? CrossAxisAlignment.start
@@ -1160,7 +1169,7 @@ class _MaterialFieldRow extends StatelessWidget {
               padding: EdgeInsets.only(top: maxLines > 1 ? 12 : 0),
               child: Text(
                 trText(label),
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppColors.textSecondary,
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
@@ -1189,7 +1198,7 @@ class _MaterialFieldRow extends StatelessWidget {
 }
 
 class _MaterialSwitchRow extends StatelessWidget {
-  const _MaterialSwitchRow({
+  _MaterialSwitchRow({
     required this.label,
     required this.value,
     required this.onChanged,
@@ -1202,14 +1211,14 @@ class _MaterialSwitchRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
+      padding: EdgeInsets.only(bottom: 4),
       child: Row(
         children: [
           SizedBox(
             width: 220,
             child: Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 13,
                 fontWeight: FontWeight.w700,

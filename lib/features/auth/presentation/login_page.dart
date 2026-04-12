@@ -12,7 +12,7 @@ import 'package:cotimax/shared/widgets/cotimax_widgets.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
-  const LoginPage({super.key});
+   LoginPage({super.key});
 
   @override
   ConsumerState<LoginPage> createState() => _LoginPageState();
@@ -96,11 +96,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           SafeArea(
             child: Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 430),
+                constraints:  BoxConstraints(maxWidth: 430),
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding:  EdgeInsets.all(16),
                   child: Container(
-                    padding: const EdgeInsets.all(28),
+                    padding:  EdgeInsets.all(28),
                     decoration: BoxDecoration(
                       color: AppColors.white.withValues(alpha: 0.92),
                       borderRadius: BorderRadius.circular(
@@ -111,7 +111,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         BoxShadow(
                           color: AppColors.textPrimary.withValues(alpha: 0.10),
                           blurRadius: 30,
-                          offset: const Offset(0, 16),
+                          offset:  Offset(0, 16),
                         ),
                       ],
                     ),
@@ -129,8 +129,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                   height: 52,
                                   fit: BoxFit.contain,
                                 ),
-                                const SizedBox(height: 14),
-                                const Text(
+                                 SizedBox(height: 14),
+                                 Text(
                                   'Gestión comercial y financiera en un solo lugar',
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
@@ -142,12 +142,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                               ],
                             ),
                           ),
-                          const SizedBox(height: 18),
+                           SizedBox(height: 18),
                           Center(
                             child: Text(
                               otpSent ? 'Validar código' : 'Iniciar sesión',
                               textAlign: TextAlign.center,
-                              style: const TextStyle(
+                              style:  TextStyle(
                                 fontSize: 28,
                                 fontWeight: FontWeight.w800,
                                 color: AppColors.textPrimary,
@@ -155,21 +155,21 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                               ),
                             ),
                           ),
-                          const SizedBox(height: 8),
+                           SizedBox(height: 8),
                           Center(
                             child: Text(
                               otpSent
                                   ? 'Ingresa el código enviado a tu correo.'
                                   : 'Te enviaremos un código a tu correo.',
                               textAlign: TextAlign.center,
-                              style: const TextStyle(
+                              style:  TextStyle(
                                 color: AppColors.textSecondary,
                                 fontWeight: FontWeight.w600,
                                 fontSize: 13,
                               ),
                             ),
                           ),
-                          const SizedBox(height: 18),
+                           SizedBox(height: 18),
                           if (!otpSent)
                             TextFormField(
                               controller: _email,
@@ -178,7 +178,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                               onFieldSubmitted: auth.isLoading
                                   ? null
                                   : (_) => _submit(),
-                              decoration: const InputDecoration(
+                              decoration:  InputDecoration(
                                 labelText: 'Correo',
                                 prefixIconConstraints: BoxConstraints(
                                   minWidth: 42,
@@ -200,8 +200,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                   : null,
                             ),
                           if (otpSent) ...[
-                            const SizedBox(height: 18),
-                            const Text(
+                             SizedBox(height: 18),
+                             Text(
                               'Correo',
                               style: TextStyle(
                                 color: AppColors.textSecondary,
@@ -209,10 +209,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                 fontSize: 12,
                               ),
                             ),
-                            const SizedBox(height: 8),
+                             SizedBox(height: 8),
                             Container(
                               width: double.infinity,
-                              padding: const EdgeInsets.symmetric(
+                              padding:  EdgeInsets.symmetric(
                                 horizontal: 14,
                                 vertical: 12,
                               ),
@@ -223,16 +223,16 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                               ),
                               child: Row(
                                 children: [
-                                  const FaIcon(
+                                   FaIcon(
                                     FontAwesomeIcons.envelope,
                                     size: 13,
                                     color: AppColors.textMuted,
                                   ),
-                                  const SizedBox(width: 10),
+                                   SizedBox(width: 10),
                                   Expanded(
                                     child: Text(
                                       auth.otpEmail ?? '',
-                                      style: const TextStyle(
+                                      style:  TextStyle(
                                         color: AppColors.textPrimary,
                                         fontWeight: FontWeight.w700,
                                         fontSize: 14,
@@ -242,7 +242,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 12),
+                             SizedBox(height: 12),
                             LayoutBuilder(
                               builder: (context, constraints) {
                                 const digits = 8;
@@ -276,7 +276,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                     fontWeight: FontWeight.w800,
                                   ),
                                   cursorColor: AppColors.primary,
-                                  pastedTextStyle: const TextStyle(
+                                  pastedTextStyle:  TextStyle(
                                     color: AppColors.textPrimary,
                                     fontWeight: FontWeight.w700,
                                   ),
@@ -301,7 +301,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                               },
                             ),
                           ],
-                          const SizedBox(height: 18),
+                           SizedBox(height: 18),
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(
@@ -313,7 +313,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   if (auth.isLoading) ...[
-                                    const SizedBox(
+                                     SizedBox(
                                       width: 18,
                                       height: 18,
                                       child: CircularProgressIndicator(
@@ -321,7 +321,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                         color: AppColors.white,
                                       ),
                                     ),
-                                    const SizedBox(width: 10),
+                                     SizedBox(width: 10),
                                   ],
                                   Text(
                                     auth.isLoading
@@ -337,7 +337,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             ),
                           ),
                           if (otpSent) ...[
-                            const SizedBox(height: 10),
+                             SizedBox(height: 10),
                             SizedBox(
                               width: double.infinity,
                               child: OutlinedButton(
@@ -347,7 +347,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                 child: Text(trText('Reenviar código')),
                               ),
                             ),
-                            const SizedBox(height: 10),
+                             SizedBox(height: 10),
                             SizedBox(
                               width: double.infinity,
                               child: OutlinedButton(
@@ -356,7 +356,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                               ),
                             ),
                           ],
-                          const SizedBox(height: 14),
+                           SizedBox(height: 14),
                           Center(
                             child: Wrap(
                               alignment: WrapAlignment.center,
@@ -367,7 +367,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                 Text(
                                   trText('Al continuar aceptas nuestros'),
                                   textAlign: TextAlign.center,
-                                  style: const TextStyle(
+                                  style:  TextStyle(
                                     color: AppColors.textSecondary,
                                     fontWeight: FontWeight.w600,
                                     fontSize: 12,
@@ -385,7 +385,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                 ),
                                 Text(
                                   trText('y'),
-                                  style: const TextStyle(
+                                  style:  TextStyle(
                                     color: AppColors.textSecondary,
                                     fontWeight: FontWeight.w600,
                                     fontSize: 12,
@@ -469,7 +469,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 }
 
 class _Glow extends StatelessWidget {
-  const _Glow({required this.size, required this.color});
+   _Glow({required this.size, required this.color});
 
   final double size;
   final Color color;

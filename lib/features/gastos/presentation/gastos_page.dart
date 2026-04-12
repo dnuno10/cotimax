@@ -18,7 +18,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 class GastosPage extends ConsumerStatefulWidget {
-  const GastosPage({super.key});
+  GastosPage({super.key});
 
   @override
   ConsumerState<GastosPage> createState() => _GastosPageState();
@@ -27,6 +27,7 @@ class GastosPage extends ConsumerStatefulWidget {
 class _GastosPageState extends ConsumerState<GastosPage> {
   bool _handledCreateRoute = false;
   bool _showProjection = false;
+  bool _isProcessingRecurring = false;
   _ProjectionOption _selectedProjection = expenseProjectionOptions[2];
   DateTimeRange? _selectedDateRange;
   final Set<String> _selectedGastoIds = <String>{};
@@ -37,7 +38,7 @@ class _GastosPageState extends ConsumerState<GastosPage> {
     final firstDate = DateUtils.dateOnly(orderedDates.first);
     final lastDate = DateUtils.dateOnly(orderedDates.last);
     final defaultStart = DateUtils.dateOnly(
-      lastDate.subtract(const Duration(days: 49)),
+      lastDate.subtract(Duration(days: 49)),
     );
     final initialRange =
         _selectedDateRange ??
@@ -88,15 +89,28 @@ class _GastosPageState extends ConsumerState<GastosPage> {
             subtitle: '',
             actions: [
               ...buildImportExportHeaderActions(context, entityLabel: 'gastos'),
+              OutlinedButton.icon(
+                onPressed: _isProcessingRecurring
+                    ? null
+                    : () => _processRecurringExpenses(),
+                icon: _isProcessingRecurring
+                    ? SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(Icons.sync_rounded),
+                label: Text(trText('Procesar recurrencias')),
+              ),
               ElevatedButton.icon(
                 onPressed: () => _openForm(context),
-                icon: const Icon(Icons.add),
+                icon: Icon(Icons.add),
                 label: Text(trText('Nuevo gasto')),
               ),
             ],
           ),
           SizedBox(height: 12),
-          const LoadingStateWidget(message: 'Cargando gastos...'),
+          LoadingStateWidget(message: 'Cargando gastos...'),
         ],
       ),
       error: (_, __) => ListView(
@@ -106,14 +120,27 @@ class _GastosPageState extends ConsumerState<GastosPage> {
             subtitle: '',
             actions: [
               ...buildImportExportHeaderActions(context, entityLabel: 'gastos'),
+              OutlinedButton.icon(
+                onPressed: _isProcessingRecurring
+                    ? null
+                    : () => _processRecurringExpenses(),
+                icon: _isProcessingRecurring
+                    ? SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(Icons.sync_rounded),
+                label: Text(trText('Procesar recurrencias')),
+              ),
               ElevatedButton.icon(
                 onPressed: () => _openForm(context),
-                icon: const Icon(Icons.add),
+                icon: Icon(Icons.add),
                 label: Text(trText('Nuevo gasto')),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           ErrorStateWidget(
             message: 'No se pudieron cargar gastos.',
             onRetry: () => ref.invalidate(gastosControllerProvider),
@@ -132,9 +159,22 @@ class _GastosPageState extends ConsumerState<GastosPage> {
                     context,
                     entityLabel: 'gastos',
                   ),
+                  OutlinedButton.icon(
+                    onPressed: _isProcessingRecurring
+                        ? null
+                        : () => _processRecurringExpenses(),
+                    icon: _isProcessingRecurring
+                        ? SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Icon(Icons.sync_rounded),
+                    label: Text(trText('Procesar recurrencias')),
+                  ),
                   ElevatedButton.icon(
                     onPressed: () => _openForm(context),
-                    icon: const Icon(Icons.add),
+                    icon: Icon(Icons.add),
                     label: Text(trText('Nuevo gasto')),
                   ),
                 ],
@@ -146,7 +186,7 @@ class _GastosPageState extends ConsumerState<GastosPage> {
                     'Registra tu primer gasto para comenzar a ver resultados.',
                 action: ElevatedButton.icon(
                   onPressed: () => _openForm(context),
-                  icon: const Icon(Icons.add),
+                  icon: Icon(Icons.add),
                   label: Text(trText('Nuevo gasto')),
                 ),
               ),
@@ -160,6 +200,7 @@ class _GastosPageState extends ConsumerState<GastosPage> {
         final ingresosCatalogo =
             ref.watch(ingresosControllerProvider).valueOrNull ??
             const <Ingreso>[];
+        final linkedIncomeByExpense = _incomeByLinkedExpense(ingresosCatalogo);
         final categorias = {
           for (final item in categoriasCatalogo) item.id: item,
         };
@@ -167,9 +208,9 @@ class _GastosPageState extends ConsumerState<GastosPage> {
         final lastDate = DateUtils.dateOnly(orderedDates.last);
         final firstDate = DateUtils.dateOnly(orderedDates.first);
         final defaultRange = DateTimeRange(
-          start: lastDate.subtract(const Duration(days: 49)).isBefore(firstDate)
+          start: lastDate.subtract(Duration(days: 49)).isBefore(firstDate)
               ? firstDate
-              : lastDate.subtract(const Duration(days: 49)),
+              : lastDate.subtract(Duration(days: 49)),
           end: lastDate,
         );
         final activeRange = _selectedDateRange ?? defaultRange;
@@ -210,6 +251,20 @@ class _GastosPageState extends ConsumerState<GastosPage> {
             : tr('Base $rango', 'Base $rango');
         final rankingCategorias = _expenseByCategory(gastos, categorias);
         final rankingProveedores = _expenseByProvider(gastos);
+        final linkedExpenseTotal = gastos.fold<double>(
+          0,
+          (sum, gasto) =>
+              sum +
+              (linkedIncomeByExpense.containsKey(gasto.id) ? gasto.monto : 0),
+        );
+        final linkedIncomeTotal = linkedIncomeByExpense.values.fold<double>(
+          0,
+          (sum, value) => sum + value,
+        );
+        final linkedDelta = linkedIncomeTotal - linkedExpenseTotal;
+        final linkedCoverage = linkedExpenseTotal == 0
+            ? 0.0
+            : linkedIncomeTotal / linkedExpenseTotal;
 
         return ListView(
           children: [
@@ -221,14 +276,27 @@ class _GastosPageState extends ConsumerState<GastosPage> {
                   context,
                   entityLabel: 'gastos',
                 ),
+                OutlinedButton.icon(
+                  onPressed: _isProcessingRecurring
+                      ? null
+                      : () => _processRecurringExpenses(),
+                  icon: _isProcessingRecurring
+                      ? SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Icon(Icons.sync_rounded),
+                  label: Text(trText('Procesar recurrencias')),
+                ),
                 ElevatedButton.icon(
                   onPressed: () => _openForm(context),
-                  icon: const Icon(Icons.add),
+                  icon: Icon(Icons.add),
                   label: Text(trText('Nuevo gasto')),
                 ),
               ],
             ),
-            const SizedBox(height: 14),
+            SizedBox(height: 14),
             SectionCard(
               title: 'Gastos totales',
               trailing: _RangeLabel(label: _showProjection ? baseLabel : rango),
@@ -245,24 +313,24 @@ class _GastosPageState extends ConsumerState<GastosPage> {
                             _showProjection
                                 ? trText('Escenario proyectado')
                                 : trText('Historico real'),
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: AppColors.textSecondary,
                               fontSize: 11,
                               fontWeight: FontWeight.w800,
                               letterSpacing: 0.4,
                             ),
                           ),
-                          const SizedBox(height: 6),
+                          SizedBox(height: 6),
                           Text(
                             formatMxn(chartTotal),
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: AppColors.textPrimary,
                               fontWeight: FontWeight.w800,
                               fontSize: 30,
                               height: 1,
                             ),
                           ),
-                          const SizedBox(height: 8),
+                          SizedBox(height: 8),
                           Wrap(
                             spacing: 14,
                             runSpacing: 8,
@@ -281,12 +349,12 @@ class _GastosPageState extends ConsumerState<GastosPage> {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 10),
+                          SizedBox(height: 10),
                           Text(
                             _showProjection
                                 ? 'Estimado con el historial reciente y, principalmente, los gastos recurrentes activos.'
                                 : 'Lectura historica de gastos registrados durante el periodo.',
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: AppColors.textSecondary,
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -301,7 +369,7 @@ class _GastosPageState extends ConsumerState<GastosPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             summary,
-                            const SizedBox(height: 16),
+                            SizedBox(height: 16),
                             _ProjectionToolbar(
                               projected: _showProjection,
                               selectedOption: _selectedProjection,
@@ -330,7 +398,7 @@ class _GastosPageState extends ConsumerState<GastosPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Expanded(child: summary),
-                          const SizedBox(width: 18),
+                          SizedBox(width: 18),
                           _ProjectionToolbar(
                             projected: _showProjection,
                             selectedOption: _selectedProjection,
@@ -355,7 +423,7 @@ class _GastosPageState extends ConsumerState<GastosPage> {
                       );
                     },
                   ),
-                  const SizedBox(height: 22),
+                  SizedBox(height: 22),
                   SizedBox(
                     height: 280,
                     child: LineChart(
@@ -365,14 +433,14 @@ class _GastosPageState extends ConsumerState<GastosPage> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  SizedBox(height: 10),
                   if (_showProjection) ...[
                     Text(
                       tr(
                         'Base recurrente estimada: ${formatMxn(_selectedProjection.isWeekly ? _weeklyRecurringExpenseEstimate(recurrentes) : _monthlyRecurringExpenseEstimate(recurrentes))} por ${_selectedProjection.isWeekly ? 'semana' : 'mes'}.',
                         'Estimated recurring base: ${formatMxn(_selectedProjection.isWeekly ? _weeklyRecurringExpenseEstimate(recurrentes) : _monthlyRecurringExpenseEstimate(recurrentes))} per ${_selectedProjection.isWeekly ? 'week' : 'month'}.',
                       ),
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppColors.textPrimary,
                         fontWeight: FontWeight.w600,
                         fontSize: 12,
@@ -392,10 +460,10 @@ class _GastosPageState extends ConsumerState<GastosPage> {
                         fontSize: 15,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8),
                     Text(
                       '${trText('Margen actual')}: ${margen.toStringAsFixed(1)}%. ${trText(margen >= 20 ? 'El gasto se mantiene bajo control.' : 'Conviene revisar gastos para recuperar margen.')}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppColors.textPrimary,
                         fontWeight: FontWeight.w600,
                         fontSize: 12,
@@ -406,7 +474,35 @@ class _GastosPageState extends ConsumerState<GastosPage> {
                 ],
               ),
             ),
-            const SizedBox(height: 10),
+            SizedBox(height: 10),
+            SectionCard(
+              title: 'Impacto de gastos vinculados',
+              child: Wrap(
+                spacing: 20,
+                runSpacing: 8,
+                children: [
+                  _ChartMetaItem(
+                    icon: Icons.account_tree_outlined,
+                    label:
+                        'Ingresos vinculados: ${formatMxn(linkedIncomeTotal)}',
+                    accent: AppColors.primary,
+                  ),
+                  _ChartMetaItem(
+                    icon: Icons.compare_arrows_rounded,
+                    label: 'Diferencia: ${formatMxn(linkedDelta)}',
+                    accent: linkedDelta >= 0
+                        ? AppColors.success
+                        : AppColors.error,
+                  ),
+                  _ChartMetaItem(
+                    icon: Icons.track_changes_rounded,
+                    label: 'Cobertura: ${linkedCoverage.toStringAsFixed(2)}x',
+                    accent: AppColors.accent,
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(height: 10),
             LayoutBuilder(
               builder: (context, constraints) {
                 final wide = constraints.maxWidth >= 1180;
@@ -419,14 +515,14 @@ class _GastosPageState extends ConsumerState<GastosPage> {
                           rows: rankingCategorias,
                         ),
                       ),
-                      const SizedBox(width: 10),
+                      SizedBox(width: 10),
                       Expanded(
                         child: _RankingExpenseTable(
                           title: 'Ranking de gastos por proveedor',
                           rows: rankingProveedores,
                         ),
                       ),
-                      const SizedBox(width: 10),
+                      SizedBox(width: 10),
                       Expanded(
                         child: SectionCard(
                           title: 'Gastos recurrentes',
@@ -463,12 +559,12 @@ class _GastosPageState extends ConsumerState<GastosPage> {
                 return Column(
                   children: [
                     _CategoryDistributionCard(rows: rankingCategorias),
-                    const SizedBox(height: 10),
+                    SizedBox(height: 10),
                     _RankingExpenseTable(
                       title: 'Ranking de gastos por proveedor',
                       rows: rankingProveedores,
                     ),
-                    const SizedBox(height: 10),
+                    SizedBox(height: 10),
                     SectionCard(
                       title: 'Gastos recurrentes',
                       child: recurrentesAsync.when(
@@ -501,8 +597,8 @@ class _GastosPageState extends ConsumerState<GastosPage> {
                 );
               },
             ),
-            const SizedBox(height: 10),
-            const FilterBar(
+            SizedBox(height: 10),
+            FilterBar(
               children: [
                 SizedBox(
                   width: 220,
@@ -534,7 +630,7 @@ class _GastosPageState extends ConsumerState<GastosPage> {
                 ),
               ],
             ),
-            const SizedBox(height: 10),
+            SizedBox(height: 10),
             Builder(
               builder: (context) {
                 final allSelected = _selectedGastoIds.length == gastos.length;
@@ -587,6 +683,8 @@ class _GastosPageState extends ConsumerState<GastosPage> {
                     DataColumn(label: Text(trText('Fecha'))),
                     DataColumn(label: Text(trText('Proveedor'))),
                     DataColumn(label: Text(trText('Referencia'))),
+                    DataColumn(label: Text(trText('Ingreso vinculado'))),
+                    DataColumn(label: Text(trText('Impacto'))),
                     DataColumn(label: Text(trText('Descripcion'))),
                     DataColumn(label: Text(trText('Notas'))),
                     DataColumn(label: Text(trText('Acciones'))),
@@ -618,7 +716,7 @@ class _GastosPageState extends ConsumerState<GastosPage> {
                                     iconKey: item.iconKey,
                                     size: 28,
                                   ),
-                                  const SizedBox(width: 8),
+                                  SizedBox(width: 8),
                                   Text(
                                     categorias[item.gastoCategoriaId]?.nombre ??
                                         item.gastoCategoriaId,
@@ -639,6 +737,28 @@ class _GastosPageState extends ConsumerState<GastosPage> {
                             ),
                             DataCell(Text(item.proveedor)),
                             DataCell(Text(item.referencia)),
+                            DataCell(
+                              Text(
+                                formatMxn(linkedIncomeByExpense[item.id] ?? 0),
+                              ),
+                            ),
+                            DataCell(
+                              Text(
+                                formatMxn(
+                                  (linkedIncomeByExpense[item.id] ?? 0) -
+                                      item.monto,
+                                ),
+                                style: TextStyle(
+                                  color:
+                                      ((linkedIncomeByExpense[item.id] ?? 0) -
+                                              item.monto) >=
+                                          0
+                                      ? AppColors.success
+                                      : AppColors.error,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
                             DataCell(Text(item.descripcion)),
                             DataCell(Text(item.notas)),
                             DataCell(
@@ -671,6 +791,38 @@ class _GastosPageState extends ConsumerState<GastosPage> {
         );
       },
     );
+  }
+
+  Future<void> _processRecurringExpenses() async {
+    if (_isProcessingRecurring) return;
+    setState(() => _isProcessingRecurring = true);
+    try {
+      final created = await ref
+          .read(gastosRepositoryProvider)
+          .processRecurrentes();
+      if (!mounted) return;
+      ref.invalidate(gastosControllerProvider);
+      ref.invalidate(gastosRecurrentesControllerProvider);
+      ToastHelper.showSuccess(
+        context,
+        created > 0
+            ? '$created gastos recurrentes generados.'
+            : 'No había gastos recurrentes pendientes.',
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ToastHelper.showError(
+        context,
+        buildActionErrorMessage(
+          error,
+          'No se pudieron procesar los gastos recurrentes.',
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isProcessingRecurring = false);
+      }
+    }
   }
 
   void _openForm(BuildContext context, [Gasto? item]) {
@@ -761,7 +913,7 @@ class _GastosPageState extends ConsumerState<GastosPage> {
 }
 
 class _GastoForm extends ConsumerStatefulWidget {
-  const _GastoForm({this.item});
+  _GastoForm({this.item});
 
   final Gasto? item;
 
@@ -771,13 +923,15 @@ class _GastoForm extends ConsumerStatefulWidget {
 
 class _GastoFormState extends ConsumerState<_GastoForm> {
   late final ScrollController _scrollController;
-  late final TextEditingController _categoriaController;
   late final TextEditingController _montoController;
   late final TextEditingController _fechaController;
+  late final TextEditingController _fechaInicioRecurrenciaController;
   late final TextEditingController _proveedorController;
   late final TextEditingController _referenciaController;
   late final TextEditingController _descripcionController;
   late final TextEditingController _notasController;
+  String _categoriaValue = '';
+  String _categoriaDisplayLabel = '';
   bool _recurrente = false;
   RecurrenceFrequency _recurrencia = RecurrenceFrequency.ninguna;
   final Set<int> _diasSemana = <int>{};
@@ -789,7 +943,7 @@ class _GastoFormState extends ConsumerState<_GastoForm> {
     super.initState();
     _scrollController = ScrollController();
     final item = widget.item;
-    _categoriaController = seededTextController(item?.gastoCategoriaId ?? '');
+    _categoriaValue = item?.gastoCategoriaId ?? '';
     _montoController = seededTextController(
       item == null
           ? '0.00'
@@ -797,6 +951,11 @@ class _GastoFormState extends ConsumerState<_GastoForm> {
     );
     _fechaController = seededTextController(
       DateFormat('yyyy-MM-dd').format(item?.fecha ?? DateTime.now()),
+    );
+    _fechaInicioRecurrenciaController = seededTextController(
+      DateFormat(
+        'yyyy-MM-dd',
+      ).format(item?.fechaInicioRecurrencia ?? item?.fecha ?? DateTime.now()),
     );
     _proveedorController = seededTextController(item?.proveedor);
     _referenciaController = seededTextController(item?.referencia);
@@ -813,9 +972,9 @@ class _GastoFormState extends ConsumerState<_GastoForm> {
   @override
   void dispose() {
     _scrollController.dispose();
-    _categoriaController.dispose();
     _montoController.dispose();
     _fechaController.dispose();
+    _fechaInicioRecurrenciaController.dispose();
     _proveedorController.dispose();
     _referenciaController.dispose();
     _descripcionController.dispose();
@@ -825,6 +984,20 @@ class _GastoFormState extends ConsumerState<_GastoForm> {
 
   @override
   Widget build(BuildContext context) {
+    final categoriasCatalogo =
+        ref.watch(gastoCategoriasControllerProvider).valueOrNull ??
+        const <GastoCategoria>[];
+    final categoriaOptions = categoriasCatalogo
+        .map((item) => _CategoryOption(value: item.id, label: item.nombre))
+        .toList();
+    final categoriaSelectOptions = _ensureSelectedCategoryOption(
+      options: categoriaOptions,
+      currentValue: _categoriaValue,
+      fallbackLabel: _categoriaDisplayLabel.isNotEmpty
+          ? _categoriaDisplayLabel
+          : _categoriaValue,
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -848,15 +1021,23 @@ class _GastoFormState extends ConsumerState<_GastoForm> {
                                 setState(() => _iconKey = value),
                           ),
                         ),
-                        const SizedBox(height: 12),
+                        SizedBox(height: 12),
                         _ResponsiveFormRow(
                           left: FormFieldWrapper(
                             label: 'Categoria',
-                            child: TextField(
-                              controller: _categoriaController,
-                              decoration: InputDecoration(
-                                hintText: trText('Categoria del gasto'),
-                              ),
+                            child: _CategoryLookupField(
+                              value: _categoriaValue,
+                              options: categoriaSelectOptions,
+                              emptyLabel: 'Sin categoria',
+                              hintText: 'Selecciona una categoria',
+                              emptyStateMessage:
+                                  'No hay categorias de gasto registradas.',
+                              buttonLabel: 'Agregar categoria',
+                              onAddPressed: _createExpenseCategory,
+                              onChanged: (value) => setState(() {
+                                _categoriaValue = value;
+                                _categoriaDisplayLabel = '';
+                              }),
                             ),
                           ),
                           right: CurrencyInput(
@@ -864,10 +1045,29 @@ class _GastoFormState extends ConsumerState<_GastoForm> {
                             label: 'Monto',
                           ),
                         ),
+                        if (_categoriaValue.trim().isNotEmpty)
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Wrap(
+                              spacing: 8,
+                              children: [
+                                TextButton.icon(
+                                  onPressed: _editExpenseCategory,
+                                  icon: Icon(Icons.edit_rounded, size: 16),
+                                  label: Text(trText('Editar categoria')),
+                                ),
+                                TextButton.icon(
+                                  onPressed: _deleteExpenseCategory,
+                                  icon: Icon(Icons.delete_outline, size: 16),
+                                  label: Text(trText('Eliminar categoria')),
+                                ),
+                              ],
+                            ),
+                          ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12),
                   SectionCard(
                     title: 'Seguimiento',
                     titleIcon: FontAwesomeIcons.calendarCheck,
@@ -878,8 +1078,13 @@ class _GastoFormState extends ConsumerState<_GastoForm> {
                             label: 'Fecha',
                             child: TextField(
                               controller: _fechaController,
+                              readOnly: true,
+                              onTap: _pickMovementDate,
                               decoration: InputDecoration(
                                 hintText: trText('AAAA-MM-DD'),
+                                suffixIcon: const Icon(
+                                  Icons.calendar_month_rounded,
+                                ),
                               ),
                             ),
                           ),
@@ -893,7 +1098,7 @@ class _GastoFormState extends ConsumerState<_GastoForm> {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 12),
+                        SizedBox(height: 12),
                         _ResponsiveFormRow(
                           left: FormFieldWrapper(
                             label: 'Referencia',
@@ -914,7 +1119,7 @@ class _GastoFormState extends ConsumerState<_GastoForm> {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 12),
+                        SizedBox(height: 12),
                         FormFieldWrapper(
                           label: 'Notas',
                           child: TextField(
@@ -928,13 +1133,18 @@ class _GastoFormState extends ConsumerState<_GastoForm> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12),
                   RecurrenceConfigurationCard(
                     title: 'Recurrencia del gasto',
                     titleIcon: FontAwesomeIcons.arrowsRotate,
                     isRecurring: _recurrente,
                     frequency: _recurrencia,
                     selectedWeekdays: _diasSemana,
+                    startDateController: _fechaInicioRecurrenciaController,
+                    startDateLabel: 'Fecha de inicio',
+                    startDateHelperText:
+                        'A partir de esta fecha se calculará la siguiente recurrencia.',
+                    onStartDateTap: _pickRecurrenceStartDate,
                     onRecurringChanged: (value) {
                       setState(() {
                         _recurrente = value;
@@ -968,7 +1178,7 @@ class _GastoFormState extends ConsumerState<_GastoForm> {
             ),
           ),
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: 16),
         Align(
           alignment: Alignment.centerRight,
           child: Wrap(
@@ -981,7 +1191,7 @@ class _GastoFormState extends ConsumerState<_GastoForm> {
               ElevatedButton.icon(
                 onPressed: _isSaving ? null : _save,
                 icon: _isSaving
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 16,
                         height: 16,
                         child: CircularProgressIndicator(strokeWidth: 2),
@@ -1005,11 +1215,16 @@ class _GastoFormState extends ConsumerState<_GastoForm> {
   Future<void> _save() async {
     if (_isSaving) return;
     final now = DateTime.now();
+    final movementDate = DateTime.tryParse(_fechaController.text.trim()) ?? now;
+    final recurrenceStartDate =
+        DateTime.tryParse(_fechaInicioRecurrenciaController.text.trim()) ??
+        movementDate;
     final item = Gasto(
       id: widget.item?.id ?? 'gas-${now.microsecondsSinceEpoch}',
-      gastoCategoriaId: _categoriaController.text.trim(),
+      gastoCategoriaId: _categoriaValue.trim(),
       monto: parseNumericText(_montoController.text) ?? 0,
-      fecha: DateTime.tryParse(_fechaController.text.trim()) ?? now,
+      fecha: movementDate,
+      fechaInicioRecurrencia: _recurrente ? recurrenceStartDate : null,
       descripcion: _descripcionController.text.trim(),
       proveedor: _proveedorController.text.trim(),
       referencia: _referenciaController.text.trim(),
@@ -1053,10 +1268,317 @@ class _GastoFormState extends ConsumerState<_GastoForm> {
       }
     }
   }
+
+  Future<void> _pickMovementDate() async {
+    final initialDate =
+        DateTime.tryParse(_fechaController.text.trim()) ?? DateTime.now();
+    final picked = await showCotimaxDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+      currentDate: initialDate,
+      locale: currentAppLocale(),
+      helpText: trText('Selecciona la fecha'),
+      cancelText: trText('Cancelar'),
+      confirmText: trText('Aceptar'),
+    );
+    if (picked == null || !mounted) return;
+    assignControllerText(
+      _fechaController,
+      DateFormat('yyyy-MM-dd').format(picked),
+    );
+  }
+
+  Future<void> _pickRecurrenceStartDate() async {
+    final initialDate =
+        DateTime.tryParse(_fechaInicioRecurrenciaController.text.trim()) ??
+        DateTime.tryParse(_fechaController.text.trim()) ??
+        DateTime.now();
+    final picked = await showCotimaxDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+      currentDate: initialDate,
+      locale: currentAppLocale(),
+      helpText: trText('Selecciona la fecha'),
+      cancelText: trText('Cancelar'),
+      confirmText: trText('Aceptar'),
+    );
+    if (picked == null || !mounted) return;
+    assignControllerText(
+      _fechaInicioRecurrenciaController,
+      DateFormat('yyyy-MM-dd').format(picked),
+    );
+  }
+
+  List<_CategoryOption> _ensureSelectedCategoryOption({
+    required List<_CategoryOption> options,
+    required String currentValue,
+    required String fallbackLabel,
+  }) {
+    final normalizedValue = currentValue.trim();
+    if (normalizedValue.isEmpty) {
+      return options;
+    }
+    for (final option in options) {
+      if (option.value == normalizedValue) {
+        return options;
+      }
+    }
+    return [
+      _CategoryOption(value: normalizedValue, label: fallbackLabel),
+      ...options,
+    ];
+  }
+
+  Future<void> _createExpenseCategory() async {
+    final nombreController = TextEditingController();
+    final descripcionController = TextEditingController();
+    final result = await showDialog<Map<String, String>?>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(trText('Nueva categoria de gasto')),
+          content: SizedBox(
+            width: 420,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nombreController,
+                  autofocus: true,
+                  decoration: InputDecoration(
+                    labelText: trText('Nombre'),
+                    hintText: trText('Ej. Operacion'),
+                  ),
+                ),
+                SizedBox(height: 10),
+                TextField(
+                  controller: descripcionController,
+                  maxLines: 2,
+                  decoration: InputDecoration(
+                    labelText: trText('Descripcion'),
+                    hintText: trText('Opcional'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(trText('Cancelar')),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop({
+                  'nombre': nombreController.text.trim(),
+                  'descripcion': descripcionController.text.trim(),
+                });
+              },
+              child: Text(trText('Guardar')),
+            ),
+          ],
+        );
+      },
+    );
+    if (!mounted || result == null) return;
+
+    final nombre = (result['nombre'] ?? '').trim();
+    final descripcion = (result['descripcion'] ?? '').trim();
+    if (nombre.isEmpty) {
+      ToastHelper.showWarning(context, 'Ingresa el nombre de la categoria.');
+      return;
+    }
+
+    try {
+      final categoriaId = await ref
+          .read(gastosRepositoryProvider)
+          .createCategoria(nombre: nombre, descripcion: descripcion);
+      ref.invalidate(gastoCategoriasControllerProvider);
+      if (!mounted) return;
+      setState(() {
+        _categoriaValue = categoriaId;
+        _categoriaDisplayLabel = nombre;
+      });
+      ToastHelper.showSuccess(context, 'Categoria de gasto creada.');
+    } catch (error) {
+      if (!mounted) return;
+      ToastHelper.showError(
+        context,
+        buildActionErrorMessage(
+          error,
+          'No se pudo crear la categoria de gasto.',
+        ),
+      );
+    }
+  }
+
+  bool _looksLikeUuid(String value) {
+    return RegExp(
+      r'^[0-9a-fA-F]{8}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{12}$',
+    ).hasMatch(value.trim());
+  }
+
+  Future<void> _editExpenseCategory() async {
+    final categoriaId = _categoriaValue.trim();
+    if (!_looksLikeUuid(categoriaId)) {
+      ToastHelper.showWarning(
+        context,
+        'Esta categoria no se puede editar porque no tiene ID valido.',
+      );
+      return;
+    }
+
+    final categorias =
+        ref.read(gastoCategoriasControllerProvider).valueOrNull ??
+        const <GastoCategoria>[];
+    final actual = categorias.where((item) => item.id == categoriaId);
+    if (actual.isEmpty) {
+      ToastHelper.showWarning(
+        context,
+        'No se encontró la categoria seleccionada.',
+      );
+      return;
+    }
+    final categoria = actual.first;
+
+    final nombreController = TextEditingController(text: categoria.nombre);
+    final descripcionController = TextEditingController(
+      text: categoria.descripcion,
+    );
+    final result = await showDialog<Map<String, String>?>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(trText('Editar categoria de gasto')),
+          content: SizedBox(
+            width: 420,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nombreController,
+                  autofocus: true,
+                  decoration: InputDecoration(labelText: trText('Nombre')),
+                ),
+                SizedBox(height: 10),
+                TextField(
+                  controller: descripcionController,
+                  maxLines: 2,
+                  decoration: InputDecoration(labelText: trText('Descripcion')),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(trText('Cancelar')),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop({
+                  'nombre': nombreController.text.trim(),
+                  'descripcion': descripcionController.text.trim(),
+                });
+              },
+              child: Text(trText('Guardar')),
+            ),
+          ],
+        );
+      },
+    );
+    if (!mounted || result == null) return;
+
+    final nombre = (result['nombre'] ?? '').trim();
+    final descripcion = (result['descripcion'] ?? '').trim();
+    if (nombre.isEmpty) {
+      ToastHelper.showWarning(context, 'Ingresa el nombre de la categoria.');
+      return;
+    }
+
+    try {
+      await ref
+          .read(gastosRepositoryProvider)
+          .updateCategoria(
+            id: categoriaId,
+            nombre: nombre,
+            descripcion: descripcion,
+          );
+      ref.invalidate(gastoCategoriasControllerProvider);
+      if (!mounted) return;
+      setState(() => _categoriaDisplayLabel = nombre);
+      ToastHelper.showSuccess(context, 'Categoria de gasto actualizada.');
+    } catch (error) {
+      if (!mounted) return;
+      ToastHelper.showError(
+        context,
+        buildActionErrorMessage(
+          error,
+          'No se pudo actualizar la categoria de gasto.',
+        ),
+      );
+    }
+  }
+
+  Future<void> _deleteExpenseCategory() async {
+    final categoriaId = _categoriaValue.trim();
+    if (!_looksLikeUuid(categoriaId)) {
+      ToastHelper.showWarning(
+        context,
+        'Esta categoria no se puede eliminar porque no tiene ID valido.',
+      );
+      return;
+    }
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(trText('Eliminar categoria')),
+        content: Text(
+          trText('¿Seguro que quieres eliminar esta categoria de gasto?'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(trText('Cancelar')),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(trText('Eliminar')),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true || !mounted) return;
+
+    try {
+      await ref.read(gastosRepositoryProvider).deleteCategoria(categoriaId);
+      ref.invalidate(gastoCategoriasControllerProvider);
+      if (!mounted) return;
+      setState(() {
+        _categoriaValue = '';
+        _categoriaDisplayLabel = '';
+      });
+      ToastHelper.showSuccess(context, 'Categoria de gasto eliminada.');
+    } catch (error) {
+      if (!mounted) return;
+      ToastHelper.showError(
+        context,
+        buildActionErrorMessage(
+          error,
+          'No se pudo eliminar la categoria de gasto.',
+        ),
+      );
+    }
+  }
 }
 
 class _ResponsiveFormRow extends StatelessWidget {
-  const _ResponsiveFormRow({required this.left, required this.right});
+  _ResponsiveFormRow({required this.left, required this.right});
 
   final Widget left;
   final Widget right;
@@ -1066,13 +1588,13 @@ class _ResponsiveFormRow extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         if (constraints.maxWidth < 760) {
-          return Column(children: [left, const SizedBox(height: 12), right]);
+          return Column(children: [left, SizedBox(height: 12), right]);
         }
 
         return Row(
           children: [
             Expanded(child: left),
-            const SizedBox(width: 12),
+            SizedBox(width: 12),
             Expanded(child: right),
           ],
         );
@@ -1081,8 +1603,139 @@ class _ResponsiveFormRow extends StatelessWidget {
   }
 }
 
+class _CategoryOption {
+  _CategoryOption({required this.value, required this.label});
+
+  final String value;
+  final String label;
+}
+
+class _CategoryLookupField extends StatelessWidget {
+  _CategoryLookupField({
+    required this.value,
+    required this.options,
+    required this.emptyLabel,
+    required this.hintText,
+    required this.emptyStateMessage,
+    required this.buttonLabel,
+    required this.onAddPressed,
+    required this.onChanged,
+  });
+
+  final String value;
+  final List<_CategoryOption> options;
+  final String emptyLabel;
+  final String hintText;
+  final String emptyStateMessage;
+  final String buttonLabel;
+  final VoidCallback onAddPressed;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    if (options.isEmpty) {
+      return _CategoryLookupEmptyState(
+        message: emptyStateMessage,
+        buttonLabel: buttonLabel,
+        onPressed: onAddPressed,
+      );
+    }
+
+    final selectedValue = options.any((option) => option.value == value)
+        ? value
+        : '';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        DropdownButtonFormField<String>(
+          initialValue: selectedValue,
+          isExpanded: true,
+          menuMaxHeight: 320,
+          borderRadius: cotimaxMenuBorderRadius,
+          dropdownColor: AppColors.white,
+          icon: cotimaxDropdownIcon,
+          style: cotimaxDropdownTextStyle,
+          decoration: cotimaxDropdownDecoration(hintText: hintText),
+          items: [
+            DropdownMenuItem(
+              value: '',
+              child: Text(
+                trText(emptyLabel),
+                overflow: TextOverflow.ellipsis,
+                style: cotimaxDropdownTextStyle,
+              ),
+            ),
+            ...options.map(
+              (option) => DropdownMenuItem(
+                value: option.value,
+                child: Text(
+                  trText(option.label),
+                  overflow: TextOverflow.ellipsis,
+                  style: cotimaxDropdownTextStyle,
+                ),
+              ),
+            ),
+          ],
+          onChanged: (nextValue) => onChanged(nextValue ?? ''),
+        ),
+        SizedBox(height: 8),
+        TextButton.icon(
+          onPressed: onAddPressed,
+          icon: Icon(Icons.add_rounded, size: 16),
+          label: Text(trText(buttonLabel)),
+        ),
+      ],
+    );
+  }
+}
+
+class _CategoryLookupEmptyState extends StatelessWidget {
+  _CategoryLookupEmptyState({
+    required this.message,
+    required this.buttonLabel,
+    required this.onPressed,
+  });
+
+  final String message;
+  final String buttonLabel;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            trText(message),
+            style: TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              height: 1.4,
+            ),
+          ),
+          SizedBox(height: 10),
+          TextButton.icon(
+            onPressed: onPressed,
+            icon: Icon(Icons.add_rounded, size: 16),
+            label: Text(trText(buttonLabel)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _RangeLabel extends StatelessWidget {
-  const _RangeLabel({required this.label});
+  _RangeLabel({required this.label});
 
   final String label;
 
@@ -1090,7 +1743,7 @@ class _RangeLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       trText(label),
-      style: const TextStyle(
+      style: TextStyle(
         color: AppColors.textSecondary,
         fontSize: 11,
         fontWeight: FontWeight.w800,
@@ -1100,7 +1753,7 @@ class _RangeLabel extends StatelessWidget {
 }
 
 class _ChartMetaItem extends StatelessWidget {
-  const _ChartMetaItem({
+  _ChartMetaItem({
     required this.icon,
     required this.label,
     required this.accent,
@@ -1116,10 +1769,10 @@ class _ChartMetaItem extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(icon, size: 15, color: accent),
-        const SizedBox(width: 6),
+        SizedBox(width: 6),
         Text(
           trText(label),
-          style: const TextStyle(
+          style: TextStyle(
             color: AppColors.textPrimary,
             fontSize: 12,
             fontWeight: FontWeight.w700,
@@ -1131,7 +1784,7 @@ class _ChartMetaItem extends StatelessWidget {
 }
 
 class _ProjectionToolbar extends StatelessWidget {
-  const _ProjectionToolbar({
+  _ProjectionToolbar({
     required this.projected,
     required this.selectedOption,
     required this.options,
@@ -1190,7 +1843,7 @@ class _ProjectionToolbar extends StatelessWidget {
         if (projected)
           PopupMenuButton<_ProjectionOption>(
             tooltip: 'Cambiar proyección',
-            offset: const Offset(0, 8),
+            offset: Offset(0, 8),
             onSelected: onOptionSelected,
             itemBuilder: (context) => options
                 .map(
@@ -1211,7 +1864,7 @@ class _ProjectionToolbar extends StatelessWidget {
 }
 
 class _DateRangeButton extends StatelessWidget {
-  const _DateRangeButton({
+  _DateRangeButton({
     required this.label,
     required this.accent,
     required this.onPressed,
@@ -1234,14 +1887,14 @@ class _DateRangeButton extends StatelessWidget {
       icon: Icon(Icons.date_range_rounded, size: 16, color: accent),
       label: Text(
         trText(label),
-        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
       ),
     );
   }
 }
 
 class _ProjectionModeButton extends StatelessWidget {
-  const _ProjectionModeButton({
+  _ProjectionModeButton({
     required this.label,
     required this.icon,
     required this.active,
@@ -1278,7 +1931,7 @@ class _ProjectionModeButton extends StatelessWidget {
 }
 
 class _ProjectionResetButton extends StatelessWidget {
-  const _ProjectionResetButton({
+  _ProjectionResetButton({
     required this.label,
     required this.accent,
     required this.onPressed,
@@ -1300,14 +1953,14 @@ class _ProjectionResetButton extends StatelessWidget {
       ),
       child: Text(
         trText(label),
-        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
       ),
     );
   }
 }
 
 class _ProjectionOptionButton extends StatelessWidget {
-  const _ProjectionOptionButton({required this.label, required this.accent});
+  _ProjectionOptionButton({required this.label, required this.accent});
 
   final String label;
   final Color accent;
@@ -1325,7 +1978,7 @@ class _ProjectionOptionButton extends StatelessWidget {
             fontSize: 13,
           ),
         ),
-        const SizedBox(width: 4),
+        SizedBox(width: 4),
         Icon(Icons.expand_more_rounded, color: accent, size: 18),
       ],
     );
@@ -1345,7 +1998,7 @@ class _ProjectionOption {
 }
 
 class _ProjectedChartData {
-  const _ProjectedChartData({
+  _ProjectedChartData({
     required this.labels,
     required this.values,
     required this.total,
@@ -1369,7 +2022,7 @@ const expenseProjectionOptions = <_ProjectionOption>[
 ];
 
 class _CategoryDistributionCard extends StatelessWidget {
-  const _CategoryDistributionCard({required this.rows});
+  _CategoryDistributionCard({required this.rows});
 
   final List<_ExpenseRankingItem> rows;
 
@@ -1390,7 +2043,7 @@ class _CategoryDistributionCard extends StatelessWidget {
           SizedBox(
             height: 188,
             child: visible.isEmpty
-                ? const Center(
+                ? Center(
                     child: Text(
                       'Sin datos de categoria',
                       style: TextStyle(
@@ -1416,16 +2069,16 @@ class _CategoryDistributionCard extends StatelessWidget {
                     ),
                   ),
           ),
-          const SizedBox(height: 6),
+          SizedBox(height: 6),
           ...List.generate(visible.length, (index) {
             final item = visible[index];
             return Padding(
-              padding: const EdgeInsets.only(bottom: 6),
+              padding: EdgeInsets.only(bottom: 6),
               child: Row(
                 children: [
                   if (index < 3) ...[
                     rankingMedalIcon(index),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                   ],
                   Container(
                     width: 10,
@@ -1435,11 +2088,11 @@ class _CategoryDistributionCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(99),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       item.name,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppColors.textPrimary,
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
@@ -1448,7 +2101,7 @@ class _CategoryDistributionCard extends StatelessWidget {
                   ),
                   Text(
                     formatMxn(item.amount),
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: AppColors.textPrimary,
                       fontSize: 12,
                       fontWeight: FontWeight.w800,
@@ -1465,7 +2118,7 @@ class _CategoryDistributionCard extends StatelessWidget {
 }
 
 class _RankingExpenseTable extends StatelessWidget {
-  const _RankingExpenseTable({required this.title, required this.rows});
+  _RankingExpenseTable({required this.title, required this.rows});
 
   final String title;
   final List<_ExpenseRankingItem> rows;
@@ -1474,10 +2127,10 @@ class _RankingExpenseTable extends StatelessWidget {
   Widget build(BuildContext context) {
     return CotimaxDataTable(
       title: title,
-      columns: const [
-        DataColumn(label: Text('Nombre')),
-        DataColumn(label: Text('Movs')),
-        DataColumn(label: Text('Gasto')),
+      columns: [
+        DataColumn(label: Text(trText('Nombre'))),
+        DataColumn(label: Text(trText('Movs'))),
+        DataColumn(label: Text(trText('Gasto'))),
       ],
       rows: rows
           .take(6)
@@ -1492,7 +2145,7 @@ class _RankingExpenseTable extends StatelessWidget {
                     children: [
                       if (entry.key < 3) ...[
                         rankingMedalIcon(entry.key),
-                        const SizedBox(width: 8),
+                        SizedBox(width: 8),
                       ],
                       Expanded(child: Text(entry.value.name)),
                     ],
@@ -1509,7 +2162,7 @@ class _RankingExpenseTable extends StatelessWidget {
 }
 
 class _ExpenseRankingItem {
-  const _ExpenseRankingItem({
+  _ExpenseRankingItem({
     required this.name,
     required this.amount,
     required this.count,
@@ -1541,19 +2194,19 @@ LineChartData _expenseLineChartData({
       show: true,
       drawVerticalLine: false,
       getDrawingHorizontalLine: (_) =>
-          const FlLine(color: AppColors.border, strokeWidth: 1),
+          FlLine(color: AppColors.border, strokeWidth: 1),
     ),
     borderData: FlBorderData(show: false),
     titlesData: FlTitlesData(
-      topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-      rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+      topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+      rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
       leftTitles: AxisTitles(
         sideTitles: SideTitles(
           showTitles: true,
           reservedSize: 94,
           getTitlesWidget: (value, _) => Text(
             formatMxn(value),
-            style: const TextStyle(
+            style: TextStyle(
               color: AppColors.textMuted,
               fontSize: 11,
               fontWeight: FontWeight.w700,
@@ -1567,16 +2220,16 @@ LineChartData _expenseLineChartData({
           getTitlesWidget: (value, _) {
             final index = value.toInt();
             if (index < 0 || index >= labels.length) {
-              return const SizedBox.shrink();
+              return SizedBox.shrink();
             }
             if (!shouldShowChartLabel(index, labels.length, maxLabels: 4)) {
-              return const SizedBox.shrink();
+              return SizedBox.shrink();
             }
             return Padding(
-              padding: const EdgeInsets.only(top: 10),
+              padding: EdgeInsets.only(top: 10),
               child: Text(
                 labels[index],
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppColors.textMuted,
                   fontSize: 10,
                   fontWeight: FontWeight.w700,
@@ -1616,10 +2269,7 @@ LineChartData _expenseLineChartData({
             .map(
               (spot) => LineTooltipItem(
                 formatMxn(spot.y),
-                const TextStyle(
-                  color: AppColors.white,
-                  fontWeight: FontWeight.w800,
-                ),
+                TextStyle(color: AppColors.white, fontWeight: FontWeight.w800),
               ),
             )
             .toList(),
@@ -1657,7 +2307,7 @@ LineChartData _expenseLineChartData({
     final weekCount = (totalDays / 7).ceil();
     for (var index = 0; index < weekCount; index++) {
       final weekStart = start.add(Duration(days: index * 7));
-      final weekEnd = weekStart.add(const Duration(days: 6));
+      final weekEnd = weekStart.add(Duration(days: 6));
       labels.add(DateFormat('dd MMM', currentIntlLocale()).format(weekStart));
       values.add(
         gastos
@@ -1721,7 +2371,7 @@ _ProjectedChartData _buildProjectedExpenseWeeks(
   var currentWeek = _startOfWeek(DateTime.now());
 
   for (var index = 0; index < horizon; index++) {
-    currentWeek = currentWeek.add(const Duration(days: 7));
+    currentWeek = currentWeek.add(Duration(days: 7));
     final projected = math.max(
       recurringBase,
       _weightedAverage(source) * (1 + (trend * 0.14)),
@@ -1781,7 +2431,7 @@ _ProjectedChartData _buildHistoricalExpenseWeeks(
     final weekStart = currentWeek.subtract(
       Duration(days: (weeks - 1 - index) * 7),
     );
-    final weekEnd = weekStart.add(const Duration(days: 6));
+    final weekEnd = weekStart.add(Duration(days: 6));
     labels.add(DateFormat('dd MMM', currentIntlLocale()).format(weekStart));
     values.add(
       gastos
@@ -1896,7 +2546,7 @@ List<Gasto> _filterGastosByRange(List<Gasto> gastos, DateTimeRange? range) {
   final start = DateUtils.dateOnly(range.start);
   final end = DateUtils.dateOnly(
     range.end,
-  ).add(const Duration(hours: 23, minutes: 59, seconds: 59));
+  ).add(Duration(hours: 23, minutes: 59, seconds: 59));
   return gastos
       .where((item) => !item.fecha.isBefore(start) && !item.fecha.isAfter(end))
       .toList();
@@ -1963,6 +2613,16 @@ List<_ExpenseRankingItem> _expenseByProvider(List<Gasto> gastos) {
       )
       .toList()
     ..sort((a, b) => b.amount.compareTo(a.amount));
+}
+
+Map<String, double> _incomeByLinkedExpense(List<Ingreso> ingresos) {
+  final map = <String, double>{};
+  for (final item in ingresos) {
+    final gastoId = item.gastoFuenteId.trim();
+    if (gastoId.isEmpty) continue;
+    map[gastoId] = (map[gastoId] ?? 0) + item.monto;
+  }
+  return map;
 }
 
 String _recurrenceDescription(

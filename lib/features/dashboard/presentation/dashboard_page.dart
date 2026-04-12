@@ -21,7 +21,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 class DashboardPage extends ConsumerStatefulWidget {
-  const DashboardPage({super.key});
+   DashboardPage({super.key});
 
   @override
   ConsumerState<DashboardPage> createState() => _DashboardPageState();
@@ -191,13 +191,13 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                       categoriasGasto: categoriasGastoMap,
                     ),
                   ),
-                  const SizedBox(height: 12),
+                   SizedBox(height: 12),
                   _DashboardReveal(
                     version: _contentVersion,
                     index: 1,
-                    child: const _QuickActionsPanel(),
+                    child:  _QuickActionsPanel(),
                   ),
-                  const SizedBox(height: 12),
+                   SizedBox(height: 12),
                   _DashboardReveal(
                     version: _contentVersion,
                     index: 2,
@@ -213,7 +213,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                                   numeroVentas: approvedQuotes.length,
                                 ),
                               ),
-                              const SizedBox(width: 12),
+                               SizedBox(width: 12),
                               Expanded(
                                 child: _GastosImpactPanel(
                                   labels: gastosSerie.$2,
@@ -233,7 +233,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                                 totalIngresos: totalIngresos,
                                 numeroVentas: approvedQuotes.length,
                               ),
-                              const SizedBox(height: 12),
+                               SizedBox(height: 12),
                               _GastosImpactPanel(
                                 labels: gastosSerie.$2,
                                 gastosSerie: gastosSerie.$1,
@@ -244,7 +244,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                             ],
                           ),
                   ),
-                  const SizedBox(height: 12),
+                   SizedBox(height: 12),
                   _DashboardReveal(
                     version: _contentVersion,
                     index: 3,
@@ -252,7 +252,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                       items: topProductosUtilidad,
                     ),
                   ),
-                  const SizedBox(height: 12),
+                   SizedBox(height: 12),
                   _DashboardReveal(
                     version: _contentVersion,
                     index: 4,
@@ -265,7 +265,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                                   items: clientProfitability,
                                 ),
                               ),
-                              const SizedBox(width: 12),
+                               SizedBox(width: 12),
                               Expanded(
                                 child: _IncomeConcentrationPanel(
                                   summary: incomeConcentration,
@@ -278,14 +278,14 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                               _ClientProfitabilityPanel(
                                 items: clientProfitability,
                               ),
-                              const SizedBox(height: 12),
+                               SizedBox(height: 12),
                               _IncomeConcentrationPanel(
                                 summary: incomeConcentration,
                               ),
                             ],
                           ),
                   ),
-                  const SizedBox(height: 12),
+                   SizedBox(height: 12),
                   _DashboardReveal(
                     version: _contentVersion,
                     index: 5,
@@ -298,7 +298,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                                   items: quoteProbabilities,
                                 ),
                               ),
-                              const SizedBox(width: 12),
+                               SizedBox(width: 12),
                               Expanded(
                                 child: _RecentIncomePanel(
                                   ingresos: ingresos.take(6).toList(),
@@ -316,7 +316,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                                   items: quoteProbabilities,
                                 ),
                               ),
-                              const SizedBox(width: 12),
+                               SizedBox(width: 12),
                               Expanded(
                                 child: _RecentIncomePanel(
                                   ingresos: ingresos.take(6).toList(),
@@ -328,7 +328,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                         : Column(
                             children: [
                               _PipelinePanel(items: quoteProbabilities),
-                              const SizedBox(height: 12),
+                               SizedBox(height: 12),
                               _RecentIncomePanel(
                                 ingresos: ingresos.take(6).toList(),
                                 clientes: clientesMap,
@@ -349,14 +349,14 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                 actions: [
                   OutlinedButton.icon(
                     onPressed: _pickDashboardRange,
-                    icon: const FaIcon(FontAwesomeIcons.calendarDays, size: 13),
+                    icon:  FaIcon(FontAwesomeIcons.calendarDays, size: 13),
                     label: Text(_rangeLabel(_selectedRange)),
                   ),
                 ],
               ),
-              const SizedBox(height: 14),
+               SizedBox(height: 14),
               AnimatedSwitcher(
-                duration: const Duration(milliseconds: 320),
+                duration:  Duration(milliseconds: 320),
                 switchInCurve: Curves.easeOutCubic,
                 switchOutCurve: Curves.easeInCubic,
                 child: KeyedSubtree(
@@ -394,7 +394,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
   DateTimeRange _buildSuggestedRange() {
     final now = DateTime.now();
     return DateTimeRange(
-      start: _startOfDay(now.subtract(const Duration(days: 49))),
+      start: _startOfDay(now.subtract( Duration(days: 49))),
       end: _endOfDay(now),
     );
   }
@@ -403,7 +403,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
     if (mounted) {
       setState(() => _isRefreshing = true);
     }
-    await Future<void>.delayed(const Duration(milliseconds: 460));
+    await Future<void>.delayed( Duration(milliseconds: 460));
     if (!mounted) return;
     setState(() {
       _isRefreshing = false;
@@ -416,7 +416,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
 }
 
 class _KpiGrid extends StatelessWidget {
-  const _KpiGrid({
+   _KpiGrid({
     required this.ingresosSerie,
     required this.gastosSerie,
     required this.utilidadSerie,
@@ -466,7 +466,7 @@ class _KpiGrid extends StatelessWidget {
 
     return GridView.builder(
       shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
+      physics:  NeverScrollableScrollPhysics(),
       itemCount: 4,
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: columns,
@@ -559,7 +559,7 @@ class _KpiGrid extends StatelessWidget {
 }
 
 class _IngresosPanel extends StatelessWidget {
-  const _IngresosPanel({
+   _IngresosPanel({
     required this.labels,
     required this.values,
     required this.totalIngresos,
@@ -575,7 +575,7 @@ class _IngresosPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return SectionCard(
       title: 'Ingresos totales',
-      trailing: const _TopChip(
+      trailing:  _TopChip(
         icon: FontAwesomeIcons.arrowTrendUp,
         label: 'Tendencia de ingresos',
       ),
@@ -584,7 +584,7 @@ class _IngresosPanel extends StatelessWidget {
         children: [
           RichText(
             text: TextSpan(
-              style: const TextStyle(
+              style:  TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
@@ -593,17 +593,17 @@ class _IngresosPanel extends StatelessWidget {
                 TextSpan(text: '${trText('Total del rango')} '),
                 TextSpan(
                   text: formatMxn(totalIngresos),
-                  style: const TextStyle(
+                  style:  TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 24,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                const TextSpan(text: '  |  '),
+                 TextSpan(text: '  |  '),
                 TextSpan(text: '${trText('Cotizaciones aprobadas')} '),
                 TextSpan(
                   text: '$numeroVentas',
-                  style: const TextStyle(
+                  style:  TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 20,
                     fontWeight: FontWeight.w800,
@@ -612,9 +612,9 @@ class _IngresosPanel extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 14),
+           SizedBox(height: 14),
           if (values.isEmpty)
-            const SizedBox(
+             SizedBox(
               height: 290,
               child: Center(child: InlineEmptyMessage()),
             )
@@ -630,7 +630,7 @@ class _IngresosPanel extends StatelessWidget {
                 ),
               ),
             ),
-          const SizedBox(height: 16),
+           SizedBox(height: 16),
           SizedBox(
             height: 58,
             child: Column(
@@ -646,7 +646,7 @@ class _IngresosPanel extends StatelessWidget {
                     fontSize: 15,
                   ),
                 ),
-                const SizedBox(height: 8),
+                 SizedBox(height: 8),
                 Text(
                   trText(
                     'Esta vista resume cuanto ingreso entro y que tan activo estuvo el cierre comercial durante el periodo.',
@@ -668,7 +668,7 @@ class _IngresosPanel extends StatelessWidget {
 }
 
 class _GastosImpactPanel extends StatelessWidget {
-  const _GastosImpactPanel({
+   _GastosImpactPanel({
     required this.labels,
     required this.gastosSerie,
     required this.totalGastos,
@@ -692,7 +692,7 @@ class _GastosImpactPanel extends StatelessWidget {
 
     return SectionCard(
       title: 'Gastos totales',
-      trailing: const _TopChip(
+      trailing:  _TopChip(
         icon: FontAwesomeIcons.arrowTrendDown,
         label: 'Tendencia de gastos',
       ),
@@ -701,7 +701,7 @@ class _GastosImpactPanel extends StatelessWidget {
         children: [
           RichText(
             text: TextSpan(
-              style: const TextStyle(
+              style:  TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
@@ -710,7 +710,7 @@ class _GastosImpactPanel extends StatelessWidget {
                 TextSpan(text: '${trText('Total del rango')} '),
                 TextSpan(
                   text: formatMxn(totalGastos),
-                  style: const TextStyle(
+                  style:  TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 24,
                     fontWeight: FontWeight.w800,
@@ -719,9 +719,9 @@ class _GastosImpactPanel extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 14),
+           SizedBox(height: 14),
           if (gastosSerie.isEmpty)
-            const SizedBox(
+             SizedBox(
               height: 290,
               child: Center(child: InlineEmptyMessage()),
             )
@@ -737,7 +737,7 @@ class _GastosImpactPanel extends StatelessWidget {
                 ),
               ),
             ),
-          const SizedBox(height: 16),
+           SizedBox(height: 16),
           SizedBox(
             height: 58,
             child: Column(
@@ -751,10 +751,10 @@ class _GastosImpactPanel extends StatelessWidget {
                     fontSize: 15,
                   ),
                 ),
-                const SizedBox(height: 8),
+                 SizedBox(height: 8),
                 Text(
                   '${trText('Margen actual')}: ${margen.toStringAsFixed(1)}%. ${trText(margen >= 20 ? 'El gasto se mantiene bajo control.' : 'Conviene revisar gastos para recuperar margen.')}',
-                  style: const TextStyle(
+                  style:  TextStyle(
                     color: AppColors.textPrimary,
                     fontWeight: FontWeight.w600,
                     fontSize: 12,
@@ -771,7 +771,7 @@ class _GastosImpactPanel extends StatelessWidget {
 }
 
 class _DashboardReveal extends StatelessWidget {
-  const _DashboardReveal({
+   _DashboardReveal({
     required this.version,
     required this.index,
     required this.child,
@@ -803,7 +803,7 @@ class _DashboardReveal extends StatelessWidget {
 }
 
 class _DashboardLoadingState extends StatelessWidget {
-  const _DashboardLoadingState({required this.desktop, required this.tablet});
+   _DashboardLoadingState({required this.desktop, required this.tablet});
 
   final bool desktop;
   final bool tablet;
@@ -819,7 +819,7 @@ class _DashboardLoadingState extends StatelessWidget {
       children: [
         GridView.builder(
           shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
+          physics:  NeverScrollableScrollPhysics(),
           itemCount: 4,
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: kpiColumns,
@@ -827,7 +827,7 @@ class _DashboardLoadingState extends StatelessWidget {
             mainAxisSpacing: 12,
             mainAxisExtent: desktop ? 228 : 208,
           ),
-          itemBuilder: (_, __) => const SectionCard(
+          itemBuilder: (_, __) =>  SectionCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -842,8 +842,8 @@ class _DashboardLoadingState extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 12),
-        const SectionCard(
+         SizedBox(height: 12),
+         SectionCard(
           title: 'Acciones rápidas',
           child: Wrap(
             spacing: 10,
@@ -856,9 +856,9 @@ class _DashboardLoadingState extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 12),
+         SizedBox(height: 12),
         desktop
-            ? const Row(
+            ?  Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(child: _LoadingPanel(height: 420)),
@@ -866,18 +866,18 @@ class _DashboardLoadingState extends StatelessWidget {
                   Expanded(child: _LoadingPanel(height: 420)),
                 ],
               )
-            : const Column(
+            :  Column(
                 children: [
                   _LoadingPanel(height: 340),
                   SizedBox(height: 12),
                   _LoadingPanel(height: 340),
                 ],
               ),
-        const SizedBox(height: 12),
-        const _LoadingPanel(height: 310),
-        const SizedBox(height: 12),
+         SizedBox(height: 12),
+         _LoadingPanel(height: 310),
+         SizedBox(height: 12),
         (desktop || tablet)
-            ? const Row(
+            ?  Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(child: _LoadingPanel(height: 300)),
@@ -885,16 +885,16 @@ class _DashboardLoadingState extends StatelessWidget {
                   Expanded(child: _LoadingPanel(height: 300)),
                 ],
               )
-            : const Column(
+            :  Column(
                 children: [
                   _LoadingPanel(height: 280),
                   SizedBox(height: 12),
                   _LoadingPanel(height: 280),
                 ],
               ),
-        const SizedBox(height: 12),
+         SizedBox(height: 12),
         (desktop || tablet)
-            ? const Row(
+            ?  Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(child: _LoadingPanel(height: 310)),
@@ -902,7 +902,7 @@ class _DashboardLoadingState extends StatelessWidget {
                   Expanded(child: _LoadingPanel(height: 310)),
                 ],
               )
-            : const Column(
+            :  Column(
                 children: [
                   _LoadingPanel(height: 280),
                   SizedBox(height: 12),
@@ -915,7 +915,7 @@ class _DashboardLoadingState extends StatelessWidget {
 }
 
 class _LoadingPanel extends StatelessWidget {
-  const _LoadingPanel({required this.height});
+   _LoadingPanel({required this.height});
 
   final double height;
 
@@ -925,10 +925,10 @@ class _LoadingPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SkeletonBox(width: 180, height: 18, radius: 8),
-          const SizedBox(height: 10),
-          const SkeletonBox(width: 260, height: 12, radius: 8),
-          const SizedBox(height: 18),
+           SkeletonBox(width: 180, height: 18, radius: 8),
+           SizedBox(height: 10),
+           SkeletonBox(width: 260, height: 12, radius: 8),
+           SizedBox(height: 18),
           SkeletonBox(height: height, radius: 20),
         ],
       ),
@@ -937,7 +937,7 @@ class _LoadingPanel extends StatelessWidget {
 }
 
 class _PipelinePanel extends StatelessWidget {
-  const _PipelinePanel({required this.items});
+   _PipelinePanel({required this.items});
 
   final List<_QuoteProbabilityItem> items;
 
@@ -965,7 +965,7 @@ class _PipelinePanel extends StatelessWidget {
 
     return SectionCard(
       title: 'Cotizaciones prioritarias',
-      trailing: const _TopChip(
+      trailing:  _TopChip(
         icon: FontAwesomeIcons.fileInvoiceDollar,
         label: 'Seguimiento',
       ),
@@ -995,21 +995,21 @@ class _PipelinePanel extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+           SizedBox(height: 12),
           Text(
             items.isEmpty
                 ? 'Todavia no hay pipeline para analizar en este rango.'
                 : '$highConfidence cotizaciones vienen con confianza alta. La tabla solo deja visibles las mas accionables para no saturarte.',
-            style: const TextStyle(
+            style:  TextStyle(
               color: AppColors.textSecondary,
               fontSize: 12,
               fontWeight: FontWeight.w600,
               height: 1.45,
             ),
           ),
-          const SizedBox(height: 14),
+           SizedBox(height: 14),
           if (prioritized.isEmpty)
-            const InlineEmptyMessage()
+             InlineEmptyMessage()
           else
             LayoutBuilder(
               builder: (context, constraints) {
@@ -1066,7 +1066,7 @@ class _PipelinePanel extends StatelessWidget {
 }
 
 class _RecentIncomePanel extends StatelessWidget {
-  const _RecentIncomePanel({required this.ingresos, required this.clientes});
+   _RecentIncomePanel({required this.ingresos, required this.clientes});
 
   final List<Ingreso> ingresos;
   final Map<String, Cliente> clientes;
@@ -1117,7 +1117,7 @@ class _RecentIncomePanel extends StatelessWidget {
 }
 
 class _CompactMetricPill extends StatelessWidget {
-  const _CompactMetricPill({
+   _CompactMetricPill({
     required this.label,
     required this.value,
     required this.accent,
@@ -1130,7 +1130,7 @@ class _CompactMetricPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding:  EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(10),
@@ -1148,10 +1148,10 @@ class _CompactMetricPill extends StatelessWidget {
               fontWeight: FontWeight.w800,
             ),
           ),
-          const SizedBox(height: 4),
+           SizedBox(height: 4),
           Text(
             value,
-            style: const TextStyle(
+            style:  TextStyle(
               color: AppColors.textPrimary,
               fontSize: 14,
               fontWeight: FontWeight.w800,
@@ -1164,7 +1164,7 @@ class _CompactMetricPill extends StatelessWidget {
 }
 
 class _ProbabilityIndicator extends StatelessWidget {
-  const _ProbabilityIndicator({required this.probability});
+   _ProbabilityIndicator({required this.probability});
 
   final double probability;
 
@@ -1188,12 +1188,12 @@ class _ProbabilityIndicator extends StatelessWidget {
             fontSize: 12,
           ),
         ),
-        const SizedBox(height: 6),
+         SizedBox(height: 6),
         ClipRRect(
           borderRadius: BorderRadius.circular(999),
           child: TweenAnimationBuilder<double>(
             tween: Tween(begin: 0, end: clamped),
-            duration: const Duration(milliseconds: 500),
+            duration:  Duration(milliseconds: 500),
             curve: Curves.easeOutCubic,
             builder: (context, value, _) {
               return LinearProgressIndicator(
@@ -1211,7 +1211,7 @@ class _ProbabilityIndicator extends StatelessWidget {
 }
 
 class _KpiCard extends StatelessWidget {
-  const _KpiCard({
+   _KpiCard({
     required this.title,
     required this.value,
     required this.accent,
@@ -1246,7 +1246,7 @@ class _KpiCard extends StatelessWidget {
                   trText(title),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style:  TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
@@ -1257,7 +1257,7 @@ class _KpiCard extends StatelessWidget {
                 TextButton(
                   onPressed: onViewMore,
                   style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
+                    padding:  EdgeInsets.symmetric(
                       horizontal: 8,
                       vertical: 4,
                     ),
@@ -1270,27 +1270,27 @@ class _KpiCard extends StatelessWidget {
             ],
           ),
           if (metaLabel != null) ...[
-            const SizedBox(height: 4),
+             SizedBox(height: 4),
             Text(
               trText(metaLabel!),
-              style: const TextStyle(
+              style:  TextStyle(
                 color: AppColors.textMuted,
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
               ),
             ),
           ],
-          const SizedBox(height: 10),
+           SizedBox(height: 10),
           Text(
             value,
-            style: const TextStyle(
+            style:  TextStyle(
               color: AppColors.textPrimary,
               fontSize: 26,
               fontWeight: FontWeight.w800,
               height: 1,
             ),
           ),
-          const SizedBox(height: 6),
+           SizedBox(height: 6),
           Text(
             trText(footer),
             style: TextStyle(
@@ -1303,19 +1303,19 @@ class _KpiCard extends StatelessWidget {
               fontWeight: FontWeight.w800,
             ),
           ),
-          const SizedBox(height: 6),
+           SizedBox(height: 6),
           SizedBox(
             height: compact ? 64 : 70,
             child: series.isEmpty
-                ? const Center(child: InlineEmptyMessage())
+                ?  Center(child: InlineEmptyMessage())
                 : Align(
                     alignment: Alignment.bottomCenter,
                     child: LineChart(
                       LineChartData(
                         minY: percentMode ? 0 : null,
-                        gridData: const FlGridData(show: false),
+                        gridData:  FlGridData(show: false),
                         borderData: FlBorderData(show: false),
-                        titlesData: const FlTitlesData(
+                        titlesData:  FlTitlesData(
                           topTitles: AxisTitles(
                             sideTitles: SideTitles(showTitles: false),
                           ),
@@ -1339,7 +1339,7 @@ class _KpiCard extends StatelessWidget {
                             isCurved: true,
                             color: accent,
                             barWidth: 2.5,
-                            dotData: const FlDotData(show: false),
+                            dotData:  FlDotData(show: false),
                             belowBarData: BarAreaData(
                               show: true,
                               color: accent.withValues(alpha: 0.10),
@@ -1356,7 +1356,7 @@ class _KpiCard extends StatelessWidget {
                                     percentMode
                                         ? '${spot.y.toStringAsFixed(1)}%'
                                         : formatMxn(spot.y),
-                                    const TextStyle(
+                                     TextStyle(
                                       color: AppColors.white,
                                       fontWeight: FontWeight.w800,
                                     ),
@@ -1376,7 +1376,7 @@ class _KpiCard extends StatelessWidget {
 }
 
 class _TopChip extends StatelessWidget {
-  const _TopChip({required this.icon, required this.label});
+   _TopChip({required this.icon, required this.label});
 
   final IconData icon;
   final String label;
@@ -1387,10 +1387,10 @@ class _TopChip extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         FaIcon(icon, size: 12, color: AppColors.textSecondary),
-        const SizedBox(width: 8),
+         SizedBox(width: 8),
         Text(
           trText(label),
-          style: const TextStyle(
+          style:  TextStyle(
             color: AppColors.textPrimary,
             fontWeight: FontWeight.w800,
             fontSize: 11,
@@ -1402,7 +1402,7 @@ class _TopChip extends StatelessWidget {
 }
 
 class _QuickActionsPanel extends StatelessWidget {
-  const _QuickActionsPanel();
+   _QuickActionsPanel();
 
   @override
   Widget build(BuildContext context) {
@@ -1465,7 +1465,7 @@ class _QuickActionButton extends StatelessWidget {
 }
 
 class _IncomeTimelineDialog extends StatelessWidget {
-  const _IncomeTimelineDialog({
+   _IncomeTimelineDialog({
     required this.ingresos,
     required this.clientes,
     required this.cotizaciones,
@@ -1486,7 +1486,7 @@ class _IncomeTimelineDialog extends StatelessWidget {
 }
 
 class _ExpenseTimelineDialog extends StatelessWidget {
-  const _ExpenseTimelineDialog({
+   _ExpenseTimelineDialog({
     required this.gastos,
     required this.categorias,
   });
@@ -1504,7 +1504,7 @@ class _ExpenseTimelineDialog extends StatelessWidget {
 }
 
 class _FilterableIncomeTimelineDialog extends StatefulWidget {
-  const _FilterableIncomeTimelineDialog({
+   _FilterableIncomeTimelineDialog({
     required this.ingresos,
     required this.clientes,
     required this.cotizaciones,
@@ -1621,7 +1621,7 @@ class _FilterableIncomeTimelineDialogState
 }
 
 class _FilterableExpenseTimelineDialog extends StatefulWidget {
-  const _FilterableExpenseTimelineDialog({
+   _FilterableExpenseTimelineDialog({
     required this.gastos,
     required this.categorias,
   });
@@ -1738,7 +1738,7 @@ class _FilterableExpenseTimelineDialogState
 }
 
 class _ApprovedQuoteTimelineDialog extends StatelessWidget {
-  const _ApprovedQuoteTimelineDialog({required this.items});
+   _ApprovedQuoteTimelineDialog({required this.items});
 
   final List<_ApprovedQuoteUtilityDetail> items;
 
@@ -1749,7 +1749,7 @@ class _ApprovedQuoteTimelineDialog extends StatelessWidget {
 }
 
 class _FilterableApprovedQuoteTimelineDialog extends StatefulWidget {
-  const _FilterableApprovedQuoteTimelineDialog({required this.items});
+   _FilterableApprovedQuoteTimelineDialog({required this.items});
 
   final List<_ApprovedQuoteUtilityDetail> items;
 
@@ -1810,7 +1810,7 @@ class _FilterableApprovedQuoteTimelineDialogState
                   color: AppColors.primary.withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(999),
                 ),
-                child: const Icon(
+                child:  Icon(
                   Icons.request_quote_rounded,
                   color: AppColors.primary,
                   size: 20,
@@ -1860,7 +1860,7 @@ class _FilterableApprovedQuoteTimelineDialogState
 }
 
 class _TimelineShell extends StatelessWidget {
-  const _TimelineShell({
+   _TimelineShell({
     required this.searchHint,
     required this.query,
     required this.onQueryChanged,
@@ -1893,7 +1893,7 @@ class _TimelineShell extends StatelessWidget {
                       'No hay resultados para "$query".',
                       'No results for "$query".',
                     ),
-              style: const TextStyle(
+              style:  TextStyle(
                 color: AppColors.textSecondary,
                 fontWeight: FontWeight.w700,
               ),
@@ -1901,7 +1901,7 @@ class _TimelineShell extends StatelessWidget {
           )
         : ListView.separated(
             itemCount: children.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            separatorBuilder: (_, __) =>  SizedBox(height: 10),
             itemBuilder: (context, index) => children[index],
           );
 
@@ -1915,14 +1915,14 @@ class _TimelineShell extends StatelessWidget {
           children: [
             if (narrow) ...[
               SearchField(hint: searchHint, onChanged: onQueryChanged),
-              const SizedBox(height: 10),
+               SizedBox(height: 10),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
                 children: [
                   OutlinedButton.icon(
                     onPressed: onPickRange,
-                    icon: const Icon(Icons.date_range_rounded, size: 18),
+                    icon:  Icon(Icons.date_range_rounded, size: 18),
                     label: Text(trText(rangeLabel)),
                   ),
                   if (onClearRange != null)
@@ -1941,13 +1941,13 @@ class _TimelineShell extends StatelessWidget {
                       onChanged: onQueryChanged,
                     ),
                   ),
-                  const SizedBox(width: 10),
+                   SizedBox(width: 10),
                   OutlinedButton.icon(
                     onPressed: onPickRange,
-                    icon: const Icon(Icons.date_range_rounded, size: 18),
+                    icon:  Icon(Icons.date_range_rounded, size: 18),
                     label: Text(trText(rangeLabel)),
                   ),
-                  if (onClearRange != null) const SizedBox(width: 6),
+                  if (onClearRange != null)  SizedBox(width: 6),
                   if (onClearRange != null)
                     TextButton(
                       onPressed: onClearRange,
@@ -1955,16 +1955,16 @@ class _TimelineShell extends StatelessWidget {
                     ),
                 ],
               ),
-            const SizedBox(height: 12),
+             SizedBox(height: 12),
             Text(
               trText(summaryLabel),
-              style: const TextStyle(
+              style:  TextStyle(
                 color: AppColors.textSecondary,
                 fontWeight: FontWeight.w700,
                 fontSize: 12,
               ),
             ),
-            const SizedBox(height: 14),
+             SizedBox(height: 14),
             if (boundedHeight)
               Expanded(child: listContent)
             else
@@ -1977,7 +1977,7 @@ class _TimelineShell extends StatelessWidget {
 }
 
 class _TimelineRow extends StatelessWidget {
-  const _TimelineRow({
+   _TimelineRow({
     required this.color,
     required this.leading,
     required this.title,
@@ -2006,16 +2006,16 @@ class _TimelineRow extends StatelessWidget {
             Container(
               width: 2,
               height: 74,
-              margin: const EdgeInsets.symmetric(vertical: 6),
+              margin:  EdgeInsets.symmetric(vertical: 6),
               color: AppColors.border,
             ),
           ],
         ),
-        const SizedBox(width: 12),
+         SizedBox(width: 12),
         Expanded(
           child: Container(
-            padding: const EdgeInsets.only(bottom: 14),
-            decoration: const BoxDecoration(
+            padding:  EdgeInsets.only(bottom: 14),
+            decoration:  BoxDecoration(
               border: Border(bottom: BorderSide(color: AppColors.border)),
             ),
             child: Column(
@@ -2030,13 +2030,13 @@ class _TimelineRow extends StatelessWidget {
                         children: [
                           Text(
                             trText(title),
-                            style: const TextStyle(
+                            style:  TextStyle(
                               color: AppColors.textPrimary,
                               fontWeight: FontWeight.w800,
                               fontSize: 15,
                             ),
                           ),
-                          const SizedBox(height: 3),
+                           SizedBox(height: 3),
                           Text(
                             trText(operationLabel),
                             style: TextStyle(
@@ -2045,10 +2045,10 @@ class _TimelineRow extends StatelessWidget {
                               fontSize: 12,
                             ),
                           ),
-                          const SizedBox(height: 4),
+                           SizedBox(height: 4),
                           Text(
                             trText(timestampLabel),
-                            style: const TextStyle(
+                            style:  TextStyle(
                               color: AppColors.textSecondary,
                               fontWeight: FontWeight.w600,
                               fontSize: 12,
@@ -2057,9 +2057,9 @@ class _TimelineRow extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const SizedBox(width: 12),
+                     SizedBox(width: 12),
                     Container(
-                      padding: const EdgeInsets.symmetric(
+                      padding:  EdgeInsets.symmetric(
                         horizontal: 10,
                         vertical: 6,
                       ),
@@ -2078,15 +2078,15 @@ class _TimelineRow extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
+                 SizedBox(height: 10),
                 ...detailLines
                     .where((line) => line.trim().isNotEmpty)
                     .map(
                       (line) => Padding(
-                        padding: const EdgeInsets.only(bottom: 4),
+                        padding:  EdgeInsets.only(bottom: 4),
                         child: Text(
                           trText(line),
-                          style: const TextStyle(
+                          style:  TextStyle(
                             color: AppColors.textPrimary,
                             fontWeight: FontWeight.w600,
                             fontSize: 13,
@@ -2105,7 +2105,7 @@ class _TimelineRow extends StatelessWidget {
 }
 
 class _TopProductsUtilityPanel extends StatelessWidget {
-  const _TopProductsUtilityPanel({required this.items});
+   _TopProductsUtilityPanel({required this.items});
 
   final List<_ProductUtilityItem> items;
 
@@ -2118,7 +2118,7 @@ class _TopProductsUtilityPanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (visible.isEmpty)
-            const InlineEmptyMessage()
+             InlineEmptyMessage()
           else
             SizedBox(
               height: 250,
@@ -2131,14 +2131,14 @@ class _TopProductsUtilityPanel extends StatelessWidget {
                     show: true,
                     drawVerticalLine: false,
                     getDrawingHorizontalLine: (_) =>
-                        const FlLine(color: AppColors.border, strokeWidth: 1),
+                         FlLine(color: AppColors.border, strokeWidth: 1),
                   ),
                   borderData: FlBorderData(show: false),
                   titlesData: FlTitlesData(
-                    topTitles: const AxisTitles(
+                    topTitles:  AxisTitles(
                       sideTitles: SideTitles(showTitles: false),
                     ),
-                    rightTitles: const AxisTitles(
+                    rightTitles:  AxisTitles(
                       sideTitles: SideTitles(showTitles: false),
                     ),
                     leftTitles: AxisTitles(
@@ -2147,7 +2147,7 @@ class _TopProductsUtilityPanel extends StatelessWidget {
                         reservedSize: 94,
                         getTitlesWidget: (value, _) => Text(
                           formatMxn(value),
-                          style: const TextStyle(
+                          style:  TextStyle(
                             color: AppColors.textMuted,
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
@@ -2161,13 +2161,13 @@ class _TopProductsUtilityPanel extends StatelessWidget {
                         getTitlesWidget: (value, _) {
                           final index = value.toInt();
                           if (index < 0 || index >= visible.length) {
-                            return const SizedBox.shrink();
+                            return  SizedBox.shrink();
                           }
                           return Padding(
-                            padding: const EdgeInsets.only(top: 8),
+                            padding:  EdgeInsets.only(top: 8),
                             child: Text(
                               visible[index].shortLabel,
-                              style: const TextStyle(
+                              style:  TextStyle(
                                 color: AppColors.textMuted,
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
@@ -2199,7 +2199,7 @@ class _TopProductsUtilityPanel extends StatelessWidget {
                       getTooltipItem: (group, groupIndex, rod, rodIndex) {
                         return BarTooltipItem(
                           formatMxn(rod.toY),
-                          const TextStyle(
+                           TextStyle(
                             color: AppColors.white,
                             fontWeight: FontWeight.w800,
                           ),
@@ -2217,7 +2217,7 @@ class _TopProductsUtilityPanel extends StatelessWidget {
 }
 
 class _ClientProfitabilityPanel extends StatelessWidget {
-  const _ClientProfitabilityPanel({required this.items});
+   _ClientProfitabilityPanel({required this.items});
 
   final List<_ClientProfitabilityItem> items;
 
@@ -2226,12 +2226,12 @@ class _ClientProfitabilityPanel extends StatelessWidget {
     final visible = items.take(4).toList();
     return SectionCard(
       title: 'Rentabilidad por cliente',
-      trailing: const _TopChip(
+      trailing:  _TopChip(
         icon: FontAwesomeIcons.handshakeAngle,
         label: 'Clientes clave',
       ),
       child: visible.isEmpty
-          ? const InlineEmptyMessage()
+          ?  InlineEmptyMessage()
           : Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -2246,10 +2246,10 @@ class _ClientProfitabilityPanel extends StatelessWidget {
                     height: 1.45,
                   ),
                 ),
-                const SizedBox(height: 14),
+                 SizedBox(height: 14),
                 for (var index = 0; index < visible.length; index++) ...[
                   _ClientProfitabilityTile(item: visible[index], index: index),
-                  if (index != visible.length - 1) const SizedBox(height: 10),
+                  if (index != visible.length - 1)  SizedBox(height: 10),
                 ],
               ],
             ),
@@ -2258,7 +2258,7 @@ class _ClientProfitabilityPanel extends StatelessWidget {
 }
 
 class _ClientProfitabilityTile extends StatelessWidget {
-  const _ClientProfitabilityTile({required this.item, required this.index});
+   _ClientProfitabilityTile({required this.item, required this.index});
 
   final _ClientProfitabilityItem item;
   final int index;
@@ -2266,7 +2266,7 @@ class _ClientProfitabilityTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding:  EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(10),
@@ -2278,11 +2278,11 @@ class _ClientProfitabilityTile extends StatelessWidget {
           Row(
             children: [
               rankingMedalIcon(index),
-              if (index < 3) const SizedBox(width: 8),
+              if (index < 3)  SizedBox(width: 8),
               Expanded(
                 child: Text(
                   item.clientName,
-                  style: const TextStyle(
+                  style:  TextStyle(
                     color: AppColors.textPrimary,
                     fontWeight: FontWeight.w800,
                     fontSize: 14,
@@ -2290,7 +2290,7 @@ class _ClientProfitabilityTile extends StatelessWidget {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(
+                padding:  EdgeInsets.symmetric(
                   horizontal: 10,
                   vertical: 6,
                 ),
@@ -2312,7 +2312,7 @@ class _ClientProfitabilityTile extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 10),
+           SizedBox(height: 10),
           Wrap(
             spacing: 10,
             runSpacing: 10,
@@ -2332,13 +2332,13 @@ class _ClientProfitabilityTile extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 10),
+           SizedBox(height: 10),
           Text(
             tr(
               'Utilidad confirmada ${formatMxn(item.utility)} en ${item.purchaseCount} compras aprobadas.',
               'Confirmed profit ${formatMxn(item.utility)} across ${item.purchaseCount} approved purchases.',
             ),
-            style: const TextStyle(
+            style:  TextStyle(
               color: AppColors.textSecondary,
               fontWeight: FontWeight.w600,
               fontSize: 12,
@@ -2352,20 +2352,20 @@ class _ClientProfitabilityTile extends StatelessWidget {
 }
 
 class _ClientMetricTag extends StatelessWidget {
-  const _ClientMetricTag({
+   _ClientMetricTag({
     required this.label,
     required this.value,
-    this.accent = AppColors.textPrimary,
+    this.accent,
   });
 
   final String label;
   final String value;
-  final Color accent;
+  final Color? accent;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      padding:  EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(10),
@@ -2377,17 +2377,17 @@ class _ClientMetricTag extends StatelessWidget {
         children: [
           Text(
             trText(label),
-            style: const TextStyle(
+            style:  TextStyle(
               color: AppColors.textMuted,
               fontWeight: FontWeight.w700,
               fontSize: 10,
             ),
           ),
-          const SizedBox(height: 3),
+           SizedBox(height: 3),
           Text(
             value,
             style: TextStyle(
-              color: accent,
+              color: accent ?? AppColors.textPrimary,
               fontWeight: FontWeight.w800,
               fontSize: 12,
             ),
@@ -2399,7 +2399,7 @@ class _ClientMetricTag extends StatelessWidget {
 }
 
 class _IncomeConcentrationPanel extends StatelessWidget {
-  const _IncomeConcentrationPanel({required this.summary});
+   _IncomeConcentrationPanel({required this.summary});
 
   final _IncomeConcentrationSummary summary;
 
@@ -2407,12 +2407,12 @@ class _IncomeConcentrationPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return SectionCard(
       title: 'Concentracion de ingresos',
-      trailing: const _TopChip(
+      trailing:  _TopChip(
         icon: FontAwesomeIcons.chartPie,
         label: 'Dependencia',
       ),
       child: summary.totalIncome <= 0
-          ? const InlineEmptyMessage()
+          ?  InlineEmptyMessage()
           : Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -2427,31 +2427,31 @@ class _IncomeConcentrationPanel extends StatelessWidget {
                     height: 1.45,
                   ),
                 ),
-                const SizedBox(height: 14),
+                 SizedBox(height: 14),
                 _ShareIndicator(
                   label: trText('Top 3 clientes'),
                   share: summary.top3Share,
                   accent: summary.dependencyColor,
                 ),
-                const SizedBox(height: 12),
+                 SizedBox(height: 12),
                 _ShareIndicator(
                   label: trText('Top 5 clientes'),
                   share: summary.top5Share,
                   accent: AppColors.primary,
                 ),
-                const SizedBox(height: 14),
+                 SizedBox(height: 14),
                 Text(
                   trText(
                     '${summary.dependencyLabel}. ${summary.dependencyNarrative}',
                   ),
-                  style: const TextStyle(
+                  style:  TextStyle(
                     color: AppColors.textPrimary,
                     fontWeight: FontWeight.w700,
                     fontSize: 12,
                     height: 1.5,
                   ),
                 ),
-                const SizedBox(height: 14),
+                 SizedBox(height: 14),
                 for (
                   var index = 0;
                   index < summary.leadingClients.length;
@@ -2459,7 +2459,7 @@ class _IncomeConcentrationPanel extends StatelessWidget {
                 ) ...[
                   _IncomeShareRow(item: summary.leadingClients[index]),
                   if (index != summary.leadingClients.length - 1)
-                    const SizedBox(height: 10),
+                     SizedBox(height: 10),
                 ],
               ],
             ),
@@ -2468,7 +2468,7 @@ class _IncomeConcentrationPanel extends StatelessWidget {
 }
 
 class _ShareIndicator extends StatelessWidget {
-  const _ShareIndicator({
+   _ShareIndicator({
     required this.label,
     required this.share,
     required this.accent,
@@ -2489,7 +2489,7 @@ class _ShareIndicator extends StatelessWidget {
             Expanded(
               child: Text(
                 trText(label),
-                style: const TextStyle(
+                style:  TextStyle(
                   color: AppColors.textPrimary,
                   fontWeight: FontWeight.w700,
                   fontSize: 12,
@@ -2506,12 +2506,12 @@ class _ShareIndicator extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 6),
+         SizedBox(height: 6),
         ClipRRect(
           borderRadius: BorderRadius.circular(999),
           child: TweenAnimationBuilder<double>(
             tween: Tween(begin: 0, end: clamped),
-            duration: const Duration(milliseconds: 560),
+            duration:  Duration(milliseconds: 560),
             curve: Curves.easeOutCubic,
             builder: (context, value, _) {
               return LinearProgressIndicator(
@@ -2529,14 +2529,14 @@ class _ShareIndicator extends StatelessWidget {
 }
 
 class _IncomeShareRow extends StatelessWidget {
-  const _IncomeShareRow({required this.item});
+   _IncomeShareRow({required this.item});
 
   final _IncomeShareClient item;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding:  EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: AppColors.background,
         borderRadius: BorderRadius.circular(10),
@@ -2547,26 +2547,26 @@ class _IncomeShareRow extends StatelessWidget {
           Expanded(
             child: Text(
               item.clientName,
-              style: const TextStyle(
+              style:  TextStyle(
                 color: AppColors.textPrimary,
                 fontWeight: FontWeight.w700,
                 fontSize: 12,
               ),
             ),
           ),
-          const SizedBox(width: 12),
+           SizedBox(width: 12),
           Text(
             formatMxn(item.amount),
-            style: const TextStyle(
+            style:  TextStyle(
               color: AppColors.textSecondary,
               fontWeight: FontWeight.w700,
               fontSize: 12,
             ),
           ),
-          const SizedBox(width: 12),
+           SizedBox(width: 12),
           Text(
             '${(item.share * 100).toStringAsFixed(0)}%',
-            style: const TextStyle(
+            style:  TextStyle(
               color: AppColors.textPrimary,
               fontWeight: FontWeight.w800,
               fontSize: 12,
@@ -2593,19 +2593,19 @@ LineChartData _lineChartData({
       show: true,
       drawVerticalLine: false,
       getDrawingHorizontalLine: (_) =>
-          const FlLine(color: AppColors.border, strokeWidth: 1),
+           FlLine(color: AppColors.border, strokeWidth: 1),
     ),
     borderData: FlBorderData(show: false),
     titlesData: FlTitlesData(
-      topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-      rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+      topTitles:  AxisTitles(sideTitles: SideTitles(showTitles: false)),
+      rightTitles:  AxisTitles(sideTitles: SideTitles(showTitles: false)),
       leftTitles: AxisTitles(
         sideTitles: SideTitles(
           showTitles: true,
           reservedSize: 94,
           getTitlesWidget: (value, _) => Text(
             currency ? formatMxn(value) : value.toStringAsFixed(1),
-            style: const TextStyle(
+            style:  TextStyle(
               color: AppColors.textMuted,
               fontSize: 11,
               fontWeight: FontWeight.w700,
@@ -2619,16 +2619,16 @@ LineChartData _lineChartData({
           getTitlesWidget: (value, _) {
             final index = value.toInt();
             if (index < 0 || index >= labels.length) {
-              return const SizedBox.shrink();
+              return  SizedBox.shrink();
             }
             if (!shouldShowChartLabel(index, labels.length, maxLabels: 4)) {
-              return const SizedBox.shrink();
+              return  SizedBox.shrink();
             }
             return Padding(
-              padding: const EdgeInsets.only(top: 10),
+              padding:  EdgeInsets.only(top: 10),
               child: Text(
                 labels[index],
-                style: const TextStyle(
+                style:  TextStyle(
                   color: AppColors.textMuted,
                   fontSize: 10,
                   fontWeight: FontWeight.w700,
@@ -2648,7 +2648,7 @@ LineChartData _lineChartData({
         isCurved: true,
         color: color,
         barWidth: 3,
-        dotData: const FlDotData(show: false),
+        dotData:  FlDotData(show: false),
         belowBarData: BarAreaData(
           show: true,
           color: color.withValues(alpha: 0.10),
@@ -2663,7 +2663,7 @@ LineChartData _lineChartData({
             .map(
               (spot) => LineTooltipItem(
                 currency ? formatMxn(spot.y) : spot.y.toStringAsFixed(1),
-                const TextStyle(
+                 TextStyle(
                   color: AppColors.white,
                   fontWeight: FontWeight.w800,
                 ),
@@ -2960,7 +2960,7 @@ String _deltaLabel(List<double> series) {
 String _paymentMethodLabel(PaymentMethod method) => trText(method.label);
 
 class _ProductUtilityItem {
-  const _ProductUtilityItem({required this.name, required this.utility});
+   _ProductUtilityItem({required this.name, required this.utility});
 
   final String name;
   final double utility;
@@ -2977,7 +2977,7 @@ class _MutableProductUtility {
 }
 
 class _ApprovedQuoteUtilityDetail {
-  const _ApprovedQuoteUtilityDetail({
+   _ApprovedQuoteUtilityDetail({
     required this.clientId,
     required this.folio,
     required this.clientName,
@@ -3018,7 +3018,7 @@ class _MutableQuoteUtility {
 }
 
 class _QuoteProbabilityItem {
-  const _QuoteProbabilityItem({
+   _QuoteProbabilityItem({
     required this.folio,
     required this.clientName,
     required this.fecha,
@@ -3052,7 +3052,7 @@ class _MutableClientProfitability {
 }
 
 class _ClientProfitabilityItem {
-  const _ClientProfitabilityItem({
+   _ClientProfitabilityItem({
     required this.clientId,
     required this.clientName,
     required this.revenue,
@@ -3081,7 +3081,7 @@ class _ClientProfitabilityItem {
 }
 
 class _IncomeConcentrationSummary {
-  const _IncomeConcentrationSummary({
+   _IncomeConcentrationSummary({
     required this.totalIncome,
     required this.top3Share,
     required this.top5Share,
@@ -3123,7 +3123,7 @@ class _IncomeConcentrationSummary {
 }
 
 class _IncomeShareClient {
-  const _IncomeShareClient({
+   _IncomeShareClient({
     required this.clientName,
     required this.amount,
     required this.share,

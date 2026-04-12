@@ -103,14 +103,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
-      GoRoute(path: RoutePaths.login, builder: (_, __) => const LoginPage()),
+      GoRoute(path: RoutePaths.login, builder: (_, __) =>  LoginPage()),
       GoRoute(
         path: RoutePaths.recover,
-        builder: (_, __) => const RecoverPage(),
+        builder: (_, __) =>  RecoverPage(),
       ),
       GoRoute(
         path: RoutePaths.workspaceSetup,
-        builder: (_, __) => const WorkspaceSetupPage(),
+        builder: (_, __) =>  WorkspaceSetupPage(),
       ),
       ShellRoute(
         builder: (_, state, child) => AppShell(
@@ -121,51 +121,51 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(
             path: RoutePaths.dashboard,
-            builder: (_, __) => const DashboardPage(),
+            builder: (_, __) =>  DashboardPage(),
           ),
           GoRoute(
             path: RoutePaths.clientes,
-            builder: (_, __) => const ClientesPage(),
+            builder: (_, __) =>  ClientesPage(),
           ),
           GoRoute(
             path: RoutePaths.proveedores,
-            builder: (_, __) => const ProveedoresPage(),
+            builder: (_, __) =>  ProveedoresPage(),
           ),
           GoRoute(
             path: RoutePaths.productos,
-            builder: (_, __) => const ProductosPage(),
+            builder: (_, __) =>  ProductosPage(),
           ),
           GoRoute(
             path: RoutePaths.materiales,
-            builder: (_, __) => const MaterialesPage(),
+            builder: (_, __) =>  MaterialesPage(),
           ),
           GoRoute(
             path: RoutePaths.cotizaciones,
-            builder: (_, __) => const CotizacionesPage(),
+            builder: (_, __) =>  CotizacionesPage(),
           ),
           GoRoute(
             path: RoutePaths.ingresos,
-            builder: (_, __) => const IngresosPage(),
+            builder: (_, __) =>  IngresosPage(),
           ),
           GoRoute(
             path: RoutePaths.gastos,
-            builder: (_, __) => const GastosPage(),
+            builder: (_, __) =>  GastosPage(),
           ),
           GoRoute(
             path: RoutePaths.analitica,
-            builder: (_, __) => const AnaliticaPage(),
+            builder: (_, __) =>  AnaliticaPage(),
           ),
           GoRoute(
             path: RoutePaths.configuracion,
-            builder: (_, __) => const ConfiguracionPage(),
+            builder: (_, __) =>  ConfiguracionPage(),
           ),
           GoRoute(
             path: RoutePaths.usuarios,
-            builder: (_, __) => const UsuariosPage(),
+            builder: (_, __) =>  UsuariosPage(),
           ),
           GoRoute(
             path: RoutePaths.planes,
-            builder: (_, __) => const PlanesPage(),
+            builder: (_, __) =>  PlanesPage(),
           ),
         ],
       ),

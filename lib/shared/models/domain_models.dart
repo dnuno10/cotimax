@@ -1,7 +1,7 @@
 import 'package:cotimax/shared/enums/app_enums.dart';
 
 class Cliente {
-  const Cliente({
+  Cliente({
     required this.id,
     required this.numero,
     required this.idNumber,
@@ -78,7 +78,7 @@ class Cliente {
 }
 
 class Proveedor {
-  const Proveedor({
+  Proveedor({
     required this.id,
     required this.numero,
     required this.idNumber,
@@ -137,7 +137,7 @@ class Proveedor {
 }
 
 class CategoriaProducto {
-  const CategoriaProducto({
+  CategoriaProducto({
     required this.id,
     required this.nombre,
     required this.descripcion,
@@ -155,7 +155,7 @@ class CategoriaProducto {
 }
 
 class MaterialInsumo {
-  const MaterialInsumo({
+  MaterialInsumo({
     required this.id,
     required this.nombre,
     required this.descripcion,
@@ -221,7 +221,7 @@ class MaterialInsumo {
 }
 
 class ProductoServicio {
-  const ProductoServicio({
+  ProductoServicio({
     required this.id,
     required this.tipo,
     required this.nombre,
@@ -253,7 +253,7 @@ class ProductoServicio {
 }
 
 class Cotizacion {
-  const Cotizacion({
+  Cotizacion({
     required this.id,
     required this.folio,
     required this.clienteId,
@@ -324,7 +324,7 @@ class Cotizacion {
 }
 
 class DetalleCotizacion {
-  const DetalleCotizacion({
+  DetalleCotizacion({
     required this.id,
     required this.cotizacionId,
     required this.productoServicioId,
@@ -358,8 +358,9 @@ class DetalleCotizacion {
 }
 
 class Ingreso {
-  const Ingreso({
+  Ingreso({
     required this.id,
+    required this.ingresoCategoriaId,
     required this.clienteId,
     required this.cotizacionId,
     required this.monto,
@@ -372,11 +373,14 @@ class Ingreso {
     required this.diasSemana,
     required this.fechaInicioRecurrencia,
     required this.iconKey,
+    this.gastoFuenteId = '',
+    this.gastoFuenteNombre = '',
     required this.createdAt,
     required this.updatedAt,
   });
 
   final String id;
+  final String ingresoCategoriaId;
   final String clienteId;
   final String cotizacionId;
   final double monto;
@@ -389,12 +393,32 @@ class Ingreso {
   final List<int> diasSemana;
   final DateTime? fechaInicioRecurrencia;
   final String iconKey;
+  final String gastoFuenteId;
+  final String gastoFuenteNombre;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+}
+
+class IngresoCategoria {
+  IngresoCategoria({
+    required this.id,
+    required this.nombre,
+    required this.descripcion,
+    required this.activo,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  final String id;
+  final String nombre;
+  final String descripcion;
+  final bool activo;
   final DateTime createdAt;
   final DateTime updatedAt;
 }
 
 class GastoCategoria {
-  const GastoCategoria({
+  GastoCategoria({
     required this.id,
     required this.nombre,
     required this.descripcion,
@@ -412,11 +436,12 @@ class GastoCategoria {
 }
 
 class Gasto {
-  const Gasto({
+  Gasto({
     required this.id,
     required this.gastoCategoriaId,
     required this.monto,
     required this.fecha,
+    required this.fechaInicioRecurrencia,
     required this.descripcion,
     required this.proveedor,
     required this.referencia,
@@ -433,6 +458,7 @@ class Gasto {
   final String gastoCategoriaId;
   final double monto;
   final DateTime fecha;
+  final DateTime? fechaInicioRecurrencia;
   final String descripcion;
   final String proveedor;
   final String referencia;
@@ -446,7 +472,7 @@ class Gasto {
 }
 
 class GastoRecurrente {
-  const GastoRecurrente({
+  GastoRecurrente({
     required this.id,
     required this.gastoCategoriaId,
     required this.nombre,
@@ -480,13 +506,19 @@ class GastoRecurrente {
 }
 
 class EmpresaPerfil {
-  const EmpresaPerfil({
+  EmpresaPerfil({
     required this.id,
     required this.logoUrl,
     required this.nombreFiscal,
     required this.nombreComercial,
     required this.rfc,
     required this.direccion,
+    this.calle = '',
+    this.apartamentoSuite = '',
+    this.ciudad = '',
+    this.estadoProvincia = '',
+    this.codigoPostal = '',
+    this.pais = '',
     required this.telefono,
     required this.correo,
     required this.sitioWeb,
@@ -495,12 +527,26 @@ class EmpresaPerfil {
     required this.colorFondo,
     required this.colorNeutro,
     required this.themeSeleccionado,
+    required this.notasDefault,
+    required this.notasPrivadasDefault,
     required this.terminosDefault,
     required this.piePaginaDefault,
     required this.localizacion,
     required this.impuestos,
     required this.createdAt,
     required this.updatedAt,
+    this.quotePageOrientation = 'Retrato',
+    this.quotePageSize = 'A4',
+    this.quoteFontSize = 18,
+    this.quoteLogoSizeMode = 'Porcentaje',
+    this.quoteLogoSizeValue = 24,
+    this.quotePrimaryFont = 'Arimo',
+    this.quoteSecondaryFont = 'Arimo',
+    this.quoteEmptyColumnsMode = 'Espectaculo',
+    this.quoteShowPaidStamp = false,
+    this.quoteShowShippingAddress = false,
+    this.quoteEmbedAttachments = false,
+    this.quoteShowPageNumber = false,
   });
 
   final String id;
@@ -509,6 +555,12 @@ class EmpresaPerfil {
   final String nombreComercial;
   final String rfc;
   final String direccion;
+  final String calle;
+  final String apartamentoSuite;
+  final String ciudad;
+  final String estadoProvincia;
+  final String codigoPostal;
+  final String pais;
   final String telefono;
   final String correo;
   final String sitioWeb;
@@ -517,12 +569,26 @@ class EmpresaPerfil {
   final String colorFondo;
   final String colorNeutro;
   final String themeSeleccionado;
+  final String notasDefault;
+  final String notasPrivadasDefault;
   final String terminosDefault;
   final String piePaginaDefault;
   final ConfiguracionLocalizacion localizacion;
   final ConfiguracionImpuestos impuestos;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final String quotePageOrientation;
+  final String quotePageSize;
+  final int quoteFontSize;
+  final String quoteLogoSizeMode;
+  final double quoteLogoSizeValue;
+  final String quotePrimaryFont;
+  final String quoteSecondaryFont;
+  final String quoteEmptyColumnsMode;
+  final bool quoteShowPaidStamp;
+  final bool quoteShowShippingAddress;
+  final bool quoteEmbedAttachments;
+  final bool quoteShowPageNumber;
 
   EmpresaPerfil copyWith({
     String? logoUrl,
@@ -530,6 +596,12 @@ class EmpresaPerfil {
     String? nombreComercial,
     String? rfc,
     String? direccion,
+    String? calle,
+    String? apartamentoSuite,
+    String? ciudad,
+    String? estadoProvincia,
+    String? codigoPostal,
+    String? pais,
     String? telefono,
     String? correo,
     String? sitioWeb,
@@ -538,11 +610,25 @@ class EmpresaPerfil {
     String? colorFondo,
     String? colorNeutro,
     String? themeSeleccionado,
+    String? notasDefault,
+    String? notasPrivadasDefault,
     String? terminosDefault,
     String? piePaginaDefault,
     ConfiguracionLocalizacion? localizacion,
     ConfiguracionImpuestos? impuestos,
     DateTime? updatedAt,
+    String? quotePageOrientation,
+    String? quotePageSize,
+    int? quoteFontSize,
+    String? quoteLogoSizeMode,
+    double? quoteLogoSizeValue,
+    String? quotePrimaryFont,
+    String? quoteSecondaryFont,
+    String? quoteEmptyColumnsMode,
+    bool? quoteShowPaidStamp,
+    bool? quoteShowShippingAddress,
+    bool? quoteEmbedAttachments,
+    bool? quoteShowPageNumber,
   }) {
     return EmpresaPerfil(
       id: id,
@@ -551,6 +637,12 @@ class EmpresaPerfil {
       nombreComercial: nombreComercial ?? this.nombreComercial,
       rfc: rfc ?? this.rfc,
       direccion: direccion ?? this.direccion,
+      calle: calle ?? this.calle,
+      apartamentoSuite: apartamentoSuite ?? this.apartamentoSuite,
+      ciudad: ciudad ?? this.ciudad,
+      estadoProvincia: estadoProvincia ?? this.estadoProvincia,
+      codigoPostal: codigoPostal ?? this.codigoPostal,
+      pais: pais ?? this.pais,
       telefono: telefono ?? this.telefono,
       correo: correo ?? this.correo,
       sitioWeb: sitioWeb ?? this.sitioWeb,
@@ -559,10 +651,77 @@ class EmpresaPerfil {
       colorFondo: colorFondo ?? this.colorFondo,
       colorNeutro: colorNeutro ?? this.colorNeutro,
       themeSeleccionado: themeSeleccionado ?? this.themeSeleccionado,
+      notasDefault: notasDefault ?? this.notasDefault,
+      notasPrivadasDefault: notasPrivadasDefault ?? this.notasPrivadasDefault,
       terminosDefault: terminosDefault ?? this.terminosDefault,
       piePaginaDefault: piePaginaDefault ?? this.piePaginaDefault,
       localizacion: localizacion ?? this.localizacion,
       impuestos: impuestos ?? this.impuestos,
+      createdAt: createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      quotePageOrientation: quotePageOrientation ?? this.quotePageOrientation,
+      quotePageSize: quotePageSize ?? this.quotePageSize,
+      quoteFontSize: quoteFontSize ?? this.quoteFontSize,
+      quoteLogoSizeMode: quoteLogoSizeMode ?? this.quoteLogoSizeMode,
+      quoteLogoSizeValue: quoteLogoSizeValue ?? this.quoteLogoSizeValue,
+      quotePrimaryFont: quotePrimaryFont ?? this.quotePrimaryFont,
+      quoteSecondaryFont: quoteSecondaryFont ?? this.quoteSecondaryFont,
+      quoteEmptyColumnsMode:
+          quoteEmptyColumnsMode ?? this.quoteEmptyColumnsMode,
+      quoteShowPaidStamp: quoteShowPaidStamp ?? this.quoteShowPaidStamp,
+      quoteShowShippingAddress:
+          quoteShowShippingAddress ?? this.quoteShowShippingAddress,
+      quoteEmbedAttachments:
+          quoteEmbedAttachments ?? this.quoteEmbedAttachments,
+      quoteShowPageNumber: quoteShowPageNumber ?? this.quoteShowPageNumber,
+    );
+  }
+}
+
+class UsuarioActual {
+  UsuarioActual({
+    required this.id,
+    required this.nombre,
+    required this.telefono,
+    required this.correo,
+    required this.rol,
+    required this.activo,
+    required this.modoOscuro,
+    required this.ultimoAccesoAt,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  final String id;
+  final String nombre;
+  final String telefono;
+  final String correo;
+  final UserRole rol;
+  final bool activo;
+  final bool modoOscuro;
+  final DateTime ultimoAccesoAt;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  UsuarioActual copyWith({
+    String? nombre,
+    String? telefono,
+    String? correo,
+    UserRole? rol,
+    bool? activo,
+    bool? modoOscuro,
+    DateTime? ultimoAccesoAt,
+    DateTime? updatedAt,
+  }) {
+    return UsuarioActual(
+      id: id,
+      nombre: nombre ?? this.nombre,
+      telefono: telefono ?? this.telefono,
+      correo: correo ?? this.correo,
+      rol: rol ?? this.rol,
+      activo: activo ?? this.activo,
+      modoOscuro: modoOscuro ?? this.modoOscuro,
+      ultimoAccesoAt: ultimoAccesoAt ?? this.ultimoAccesoAt,
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -570,7 +729,7 @@ class EmpresaPerfil {
 }
 
 class ConfiguracionLocalizacion {
-  const ConfiguracionLocalizacion({
+  ConfiguracionLocalizacion({
     required this.moneda,
     required this.idioma,
     required this.husoHorario,
@@ -601,50 +760,84 @@ class ConfiguracionLocalizacion {
   }
 }
 
-class ConfiguracionImpuestos {
-  const ConfiguracionImpuestos({
-    required this.tasasLinea,
-    required this.impuestosSobreGastos,
-    required this.impuestosInclusivos,
-    required this.tasaPredeterminada,
+class EmpresaTasaImpuesto {
+  EmpresaTasaImpuesto({
+    required this.id,
+    required this.nombre,
+    required this.porcentaje,
   });
 
+  final String id;
+  final String nombre;
+  final double porcentaje;
+
+  String get displayLabel {
+    final decimalDigits = porcentaje == porcentaje.roundToDouble() ? 0 : 2;
+    final normalized = porcentaje.toStringAsFixed(decimalDigits);
+    return '$nombre ($normalized%)';
+  }
+
+  EmpresaTasaImpuesto copyWith({
+    String? id,
+    String? nombre,
+    double? porcentaje,
+  }) {
+    return EmpresaTasaImpuesto(
+      id: id ?? this.id,
+      nombre: nombre ?? this.nombre,
+      porcentaje: porcentaje ?? this.porcentaje,
+    );
+  }
+}
+
+class ConfiguracionImpuestos {
+  ConfiguracionImpuestos({
+    required this.tasas,
+    required this.tasaPredeterminada,
+    this.tasasLinea = '',
+    this.impuestosSobreGastos = '',
+    this.impuestosInclusivos = '',
+  });
+
+  final List<EmpresaTasaImpuesto> tasas;
+  final String tasaPredeterminada;
   final String tasasLinea;
   final String impuestosSobreGastos;
   final String impuestosInclusivos;
-  final String tasaPredeterminada;
 
   ConfiguracionImpuestos copyWith({
+    List<EmpresaTasaImpuesto>? tasas,
+    String? tasaPredeterminada,
     String? tasasLinea,
     String? impuestosSobreGastos,
     String? impuestosInclusivos,
-    String? tasaPredeterminada,
   }) {
     return ConfiguracionImpuestos(
+      tasas: tasas ?? this.tasas,
+      tasaPredeterminada: tasaPredeterminada ?? this.tasaPredeterminada,
       tasasLinea: tasasLinea ?? this.tasasLinea,
       impuestosSobreGastos: impuestosSobreGastos ?? this.impuestosSobreGastos,
       impuestosInclusivos: impuestosInclusivos ?? this.impuestosInclusivos,
-      tasaPredeterminada: tasaPredeterminada ?? this.tasaPredeterminada,
     );
   }
 }
 
 class WorkspaceStatus {
-  const WorkspaceStatus({required this.hasCompany, this.empresaId});
+  WorkspaceStatus({required this.hasCompany, this.empresaId});
 
   final bool hasCompany;
   final String? empresaId;
 }
 
 class CompanyInvitationCode {
-  const CompanyInvitationCode({required this.empresaId, required this.codigo});
+  CompanyInvitationCode({required this.empresaId, required this.codigo});
 
   final String empresaId;
   final String codigo;
 }
 
 class Usuario {
-  const Usuario({
+  Usuario({
     required this.id,
     required this.nombre,
     required this.telefono,
@@ -670,7 +863,7 @@ class Usuario {
 }
 
 class Plan {
-  const Plan({
+  Plan({
     required this.id,
     required this.nombre,
     required this.precioMensual,
@@ -716,7 +909,7 @@ class Plan {
 }
 
 class Suscripcion {
-  const Suscripcion({
+  Suscripcion({
     required this.id,
     required this.empresaId,
     required this.planId,

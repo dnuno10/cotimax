@@ -11,7 +11,7 @@ final workspaceRepositoryProvider = Provider<WorkspaceRepository>((ref) {
 final workspaceStatusProvider = FutureProvider<WorkspaceStatus>((ref) async {
   final auth = ref.watch(authControllerProvider);
   if (!auth.isAuthenticated) {
-    return const WorkspaceStatus(hasCompany: false);
+    return  WorkspaceStatus(hasCompany: false);
   }
   return ref.watch(workspaceRepositoryProvider).getStatus();
 });

@@ -10,7 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 class ProveedoresPage extends ConsumerStatefulWidget {
-  const ProveedoresPage({super.key});
+  ProveedoresPage({super.key});
 
   @override
   ConsumerState<ProveedoresPage> createState() => _ProveedoresPageState();
@@ -51,16 +51,16 @@ class _ProveedoresPageState extends ConsumerState<ProveedoresPage> {
             ),
             ElevatedButton.icon(
               onPressed: () => _openForm(context, null),
-              icon: const Icon(Icons.add),
+              icon: Icon(Icons.add),
               label: Text(trText('Nuevo proveedor')),
             ),
           ],
         ),
-        const SizedBox(height: 10),
+        SizedBox(height: 10),
         FilterBar(
           children: [
             Padding(
-              padding: const EdgeInsets.only(top: 20),
+              padding: EdgeInsets.only(top: 20),
               child: SizedBox(
                 width: 320,
                 child: SearchField(
@@ -71,7 +71,7 @@ class _ProveedoresPageState extends ConsumerState<ProveedoresPage> {
                 ),
               ),
             ),
-            const SizedBox(
+            SizedBox(
               width: 220,
               child: SelectField<String>(
                 label: 'Estatus',
@@ -79,7 +79,7 @@ class _ProveedoresPageState extends ConsumerState<ProveedoresPage> {
                 options: ['Todos', 'Activos', 'Inactivos'],
               ),
             ),
-            const SizedBox(
+            SizedBox(
               width: 220,
               child: SelectField<String>(
                 label: 'Origen',
@@ -89,17 +89,16 @@ class _ProveedoresPageState extends ConsumerState<ProveedoresPage> {
             ),
           ],
         ),
-        const SizedBox(height: 10),
+        SizedBox(height: 10),
         proveedoresAsync.when(
-          loading: () =>
-              const LoadingStateWidget(message: 'Cargando proveedores...'),
+          loading: () => LoadingStateWidget(message: 'Cargando proveedores...'),
           error: (_, __) => ErrorStateWidget(
             message: 'No fue posible cargar proveedores.',
             onRetry: () => ref.invalidate(proveedoresControllerProvider),
           ),
           data: (proveedores) {
             if (proveedores.isEmpty) {
-              return const SectionCard(child: InlineEmptyMessage());
+              return SectionCard(child: InlineEmptyMessage());
             }
 
             final allSelected =
@@ -337,7 +336,7 @@ class _ProveedoresPageState extends ConsumerState<ProveedoresPage> {
 }
 
 class _ProveedorForm extends ConsumerStatefulWidget {
-  const _ProveedorForm({this.proveedor});
+  _ProveedorForm({this.proveedor});
 
   final Proveedor? proveedor;
 
@@ -361,6 +360,7 @@ class _ProveedorFormState extends ConsumerState<_ProveedorForm> {
   bool _ivaValido = false;
   bool _exentoImpuestos = false;
   bool _activo = true;
+  bool _numeroAutofilled = false;
 
   @override
   void initState() {
@@ -406,7 +406,7 @@ class _ProveedorFormState extends ConsumerState<_ProveedorForm> {
   @override
   Widget build(BuildContext context) {
     final proveedoresExistentes =
-        ref.watch(proveedoresControllerProvider).valueOrNull ??
+        ref.watch(proveedoresCatalogControllerProvider).valueOrNull ??
         const <Proveedor>[];
     final numeroSugerido = nextSequentialValue(
       proveedoresExistentes
@@ -414,15 +414,20 @@ class _ProveedorFormState extends ConsumerState<_ProveedorForm> {
           .map((item) => item.numero),
     );
 
+    if (!_numeroAutofilled && _numeroController.text.trim().isEmpty) {
+      assignControllerText(_numeroController, numeroSugerido);
+      _numeroAutofilled = true;
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Row(
           children: const [_ProviderTabButton(label: 'Crear', selected: true)],
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         Container(height: 1, color: AppColors.border),
-        const SizedBox(height: 10),
+        SizedBox(height: 10),
         Expanded(
           child: FocusTraversalGroup(
             policy: WidgetOrderTraversalPolicy(),
@@ -435,7 +440,7 @@ class _ProveedorFormState extends ConsumerState<_ProveedorForm> {
             ),
           ),
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         Align(
           alignment: Alignment.centerRight,
           child: Wrap(
@@ -448,7 +453,7 @@ class _ProveedorFormState extends ConsumerState<_ProveedorForm> {
               ElevatedButton.icon(
                 onPressed: _isSaving ? null : _save,
                 icon: _isSaving
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 16,
                         height: 16,
                         child: CircularProgressIndicator(strokeWidth: 2),
@@ -531,10 +536,6 @@ class _ProveedorFormState extends ConsumerState<_ProveedorForm> {
             _ProviderSection(
               title: 'Contactos',
               icon: FontAwesomeIcons.addressBook,
-              trailing: OutlinedButton(
-                onPressed: () {},
-                child: Text(trText('+ Añadir contacto')),
-              ),
               child: Column(
                 children: [
                   _ProviderFieldRow(
@@ -564,13 +565,13 @@ class _ProveedorFormState extends ConsumerState<_ProveedorForm> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(child: left),
-              const SizedBox(width: 10),
+              SizedBox(width: 10),
               Expanded(child: right),
             ],
           );
         }
 
-        return Column(children: [left, const SizedBox(height: 10), right]);
+        return Column(children: [left, SizedBox(height: 10), right]);
       },
     );
   }
@@ -585,7 +586,7 @@ class _ProveedorFormState extends ConsumerState<_ProveedorForm> {
     }
 
     final proveedoresExistentes =
-        ref.read(proveedoresControllerProvider).valueOrNull ??
+        ref.read(proveedoresCatalogControllerProvider).valueOrNull ??
         const <Proveedor>[];
     final numeroIngresado = _numeroController.text.trim();
     final numeroDefinitivo = numeroIngresado.isNotEmpty
@@ -663,7 +664,7 @@ class _ProviderTabButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
@@ -685,17 +686,15 @@ class _ProviderTabButton extends StatelessWidget {
 }
 
 class _ProviderSection extends StatelessWidget {
-  const _ProviderSection({
+  _ProviderSection({
     required this.title,
     required this.icon,
     required this.child,
-    this.trailing,
   });
 
   final String title;
   final IconData icon;
   final Widget child;
-  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -708,18 +707,18 @@ class _ProviderSection extends StatelessWidget {
       child: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+            padding: EdgeInsets.fromLTRB(16, 14, 16, 14),
             child: Row(
               children: [
                 Expanded(
                   child: Row(
                     children: [
                       FaIcon(icon, size: 14, color: AppColors.textPrimary),
-                      const SizedBox(width: 8),
+                      SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           trText(title),
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: AppColors.textPrimary,
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
@@ -729,12 +728,11 @@ class _ProviderSection extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (trailing != null) trailing!,
               ],
             ),
           ),
           Container(height: 1, color: AppColors.border),
-          Padding(padding: const EdgeInsets.all(16), child: child),
+          Padding(padding: EdgeInsets.all(16), child: child),
         ],
       ),
     );
@@ -742,7 +740,7 @@ class _ProviderSection extends StatelessWidget {
 }
 
 class _ProviderFieldRow extends StatelessWidget {
-  const _ProviderFieldRow({
+  _ProviderFieldRow({
     required this.label,
     required this.controller,
     this.hintText,
@@ -757,7 +755,7 @@ class _ProviderFieldRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: EdgeInsets.only(bottom: 10),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -765,7 +763,7 @@ class _ProviderFieldRow extends StatelessWidget {
             width: 165,
             child: Text(
               trText(label),
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
@@ -790,7 +788,7 @@ class _ProviderFieldRow extends StatelessWidget {
 }
 
 class _ProviderSwitchRow extends StatelessWidget {
-  const _ProviderSwitchRow({
+  _ProviderSwitchRow({
     required this.label,
     required this.value,
     required this.onChanged,
@@ -803,14 +801,14 @@ class _ProviderSwitchRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
+      padding: EdgeInsets.only(bottom: 4),
       child: Row(
         children: [
           SizedBox(
             width: 165,
             child: Text(
               trText(label),
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 13,
                 fontWeight: FontWeight.w700,

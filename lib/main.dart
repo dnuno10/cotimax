@@ -6,5 +6,5 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SupabaseBootstrap.initialize();
-  runApp(const ProviderScope(child: CotimaxApp()));
+  runApp( ProviderScope(child: CotimaxApp()));
 }

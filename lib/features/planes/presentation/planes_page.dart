@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class PlanesPage extends ConsumerWidget {
-  const PlanesPage({super.key});
+   PlanesPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -15,18 +15,18 @@ class PlanesPage extends ConsumerWidget {
 
     return ListView(
       children: [
-        const PageHeader(
+         PageHeader(
           title: 'Planes / Suscripcion',
           subtitle: 'Pricing interno, comparativa y control de limites.',
         ),
-        const SizedBox(height: 12),
+         SizedBox(height: 12),
         suscripcion.when(
           data: (sub) => SectionCard(
             title: 'Plan actual',
             child: Row(
               children: [
                 PlanBadge(planName: sub.planId.toUpperCase()),
-                const SizedBox(width: 8),
+                 SizedBox(width: 8),
                 Text(
                   '${trText('Estatus')}: ${trText(sub.estado)} | ${tr('Usuarios activos', 'Active users')}: ${sub.usuariosActivos}',
                 ),
@@ -34,9 +34,9 @@ class PlanesPage extends ConsumerWidget {
             ),
           ),
           loading: LoadingSkeleton.new,
-          error: (_, __) => const SizedBox.shrink(),
+          error: (_, __) =>  SizedBox.shrink(),
         ),
-        const SizedBox(height: 12),
+         SizedBox(height: 12),
         planes.when(
           loading: LoadingSkeleton.new,
           error: (_, __) => ErrorStateWidget(
@@ -49,7 +49,7 @@ class PlanesPage extends ConsumerWidget {
                 .map(
                   (plan) => Expanded(
                     child: Padding(
-                      padding: const EdgeInsets.only(right: 12),
+                      padding:  EdgeInsets.only(right: 12),
                       child: SectionCard(
                         title: plan.nombre,
                         child: Column(
@@ -57,14 +57,14 @@ class PlanesPage extends ConsumerWidget {
                           children: [
                             Text(
                               _planPriceLabel(plan),
-                              style: const TextStyle(
+                              style:  TextStyle(
                                 fontWeight: FontWeight.w800,
                                 fontSize: 22,
                               ),
                             ),
-                            const SizedBox(height: 8),
+                             SizedBox(height: 8),
                             Text(plan.descripcion),
-                            const SizedBox(height: 10),
+                             SizedBox(height: 10),
                             Text(
                               '${trText('Clientes')}: ${plan.limiteClientes <= 0 ? tr('Ilimitados', 'Unlimited') : plan.limiteClientes}',
                             ),
@@ -77,7 +77,7 @@ class PlanesPage extends ConsumerWidget {
                             Text(
                               '${trText('Usuarios')}: ${_userLimitLabel(plan)}',
                             ),
-                            const SizedBox(height: 12),
+                             SizedBox(height: 12),
                             SizedBox(
                               width: double.infinity,
                               child: ElevatedButton(
@@ -94,7 +94,7 @@ class PlanesPage extends ConsumerWidget {
                 .toList(),
           ),
         ),
-        const SizedBox(height: 12),
+         SizedBox(height: 12),
         SectionCard(
           title: 'Notas de roadmap',
           child: Text(trText('Reportes por usuario: proximamente.')),
