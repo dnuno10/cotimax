@@ -1354,7 +1354,7 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
     String descripcion = '',
     String costoUnitario = '',
     String cantidad = '1',
-    String impuesto = '16',
+    String impuesto = '0',
     String total = '',
     String unidad = '',
   }) {
