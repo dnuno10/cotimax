@@ -1,6 +1,8 @@
 import 'package:cotimax/core/constants/app_colors.dart';
 import 'package:cotimax/core/localization/app_localization.dart';
 import 'package:cotimax/core/routing/route_paths.dart';
+import 'package:cotimax/features/gastos/application/gastos_controller.dart';
+import 'package:cotimax/features/materiales/application/materiales_controller.dart';
 import 'package:cotimax/features/proveedores/application/proveedores_controller.dart';
 import 'package:cotimax/shared/models/domain_models.dart';
 import 'package:cotimax/shared/widgets/cotimax_widgets.dart';
@@ -98,7 +100,15 @@ class _ProveedoresPageState extends ConsumerState<ProveedoresPage> {
           ),
           data: (proveedores) {
             if (proveedores.isEmpty) {
-              return SectionCard(child: InlineEmptyMessage());
+              return EmptyStateWidget(
+                title: 'Todavía no hay proveedores',
+                subtitle: 'Registra tu primer proveedor para comenzar.',
+                action: ElevatedButton.icon(
+                  onPressed: () => _openForm(context, null),
+                  icon: Icon(Icons.add),
+                  label: Text(trText('Nuevo proveedor')),
+                ),
+              );
             }
 
             final allSelected =
@@ -259,10 +269,14 @@ class _ProveedoresPageState extends ConsumerState<ProveedoresPage> {
     final confirmed = await showDeleteConfirmation(
       context,
       entityLabel: 'proveedor',
+      dependencyEntityType: 'proveedor',
+      dependencyIds: [proveedor.id],
       onConfirmAsync: () async {
         try {
           await ref.read(proveedoresRepositoryProvider).delete(proveedor.id);
           ref.invalidate(proveedoresControllerProvider);
+          ref.invalidate(gastosControllerProvider);
+          ref.invalidate(materialesControllerProvider);
           if (!mounted) return;
           ToastHelper.showSuccess(context, 'Proveedor eliminado.');
         } catch (error) {
@@ -289,6 +303,8 @@ class _ProveedoresPageState extends ConsumerState<ProveedoresPage> {
       message: count == 1
           ? '¿Estás seguro que quieres eliminar este proveedor?'
           : '¿Estás seguro que quieres eliminar los $count proveedores seleccionados?',
+      dependencyEntityType: 'proveedor',
+      dependencyIds: _selectedProveedorIds.toList(),
       onConfirmAsync: () async {
         try {
           final ids = _selectedProveedorIds.toList();
@@ -296,6 +312,8 @@ class _ProveedoresPageState extends ConsumerState<ProveedoresPage> {
             await ref.read(proveedoresRepositoryProvider).delete(id);
           }
           ref.invalidate(proveedoresControllerProvider);
+          ref.invalidate(gastosControllerProvider);
+          ref.invalidate(materialesControllerProvider);
           if (!mounted) return;
           setState(() => _selectedProveedorIds.clear());
           ToastHelper.showSuccess(
@@ -483,6 +501,7 @@ class _ProveedorFormState extends ConsumerState<_ProveedorForm> {
         final left = _ProviderSection(
           title: 'Detalles de la empresa',
           icon: FontAwesomeIcons.building,
+          headerBackgroundColor: AppColors.background,
           child: Column(
             children: [
               _ProviderFieldRow(
@@ -536,6 +555,7 @@ class _ProveedorFormState extends ConsumerState<_ProveedorForm> {
             _ProviderSection(
               title: 'Contactos',
               icon: FontAwesomeIcons.addressBook,
+              headerBackgroundColor: AppColors.background,
               child: Column(
                 children: [
                   _ProviderFieldRow(
@@ -690,11 +710,13 @@ class _ProviderSection extends StatelessWidget {
     required this.title,
     required this.icon,
     required this.child,
+    this.headerBackgroundColor,
   });
 
   final String title;
   final IconData icon;
   final Widget child;
+  final Color? headerBackgroundColor;
 
   @override
   Widget build(BuildContext context) {
@@ -706,7 +728,11 @@ class _ProviderSection extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Padding(
+          Container(
+            decoration: BoxDecoration(
+              color: headerBackgroundColor,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
+            ),
             padding: EdgeInsets.fromLTRB(16, 14, 16, 14),
             child: Row(
               children: [

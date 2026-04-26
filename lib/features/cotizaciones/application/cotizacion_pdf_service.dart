@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:typed_data';
@@ -5,6 +6,7 @@ import 'dart:typed_data';
 import 'package:cotimax/core/localization/app_localization.dart';
 import 'package:cotimax/shared/models/domain_models.dart';
 import 'package:cotimax/shared/widgets/cotimax_rich_text_editor.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -12,10 +14,16 @@ import 'package:printing/printing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class CotizacionPdfService {
+  static const int _pdfLayoutVersion = 4;
+  static const Duration _googleFontsTimeout = Duration(milliseconds: 850);
   static Future<_CotizacionPdfFonts>? _fontsFuture;
   static String? _cachedFontFamily;
   static final Map<String, Uint8List> _pdfCache = <String, Uint8List>{};
+  static final Map<String, Future<Uint8List>> _pdfInFlight =
+      <String, Future<Uint8List>>{};
   static final Map<String, Future<pw.ImageProvider?>> _logoCache =
+      <String, Future<pw.ImageProvider?>>{};
+  static final Map<String, Future<pw.ImageProvider?>> _productImageCache =
       <String, Future<pw.ImageProvider?>>{};
   static final Map<String, _QuotePdfSourceData> _quoteDataCache =
       <String, _QuotePdfSourceData>{};
@@ -23,12 +31,80 @@ class CotizacionPdfService {
       <String, Future<_QuotePdfSourceData>>{};
   static Map<String, dynamic>? _empresaActualCache;
   static DateTime? _empresaActualCacheAt;
+  static String? _currentPlanIdCache;
+  static DateTime? _currentPlanIdCacheAt;
+  static Future<pw.MemoryImage?>? _cotimaxWatermarkFuture;
+
+  static void prewarmFonts([String preferredFamily = 'Arimo']) {
+    unawaited(_loadFonts(preferredFamily));
+  }
+
+  static Future<void> prewarmDefaultAssets() async {
+    try {
+      final client = Supabase.instance.client;
+      final empresaJson = await _getEmpresaActualCached(client);
+      final disenoQuote =
+          ((empresaJson['diseno_quote'] as Map?)?.cast<String, dynamic>() ??
+          const <String, dynamic>{});
+      final preferredFont =
+          (disenoQuote['fuente_primaria'] ??
+                  disenoQuote['quote_primary_font'] ??
+                  'Arimo')
+              .toString();
+      prewarmFonts(preferredFont);
+      final logoUrl = (empresaJson['logo_url'] ?? '').toString().trim();
+      if (logoUrl.isNotEmpty) {
+        unawaited(_loadLogoProvider(logoUrl));
+      }
+      unawaited(_loadCotimaxWatermarkLogo());
+    } catch (_) {
+      // Best effort only.
+    }
+  }
+
+  static Future<Uint8List> prewarmPreview(
+    Cotizacion cotizacion, {
+    EmpresaPerfil? empresaOverride,
+    Map<String, dynamic>? disenoQuoteOverride,
+    Cliente? clienteOverride,
+    List<DetalleCotizacion>? detallesOverride,
+  }) {
+    return generate(
+      cotizacion,
+      useCache: true,
+      fastPreview: true,
+      empresaOverride: empresaOverride,
+      disenoQuoteOverride: disenoQuoteOverride,
+      clienteOverride: clienteOverride,
+      detallesOverride: detallesOverride,
+    );
+  }
+
+  static Future<Uint8List> prewarmFull(
+    Cotizacion cotizacion, {
+    EmpresaPerfil? empresaOverride,
+    Map<String, dynamic>? disenoQuoteOverride,
+    Cliente? clienteOverride,
+    List<DetalleCotizacion>? detallesOverride,
+  }) {
+    return generate(
+      cotizacion,
+      useCache: true,
+      empresaOverride: empresaOverride,
+      disenoQuoteOverride: disenoQuoteOverride,
+      clienteOverride: clienteOverride,
+      detallesOverride: detallesOverride,
+    );
+  }
 
   static Future<Uint8List> generate(
     Cotizacion cotizacion, {
     bool useCache = true,
+    bool fastPreview = false,
     EmpresaPerfil? empresaOverride,
     Map<String, dynamic>? disenoQuoteOverride,
+    Cliente? clienteOverride,
+    List<DetalleCotizacion>? detallesOverride,
   }) async {
     final client = Supabase.instance.client;
     final empresaJson = empresaOverride == null
@@ -38,6 +114,7 @@ class CotizacionPdfService {
         ? ((empresaJson!['diseno_quote'] as Map?)?.cast<String, dynamic>() ??
               const <String, dynamic>{})
         : _disenoQuoteFromEmpresa(empresaOverride);
+    final currentPlanId = await _getCurrentPlanIdCached(client);
     final disenoQuoteJson = <String, dynamic>{
       ...storedDisenoQuoteJson,
       ...?disenoQuoteOverride,
@@ -47,7 +124,14 @@ class CotizacionPdfService {
                 disenoQuoteJson['quote_primary_font'] ??
                 'Arimo')
             .toString();
-    final fonts = await _loadFonts(primaryFont);
+    final fonts = fastPreview
+        ? _CotizacionPdfFonts(
+            base: pw.Font.helvetica(),
+            bold: pw.Font.helveticaBold(),
+            italic: pw.Font.helveticaOblique(),
+            boldItalic: pw.Font.helveticaBoldOblique(),
+          )
+        : await _loadFonts(primaryFont);
     final pdf = pw.Document(
       theme: pw.ThemeData.withFont(
         base: fonts.base,
@@ -143,11 +227,11 @@ class CotizacionPdfService {
                 disenoQuoteJson['quote_logo_size_mode'] ??
                 'Porcentaje')
             .toString();
-    final showPaidStamp = disenoQuoteJson['show_paid_stamp'] == true;
-    final showShippingAddress =
-        disenoQuoteJson['show_shipping_address'] == true;
-    final embedAttachments = disenoQuoteJson['embed_attachments'] == true;
-    final showPageNumber = disenoQuoteJson['show_page_number'] == true;
+    final showPaidStamp = empresaOverride == null && cotizacion.isPaid;
+    final embedAttachments =
+        !fastPreview && disenoQuoteJson['embed_attachments'] == true;
+    final showPageNumber =
+        !fastPreview && disenoQuoteJson['show_page_number'] == true;
     final pageOrientation =
         (disenoQuoteJson['page_orientation'] ??
                 disenoQuoteJson['quote_page_orientation'] ??
@@ -174,10 +258,62 @@ class CotizacionPdfService {
             empresaOverride.quotePrimaryFont,
             empresaOverride.quoteSecondaryFont,
           ].join('|');
+    final effectiveTerms = _effectiveQuoteRichText(
+      cotizacion.terminos,
+      empresa.terminosDefault,
+    );
+    final effectiveNotes = _effectiveQuoteRichText(
+      cotizacion.notas,
+      empresa.notasDefault,
+    );
+    final effectiveFooter = _effectiveQuoteRichText(
+      cotizacion.piePagina,
+      empresa.piePaginaDefault,
+    );
+    final previewTerms = fastPreview ? '' : effectiveTerms;
+    final previewNotes = fastPreview ? '' : effectiveNotes;
+    final previewFooter = fastPreview ? '' : effectiveFooter;
+    final contentSignature = _stableJsonSignature(<String, dynamic>{
+      'notas': previewNotes,
+      'terminos': previewTerms,
+      'pie_pagina': previewFooter,
+    });
+    final hasSourceOverride =
+        clienteOverride != null && detallesOverride != null;
+    final sourceOverrideSignature = hasSourceOverride
+        ? _stableJsonSignature(<String, dynamic>{
+            'cliente': <String, dynamic>{
+              'nombre': clienteOverride.nombre,
+              'empresa': clienteOverride.empresa,
+              'rfc': clienteOverride.rfc,
+              'direccion': clienteOverride.direccion,
+              'telefono': clienteOverride.telefono,
+              'correo': clienteOverride.correo,
+            },
+            'detalles': detallesOverride
+                .map(
+                  (item) => <String, dynamic>{
+                    'concepto': item.concepto,
+                    'descripcion': item.descripcion,
+                    'precio': item.precioUnitario,
+                    'cantidad': item.cantidad,
+                    'impuesto': item.impuestoPorcentaje,
+                    'importe': item.importe,
+                  },
+                )
+                .toList(growable: false),
+          })
+        : '';
     final cacheKey = [
+      _pdfLayoutVersion,
       cotizacion.id,
       cotizacion.updatedAt.microsecondsSinceEpoch,
       cotizacion.total,
+      cotizacion.pagadoTotal,
+      cotizacion.saldoTotal,
+      fastPreview ? 1 : 0,
+      contentSignature,
+      sourceOverrideSignature,
       empresaUpdated,
       empresa.themeSeleccionado,
       quoteFontSize,
@@ -189,473 +325,519 @@ class CotizacionPdfService {
     if (useCache) {
       final cached = _pdfCache[cacheKey];
       if (cached != null) return cached;
+      final inFlight = _pdfInFlight[cacheKey];
+      if (inFlight != null) return inFlight;
     }
 
-    final quoteSourceFuture = _loadQuoteSourceData(
-      client,
-      cotizacion,
-      isEnglish,
-      useCache: useCache,
-    );
-    final logoFuture = _loadLogoProvider(empresa.logoUrl);
+    Completer<Uint8List>? inFlightCompleter;
+    if (useCache) {
+      inFlightCompleter = Completer<Uint8List>();
+      _pdfInFlight[cacheKey] = inFlightCompleter.future;
+    }
 
-    final parallelData = await Future.wait<dynamic>([
-      quoteSourceFuture,
-      logoFuture,
-    ]);
-    final quoteSource = parallelData[0] as _QuotePdfSourceData;
-    final logoProvider = parallelData[1] as pw.ImageProvider?;
-    final cliente = quoteSource.cliente;
-    final detalles = quoteSource.detalles;
-    final themePreset = _normalizeThemePreset(empresa.themeSeleccionado);
-    final isCorporateTemplate = themePreset == 'corporativo';
-    final isIndustrialTemplate = themePreset == 'industrial';
-    final isMinimalTemplate = themePreset == 'minimal';
-    final isDestacadoTemplate = themePreset == 'destacado';
-    final isEditorialTemplate = themePreset == 'editorial';
+    try {
+      final quoteSourceFuture = hasSourceOverride
+          ? Future<_QuotePdfSourceData>.value(
+              _QuotePdfSourceData(
+                cliente: clienteOverride,
+                detalles: detallesOverride,
+              ),
+            )
+          : _loadQuoteSourceData(
+              client,
+              cotizacion,
+              isEnglish,
+              useCache: useCache,
+            );
+      final logoFuture = fastPreview
+          ? _loadLogoProviderFast(empresa.logoUrl)
+          : _loadLogoProvider(empresa.logoUrl);
+      final starterWatermarkFuture = currentPlanId == 'starter'
+          ? _loadCotimaxWatermarkLogo()
+          : Future<pw.MemoryImage?>.value(null);
 
-    final resolvedPageFormat = _resolvePageFormat(
-      pageSize: pageSize,
-      pageOrientation: pageOrientation,
-    );
-    final fontScale = _resolveFontScale(
-      quoteFontSize: quoteFontSize,
-      pageFormat: resolvedPageFormat,
-    );
-    final logoExtent = _resolveLogoExtent(
-      logoSize: logoSize,
-      logoSizeMode: logoSizeMode,
-      pageFormat: resolvedPageFormat,
-    );
-    final pageMargin = _resolvePageMargin(resolvedPageFormat);
+      final parallelData = await Future.wait<dynamic>([
+        quoteSourceFuture,
+        logoFuture,
+        starterWatermarkFuture,
+      ]);
+      final quoteSource = parallelData[0] as _QuotePdfSourceData;
+      final logoProvider = parallelData[1] as pw.ImageProvider?;
+      final starterWatermark = parallelData[2] as pw.MemoryImage?;
+      final cliente = quoteSource.cliente;
+      final detalles = fastPreview && quoteSource.detalles.length > 8
+          ? quoteSource.detalles.take(8).toList(growable: false)
+          : quoteSource.detalles;
+      final productImagesById = await _loadProductImagesByProductId(
+        detalles,
+        fastPreview: fastPreview,
+      );
+      final documentCotizacion = fastPreview
+          ? _buildFastPreviewQuote(cotizacion)
+          : cotizacion;
+      final themePreset = _normalizeThemePreset(empresa.themeSeleccionado);
+      final isCorporateTemplate = themePreset == 'corporativo';
+      final isIndustrialTemplate = themePreset == 'industrial';
+      final isMinimalTemplate = themePreset == 'minimal';
+      final isDestacadoTemplate = themePreset == 'destacado';
+      final isEditorialTemplate = themePreset == 'editorial';
 
-    pdf.addPage(
-      pw.MultiPage(
-        pageTheme: pw.PageTheme(
-          pageFormat: resolvedPageFormat,
-          margin: pw.EdgeInsets.all(pageMargin),
-          buildBackground: (context) => pw.FullPage(
-            ignoreMargins: true,
-            child: pw.Container(color: pdfTheme.background),
-          ),
-        ),
-        footer: showPageNumber
-            ? (context) => pw.Align(
-                alignment: pw.Alignment.centerRight,
-                child: pw.Text(
-                  '${isEnglish ? 'Page' : 'Pagina'} ${context.pageNumber} / ${context.pagesCount} • $pageSize',
-                  style: pw.TextStyle(fontSize: 8, color: pdfTheme.textMuted),
-                ),
-              )
-            : null,
-        build: (context) => isCorporateTemplate
-            ? _buildCorporateQuoteBody(
-                cotizacion: cotizacion,
-                cliente: cliente,
-                detalles: detalles,
-                empresa: empresa,
-                pdfTheme: pdfTheme,
-                currency: currency,
-                dateFormat: dateFormat,
-                isEnglish: isEnglish,
-                logoProvider: logoProvider,
-                fontScale: fontScale,
-                logoExtent: logoExtent,
-                showPaidStamp: showPaidStamp,
-              )
-            : isIndustrialTemplate
-            ? _buildIndustrialQuoteBody(
-                cotizacion: cotizacion,
-                cliente: cliente,
-                detalles: detalles,
-                empresa: empresa,
-                pdfTheme: pdfTheme,
-                currency: currency,
-                dateFormat: dateFormat,
-                isEnglish: isEnglish,
-                logoProvider: logoProvider,
-                fontScale: fontScale,
-                logoExtent: logoExtent,
-              )
-            : isMinimalTemplate
-            ? _buildMinimalQuoteBody(
-                cotizacion: cotizacion,
-                cliente: cliente,
-                detalles: detalles,
-                empresa: empresa,
-                pdfTheme: pdfTheme,
-                currency: currency,
-                dateFormat: dateFormat,
-                isEnglish: isEnglish,
-                logoProvider: logoProvider,
-                fontScale: fontScale,
-                logoExtent: logoExtent,
-              )
-            : isDestacadoTemplate
-            ? _buildDestacadoQuoteBody(
-                cotizacion: cotizacion,
-                cliente: cliente,
-                detalles: detalles,
-                empresa: empresa,
-                pdfTheme: pdfTheme,
-                currency: currency,
-                dateFormat: dateFormat,
-                isEnglish: isEnglish,
-                logoProvider: logoProvider,
-                fontScale: fontScale,
-                logoExtent: logoExtent,
-              )
-            : isEditorialTemplate
-            ? _buildEditorialQuoteBody(
-                cotizacion: cotizacion,
-                cliente: cliente,
-                detalles: detalles,
-                empresa: empresa,
-                pdfTheme: pdfTheme,
-                currency: currency,
-                dateFormat: dateFormat,
-                isEnglish: isEnglish,
-                logoProvider: logoProvider,
-                fontScale: fontScale,
-                logoExtent: logoExtent,
-              )
-            : [
-                pw.Container(
-                  padding: const pw.EdgeInsets.all(14),
-                  decoration: pw.BoxDecoration(
-                    color: pdfTheme.background,
-                    borderRadius: pw.BorderRadius.circular(pdfTheme.radius),
-                    border: pw.Border.all(color: pdfTheme.border),
-                  ),
-                  child: pw.Row(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      if (logoProvider != null) ...[
-                        pw.Container(
-                          width: logoExtent,
-                          height: logoExtent,
-                          alignment: pw.Alignment.center,
-                          child: pw.Image(logoProvider, fit: pw.BoxFit.contain),
-                        ),
-                        pw.SizedBox(width: 12),
-                      ],
-                      pw.Expanded(
-                        child: pw.Column(
-                          crossAxisAlignment: pw.CrossAxisAlignment.start,
-                          children: [
-                            pw.Text(
-                              empresa.nombreComercial,
-                              style: pw.TextStyle(
-                                fontSize: 20 * fontScale,
-                                fontWeight: pw.FontWeight.bold,
-                                color: pdfTheme.primary,
-                              ),
+      final resolvedPageFormat = _resolvePageFormat(
+        pageSize: pageSize,
+        pageOrientation: pageOrientation,
+      );
+      final fontScale = _resolveFontScale(
+        quoteFontSize: quoteFontSize,
+        pageFormat: resolvedPageFormat,
+      );
+      final logoExtent = _resolveLogoExtent(
+        logoSize: logoSize,
+        logoSizeMode: logoSizeMode,
+        pageFormat: resolvedPageFormat,
+      );
+      final pageMargin = _resolvePageMargin(resolvedPageFormat);
+
+      pdf.addPage(
+        pw.MultiPage(
+          pageTheme: pw.PageTheme(
+            pageFormat: resolvedPageFormat,
+            margin: pw.EdgeInsets.all(pageMargin),
+            buildBackground: (context) => pw.FullPage(
+              ignoreMargins: true,
+              child: pw.Container(color: pdfTheme.background),
+            ),
+            buildForeground: (context) {
+              if (!showPaidStamp && starterWatermark == null) {
+                return pw.SizedBox.shrink();
+              }
+              return pw.FullPage(
+                ignoreMargins: true,
+                child: pw.Stack(
+                  children: [
+                    if (starterWatermark != null)
+                      pw.Center(
+                        child: pw.Opacity(
+                          opacity: 0.08,
+                          child: pw.Transform.rotate(
+                            angle: -math.pi / 5,
+                            child: pw.Image(
+                              starterWatermark,
+                              width: resolvedPageFormat.width * 0.62,
+                              fit: pw.BoxFit.contain,
                             ),
-                            pw.SizedBox(height: 4),
-                            pw.Text(empresa.nombreFiscal),
-                            pw.Text(
-                              '${isEnglish ? 'Tax ID' : 'RFC'}: ${empresa.rfc}',
-                              style: pw.TextStyle(color: pdfTheme.textMuted),
-                            ),
-                            pw.Text(empresa.correo),
-                            if (empresa.telefono.trim().isNotEmpty)
-                              pw.Text(empresa.telefono),
-                            if (empresa.sitioWeb.trim().isNotEmpty)
-                              pw.Text(empresa.sitioWeb),
-                          ],
+                          ),
                         ),
                       ),
-                      pw.SizedBox(width: 12),
-                      pw.SizedBox(
-                        width: 190,
-                        child: pw.Column(
-                          crossAxisAlignment: pw.CrossAxisAlignment.start,
-                          children: [
-                            pw.Text(
-                              empresa.direccion,
-                              style: pw.TextStyle(
-                                color: pdfTheme.textMuted,
-                                fontSize: 9 * fontScale,
-                                fontWeight: pw.FontWeight.bold,
-                                lineSpacing: 2,
-                              ),
+                    if (showPaidStamp)
+                      pw.Center(
+                        child: pw.Opacity(
+                          opacity: 0.3,
+                          child: _buildPaidWatermark(
+                            pageFormat: resolvedPageFormat,
+                            isEnglish: isEnglish,
+                            background: pdfTheme.background,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            },
+          ),
+          footer: showPageNumber
+              ? (context) => pw.Align(
+                  alignment: pw.Alignment.centerRight,
+                  child: pw.Text(
+                    '${isEnglish ? 'Page' : 'Pagina'} ${context.pageNumber} / ${context.pagesCount} • $pageSize',
+                    style: pw.TextStyle(fontSize: 8, color: pdfTheme.textMuted),
+                  ),
+                )
+              : null,
+          build: (context) => isCorporateTemplate
+              ? _buildCorporateQuoteBody(
+                  cotizacion: documentCotizacion,
+                  cliente: cliente,
+                  detalles: detalles,
+                  empresa: empresa,
+                  pdfTheme: pdfTheme,
+                  currency: currency,
+                  dateFormat: dateFormat,
+                  isEnglish: isEnglish,
+                  logoProvider: logoProvider,
+                  productImagesById: productImagesById,
+                  fontScale: fontScale,
+                  logoExtent: logoExtent,
+                )
+              : isIndustrialTemplate
+              ? _buildIndustrialQuoteBody(
+                  cotizacion: documentCotizacion,
+                  cliente: cliente,
+                  detalles: detalles,
+                  empresa: empresa,
+                  pdfTheme: pdfTheme,
+                  currency: currency,
+                  dateFormat: dateFormat,
+                  isEnglish: isEnglish,
+                  logoProvider: logoProvider,
+                  productImagesById: productImagesById,
+                  fontScale: fontScale,
+                  logoExtent: logoExtent,
+                )
+              : isMinimalTemplate
+              ? _buildMinimalQuoteBody(
+                  cotizacion: documentCotizacion,
+                  cliente: cliente,
+                  detalles: detalles,
+                  empresa: empresa,
+                  pdfTheme: pdfTheme,
+                  currency: currency,
+                  dateFormat: dateFormat,
+                  isEnglish: isEnglish,
+                  logoProvider: logoProvider,
+                  productImagesById: productImagesById,
+                  fontScale: fontScale,
+                  logoExtent: logoExtent,
+                )
+              : isDestacadoTemplate
+              ? _buildDestacadoQuoteBody(
+                  cotizacion: documentCotizacion,
+                  cliente: cliente,
+                  detalles: detalles,
+                  empresa: empresa,
+                  pdfTheme: pdfTheme,
+                  currency: currency,
+                  dateFormat: dateFormat,
+                  isEnglish: isEnglish,
+                  logoProvider: logoProvider,
+                  productImagesById: productImagesById,
+                  fontScale: fontScale,
+                  logoExtent: logoExtent,
+                )
+              : isEditorialTemplate
+              ? _buildEditorialQuoteBody(
+                  cotizacion: documentCotizacion,
+                  cliente: cliente,
+                  detalles: detalles,
+                  empresa: empresa,
+                  pdfTheme: pdfTheme,
+                  currency: currency,
+                  dateFormat: dateFormat,
+                  isEnglish: isEnglish,
+                  logoProvider: logoProvider,
+                  productImagesById: productImagesById,
+                  fontScale: fontScale,
+                  logoExtent: logoExtent,
+                )
+              : [
+                  pw.Container(
+                    padding: const pw.EdgeInsets.all(14),
+                    decoration: pw.BoxDecoration(
+                      color: pdfTheme.background,
+                      borderRadius: pw.BorderRadius.circular(pdfTheme.radius),
+                      border: pw.Border.all(color: pdfTheme.border),
+                    ),
+                    child: pw.Row(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        if (logoProvider != null) ...[
+                          pw.Container(
+                            width: logoExtent,
+                            height: logoExtent,
+                            alignment: pw.Alignment.center,
+                            child: pw.Image(
+                              logoProvider,
+                              fit: pw.BoxFit.contain,
                             ),
-                            if (showShippingAddress) ...[
-                              pw.SizedBox(height: 6),
+                          ),
+                          pw.SizedBox(width: 12),
+                        ],
+                        pw.Expanded(
+                          child: pw.Column(
+                            crossAxisAlignment: pw.CrossAxisAlignment.start,
+                            children: [
                               pw.Text(
-                                isEnglish
-                                    ? 'Ship to: Blvd. Agua Caliente 1444, Tijuana, BC'
-                                    : 'Enviar a: Blvd. Agua Caliente 1444, Tijuana, BC',
+                                empresa.nombreComercial,
                                 style: pw.TextStyle(
-                                  color: pdfTheme.secondary,
+                                  fontSize: 20 * fontScale,
+                                  fontWeight: pw.FontWeight.bold,
+                                  color: pdfTheme.primary,
+                                ),
+                              ),
+                              pw.SizedBox(height: 4),
+                              pw.Text(empresa.nombreFiscal),
+                              pw.Text(
+                                '${isEnglish ? 'Tax ID' : 'RFC'}: ${empresa.rfc}',
+                                style: pw.TextStyle(color: pdfTheme.textMuted),
+                              ),
+                              pw.Text(empresa.correo),
+                              if (empresa.telefono.trim().isNotEmpty)
+                                pw.Text(empresa.telefono),
+                              if (empresa.sitioWeb.trim().isNotEmpty)
+                                pw.Text(empresa.sitioWeb),
+                            ],
+                          ),
+                        ),
+                        pw.SizedBox(width: 12),
+                        pw.SizedBox(
+                          width: 190,
+                          child: pw.Column(
+                            crossAxisAlignment: pw.CrossAxisAlignment.start,
+                            children: [
+                              pw.Text(
+                                empresa.direccion,
+                                style: pw.TextStyle(
+                                  color: pdfTheme.textMuted,
                                   fontSize: 9 * fontScale,
                                   fontWeight: pw.FontWeight.bold,
+                                  lineSpacing: 2,
                                 ),
                               ),
                             ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  pw.SizedBox(height: 20),
+                  pw.Text(
+                    isEnglish ? 'QUOTE' : 'COTIZACION',
+                    style: pw.TextStyle(
+                      fontSize: 16 * fontScale,
+                      fontWeight: pw.FontWeight.bold,
+                      color: pdfTheme.primary,
+                      letterSpacing: 0.6,
+                    ),
+                  ),
+                  pw.SizedBox(height: 8),
+                  pw.Container(
+                    height: pdfTheme.ruleThickness,
+                    color: pdfTheme.rule,
+                  ),
+                  pw.SizedBox(height: 14),
+                  pw.Wrap(
+                    spacing: 24,
+                    runSpacing: 10,
+                    children: [
+                      _metaInline(
+                        isEnglish ? 'Number' : 'Numero',
+                        cotizacion.folio,
+                        pdfTheme,
+                      ),
+                      _metaInline(
+                        isEnglish ? 'Issue date' : 'Fecha de cotizacion',
+                        dateFormat.format(cotizacion.fechaEmision),
+                        pdfTheme,
+                      ),
+                      _metaInline(
+                        isEnglish ? 'Due date' : 'Fecha de vencimiento',
+                        dateFormat.format(cotizacion.fechaVencimiento),
+                        pdfTheme,
+                      ),
+                      _metaInline(
+                        isEnglish ? 'Client' : 'Cliente',
+                        cliente.nombre,
+                        pdfTheme,
+                      ),
+                      _metaInline(
+                        isEnglish ? 'Quoted total' : 'Total cotizado',
+                        currency.format(cotizacion.total),
+                        pdfTheme,
+                      ),
+                    ],
+                  ),
+                  pw.SizedBox(height: 16),
+                  pw.Table(
+                    border: pw.TableBorder.all(color: pdfTheme.border),
+                    columnWidths: {
+                      0: const pw.FlexColumnWidth(2),
+                      1: const pw.FlexColumnWidth(3),
+                      2: const pw.FlexColumnWidth(2),
+                      3: const pw.FlexColumnWidth(1.2),
+                      4: const pw.FlexColumnWidth(1.2),
+                      5: const pw.FlexColumnWidth(1.6),
+                    },
+                    children: [
+                      pw.TableRow(
+                        decoration: pw.BoxDecoration(
+                          color: pdfTheme.accentPanel,
+                        ),
+                        children: [
+                          _cell(
+                            isEnglish ? 'Item' : 'Concepto',
+                            header: true,
+                            color: pdfTheme.primary,
+                          ),
+                          _cell(
+                            isEnglish ? 'Description' : 'Descripcion',
+                            header: true,
+                            color: pdfTheme.primary,
+                          ),
+                          _cell(
+                            isEnglish ? 'Unit Cost' : 'Coste unitario',
+                            header: true,
+                            color: pdfTheme.primary,
+                          ),
+                          _cell(
+                            isEnglish ? 'Quantity' : 'Cantidad',
+                            header: true,
+                            color: pdfTheme.primary,
+                          ),
+                          _cell(
+                            isEnglish ? 'Tax' : 'Impuesto',
+                            header: true,
+                            color: pdfTheme.primary,
+                          ),
+                          _cell(
+                            isEnglish ? 'Total' : 'Total',
+                            header: true,
+                            color: pdfTheme.primary,
+                          ),
+                        ],
+                      ),
+                      ...detalles.map(
+                        (d) => pw.TableRow(
+                          children: [
+                            _cell(d.concepto, color: pdfTheme.textPrimary),
+                            _cell(d.descripcion, color: pdfTheme.textPrimary),
+                            _cell(
+                              currency.format(d.precioUnitario),
+                              color: pdfTheme.textPrimary,
+                            ),
+                            _cell(
+                              d.cantidad.toStringAsFixed(2),
+                              color: pdfTheme.textPrimary,
+                            ),
+                            _cell(
+                              '${d.impuestoPorcentaje.toStringAsFixed(0)}%',
+                              color: pdfTheme.textPrimary,
+                            ),
+                            _cell(
+                              currency.format(d.importe),
+                              color: pdfTheme.primary,
+                            ),
                           ],
                         ),
                       ),
                     ],
                   ),
-                ),
-                if (showPaidStamp)
+                  pw.SizedBox(height: 14),
                   pw.Align(
                     alignment: pw.Alignment.centerRight,
                     child: pw.Container(
-                      margin: const pw.EdgeInsets.only(top: 8),
-                      padding: const pw.EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 7,
-                      ),
+                      width: 260,
+                      padding: const pw.EdgeInsets.all(10),
                       decoration: pw.BoxDecoration(
-                        color: _mix(
-                          pdfTheme.secondary,
-                          pdfTheme.background,
-                          0.85,
-                        ),
-                        borderRadius: pw.BorderRadius.circular(8),
-                        border: pw.Border.all(color: pdfTheme.secondary),
+                        color: pdfTheme.surface,
+                        border: pw.Border.all(color: pdfTheme.border),
+                        borderRadius: pw.BorderRadius.circular(pdfTheme.radius),
                       ),
-                      child: pw.Text(
-                        isEnglish ? 'PAID' : 'PAGADO',
-                        style: pw.TextStyle(
-                          color: pdfTheme.secondary,
-                          fontWeight: pw.FontWeight.bold,
-                          letterSpacing: 1,
-                        ),
-                      ),
-                    ),
-                  ),
-                pw.SizedBox(height: 20),
-                pw.Text(
-                  isEnglish ? 'QUOTE' : 'COTIZACION',
-                  style: pw.TextStyle(
-                    fontSize: 16 * fontScale,
-                    fontWeight: pw.FontWeight.bold,
-                    color: pdfTheme.primary,
-                    letterSpacing: 0.6,
-                  ),
-                ),
-                pw.SizedBox(height: 8),
-                pw.Container(
-                  height: pdfTheme.ruleThickness,
-                  color: pdfTheme.rule,
-                ),
-                pw.SizedBox(height: 14),
-                pw.Wrap(
-                  spacing: 24,
-                  runSpacing: 10,
-                  children: [
-                    _metaInline(
-                      isEnglish ? 'Number' : 'Numero',
-                      cotizacion.folio,
-                      pdfTheme,
-                    ),
-                    _metaInline(
-                      isEnglish ? 'Issue date' : 'Fecha de cotizacion',
-                      dateFormat.format(cotizacion.fechaEmision),
-                      pdfTheme,
-                    ),
-                    _metaInline(
-                      isEnglish ? 'Due date' : 'Fecha de vencimiento',
-                      dateFormat.format(cotizacion.fechaVencimiento),
-                      pdfTheme,
-                    ),
-                    _metaInline(
-                      isEnglish ? 'Client' : 'Cliente',
-                      cliente.nombre,
-                      pdfTheme,
-                    ),
-                    _metaInline(
-                      isEnglish ? 'Quoted total' : 'Total cotizado',
-                      currency.format(cotizacion.total),
-                      pdfTheme,
-                    ),
-                  ],
-                ),
-                pw.SizedBox(height: 16),
-                pw.Table(
-                  border: pw.TableBorder.all(color: pdfTheme.border),
-                  columnWidths: {
-                    0: const pw.FlexColumnWidth(2),
-                    1: const pw.FlexColumnWidth(3),
-                    2: const pw.FlexColumnWidth(2),
-                    3: const pw.FlexColumnWidth(1.2),
-                    4: const pw.FlexColumnWidth(1.2),
-                    5: const pw.FlexColumnWidth(1.6),
-                  },
-                  children: [
-                    pw.TableRow(
-                      decoration: pw.BoxDecoration(color: pdfTheme.accentPanel),
-                      children: [
-                        _cell(
-                          isEnglish ? 'Item' : 'Concepto',
-                          header: true,
-                          color: pdfTheme.primary,
-                        ),
-                        _cell(
-                          isEnglish ? 'Description' : 'Descripcion',
-                          header: true,
-                          color: pdfTheme.primary,
-                        ),
-                        _cell(
-                          isEnglish ? 'Unit Cost' : 'Coste unitario',
-                          header: true,
-                          color: pdfTheme.primary,
-                        ),
-                        _cell(
-                          isEnglish ? 'Quantity' : 'Cantidad',
-                          header: true,
-                          color: pdfTheme.primary,
-                        ),
-                        _cell(
-                          isEnglish ? 'Tax' : 'Impuesto',
-                          header: true,
-                          color: pdfTheme.primary,
-                        ),
-                        _cell(
-                          isEnglish ? 'Total' : 'Total',
-                          header: true,
-                          color: pdfTheme.primary,
-                        ),
-                      ],
-                    ),
-                    ...detalles.map(
-                      (d) => pw.TableRow(
+                      child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.stretch,
                         children: [
-                          _cell(d.concepto, color: pdfTheme.textPrimary),
-                          _cell(d.descripcion, color: pdfTheme.textPrimary),
-                          _cell(
-                            currency.format(d.precioUnitario),
-                            color: pdfTheme.textPrimary,
+                          _totalLine(
+                            isEnglish ? 'Subtotal' : 'Subtotal',
+                            currency.format(cotizacion.subtotal),
+                            labelColor: pdfTheme.textMuted,
+                            valueColor: pdfTheme.primary,
                           ),
-                          _cell(
-                            d.cantidad.toStringAsFixed(2),
-                            color: pdfTheme.textPrimary,
+                          _totalLine(
+                            isEnglish ? 'Discount' : 'Descuento',
+                            currency.format(cotizacion.descuentoTotal),
+                            labelColor: pdfTheme.textMuted,
+                            valueColor: pdfTheme.textPrimary,
                           ),
-                          _cell(
-                            '${d.impuestoPorcentaje.toStringAsFixed(0)}%',
-                            color: pdfTheme.textPrimary,
+                          _totalLine(
+                            isEnglish ? 'Tax' : 'Impuesto',
+                            currency.format(cotizacion.impuestoTotal),
+                            labelColor: pdfTheme.textMuted,
+                            valueColor: pdfTheme.textPrimary,
                           ),
-                          _cell(
-                            currency.format(d.importe),
-                            color: pdfTheme.primary,
+                          pw.Divider(color: pdfTheme.border),
+                          _totalLine(
+                            isEnglish ? 'Total' : 'Total',
+                            currency.format(cotizacion.total),
+                            strong: true,
+                            labelColor: pdfTheme.textMuted,
+                            valueColor: pdfTheme.secondary,
                           ),
                         ],
                       ),
                     ),
-                  ],
-                ),
-                pw.SizedBox(height: 14),
-                pw.Align(
-                  alignment: pw.Alignment.centerRight,
-                  child: pw.Container(
-                    width: 260,
-                    padding: const pw.EdgeInsets.all(10),
-                    decoration: pw.BoxDecoration(
-                      color: pdfTheme.surface,
-                      border: pw.Border.all(color: pdfTheme.border),
-                      borderRadius: pw.BorderRadius.circular(pdfTheme.radius),
-                    ),
-                    child: pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.stretch,
-                      children: [
-                        _totalLine(
-                          isEnglish ? 'Subtotal' : 'Subtotal',
-                          currency.format(cotizacion.subtotal),
-                          labelColor: pdfTheme.textMuted,
-                          valueColor: pdfTheme.primary,
-                        ),
-                        _totalLine(
-                          isEnglish ? 'Discount' : 'Descuento',
-                          currency.format(cotizacion.descuentoTotal),
-                          labelColor: pdfTheme.textMuted,
-                          valueColor: pdfTheme.textPrimary,
-                        ),
-                        _totalLine(
-                          isEnglish ? 'Tax' : 'Impuesto',
-                          currency.format(cotizacion.impuestoTotal),
-                          labelColor: pdfTheme.textMuted,
-                          valueColor: pdfTheme.textPrimary,
-                        ),
-                        pw.Divider(color: pdfTheme.border),
-                        _totalLine(
-                          isEnglish ? 'Total' : 'Total',
-                          currency.format(cotizacion.total),
-                          strong: true,
-                          labelColor: pdfTheme.textMuted,
-                          valueColor: pdfTheme.secondary,
-                        ),
-                      ],
-                    ),
                   ),
-                ),
-                if (embedAttachments) ...[
-                  pw.SizedBox(height: 14),
-                  pw.Container(
-                    width: double.infinity,
-                    padding: const pw.EdgeInsets.all(10),
-                    decoration: pw.BoxDecoration(
-                      color: pdfTheme.surface,
-                      border: pw.Border.all(color: pdfTheme.border),
-                      borderRadius: pw.BorderRadius.circular(pdfTheme.radius),
-                    ),
-                    child: pw.Text(
-                      isEnglish
-                          ? 'Attachments included: ficha-tecnica.pdf, evidencia-obra.jpg'
-                          : 'Adjuntos incluidos: ficha-tecnica.pdf, evidencia-obra.jpg',
-                      style: pw.TextStyle(
-                        color: pdfTheme.textMuted,
-                        fontWeight: pw.FontWeight.bold,
+                  if (embedAttachments) ...[
+                    pw.SizedBox(height: 14),
+                    pw.Container(
+                      width: double.infinity,
+                      padding: const pw.EdgeInsets.all(10),
+                      decoration: pw.BoxDecoration(
+                        color: pdfTheme.surface,
+                        border: pw.Border.all(color: pdfTheme.border),
+                        borderRadius: pw.BorderRadius.circular(pdfTheme.radius),
+                      ),
+                      child: pw.Text(
+                        isEnglish
+                            ? 'Attachments included: ficha-tecnica.pdf, evidencia-obra.jpg'
+                            : 'Adjuntos incluidos: ficha-tecnica.pdf, evidencia-obra.jpg',
+                        style: pw.TextStyle(
+                          color: pdfTheme.textMuted,
+                          fontWeight: pw.FontWeight.bold,
+                        ),
                       ),
                     ),
-                  ),
-                ],
-                ..._buildRichTextSection(
-                  label: isEnglish ? 'Terms' : 'Términos',
-                  stored: cotizacion.terminos,
-                  labelStyle: pw.TextStyle(
-                    fontSize: 10,
-                    fontWeight: pw.FontWeight.bold,
-                    color: pdfTheme.textPrimary,
-                  ),
-                  contentStyle: const pw.TextStyle(fontSize: 10),
-                ),
-                ..._buildRichTextSection(
-                  label: isEnglish ? 'Notes' : 'Notas',
-                  stored: cotizacion.notas,
-                  labelStyle: pw.TextStyle(
-                    fontSize: 10,
-                    fontWeight: pw.FontWeight.bold,
-                    color: pdfTheme.textPrimary,
-                  ),
-                  contentStyle: const pw.TextStyle(fontSize: 10),
-                ),
-                if (richTextPlainTextFromStorage(
-                  cotizacion.piePagina,
-                ).isNotEmpty) ...[
-                  pw.SizedBox(height: 18),
-                  _buildRichTextDocument(
-                    cotizacion.piePagina,
-                    baseStyle: pw.TextStyle(
-                      fontSize: 9,
-                      color: pdfTheme.textMuted,
+                  ],
+                  ..._buildRichTextSection(
+                    label: isEnglish ? 'Terms' : 'Términos',
+                    stored: previewTerms,
+                    labelStyle: pw.TextStyle(
+                      fontSize: 10,
+                      fontWeight: pw.FontWeight.bold,
+                      color: pdfTheme.textPrimary,
                     ),
+                    contentStyle: const pw.TextStyle(fontSize: 10),
                   ),
+                  ..._buildRichTextSection(
+                    label: isEnglish ? 'Notes' : 'Notas',
+                    stored: previewNotes,
+                    labelStyle: pw.TextStyle(
+                      fontSize: 10,
+                      fontWeight: pw.FontWeight.bold,
+                      color: pdfTheme.textPrimary,
+                    ),
+                    contentStyle: const pw.TextStyle(fontSize: 10),
+                  ),
+                  if (richTextPlainTextFromStorage(
+                    previewFooter,
+                  ).isNotEmpty) ...[
+                    pw.SizedBox(height: 18),
+                    _buildRichTextDocument(
+                      previewFooter,
+                      baseStyle: pw.TextStyle(
+                        fontSize: 9,
+                        color: pdfTheme.textMuted,
+                      ),
+                    ),
+                  ],
                 ],
-              ],
-      ),
-    );
+        ),
+      );
 
-    final bytes = await pdf.save();
-    if (useCache) {
-      _pdfCache[cacheKey] = bytes;
-      if (_pdfCache.length > 24) {
-        _pdfCache.remove(_pdfCache.keys.first);
+      final bytes = await pdf.save();
+      if (useCache) {
+        _pdfCache[cacheKey] = bytes;
+        if (_pdfCache.length > 48) {
+          _pdfCache.remove(_pdfCache.keys.first);
+        }
+      }
+      inFlightCompleter?.complete(bytes);
+      return bytes;
+    } catch (error, stackTrace) {
+      inFlightCompleter?.completeError(error, stackTrace);
+      rethrow;
+    } finally {
+      if (useCache) {
+        _pdfInFlight.remove(cacheKey);
       }
     }
-    return bytes;
   }
 
   static Future<Map<String, dynamic>> _getEmpresaActualCached(
@@ -674,6 +856,21 @@ class CotizacionPdfService {
     return parsed;
   }
 
+  static Future<String> _getCurrentPlanIdCached(SupabaseClient client) async {
+    final now = DateTime.now();
+    if (_currentPlanIdCache != null && _currentPlanIdCacheAt != null) {
+      if (now.difference(_currentPlanIdCacheAt!).inSeconds <= 10) {
+        return _currentPlanIdCache!;
+      }
+    }
+    final raw = await client.rpc('get_suscripcion_actual');
+    final parsed = (raw as Map).cast<String, dynamic>();
+    final planId = (parsed['plan_id'] ?? '').toString();
+    _currentPlanIdCache = planId;
+    _currentPlanIdCacheAt = now;
+    return planId;
+  }
+
   static Map<String, dynamic> _disenoQuoteFromEmpresa(EmpresaPerfil empresa) {
     return <String, dynamic>{
       'preset_diseno': empresa.themeSeleccionado,
@@ -684,8 +881,6 @@ class CotizacionPdfService {
       'logo_size_value': empresa.quoteLogoSizeValue,
       'fuente_primaria': empresa.quotePrimaryFont,
       'fuente_secundaria': empresa.quoteSecondaryFont,
-      'show_paid_stamp': empresa.quoteShowPaidStamp,
-      'show_shipping_address': empresa.quoteShowShippingAddress,
       'embed_attachments': empresa.quoteEmbedAttachments,
       'show_page_number': empresa.quoteShowPageNumber,
     };
@@ -721,11 +916,14 @@ class CotizacionPdfService {
     }
 
     final future = () async {
-      final clienteFuture = client
+      dynamic clienteQuery = client
           .from('clientes')
           .select()
-          .eq('id', cotizacion.clienteId)
-          .maybeSingle();
+          .eq('id', cotizacion.clienteId);
+      if (cotizacion.empresaId.trim().isNotEmpty) {
+        clienteQuery = clienteQuery.eq('empresa_id', cotizacion.empresaId);
+      }
+      final clienteFuture = clienteQuery.maybeSingle();
       final detalleFuture = client.rpc(
         'list_cotizacion_detalles',
         params: {'p_cotizacion_id': cotizacion.id},
@@ -801,6 +999,12 @@ class CotizacionPdfService {
                       ((item['impuesto_porcentaje'] ?? 0) as num).toDouble(),
                   importe: ((item['importe'] ?? 0) as num).toDouble(),
                   orden: ((item['orden'] ?? 0) as num).toInt(),
+                  productoImagenUrl:
+                      (item['producto_imagen_url'] ?? '') as String,
+                  productoImagenBucket:
+                      (item['producto_imagen_bucket'] ?? '') as String,
+                  productoImagenPath:
+                      (item['producto_imagen_path'] ?? '') as String,
                   createdAt: DateTime.now(),
                   updatedAt: DateTime.now(),
                 ),
@@ -819,7 +1023,7 @@ class CotizacionPdfService {
       final result = await future;
       if (useCache) {
         _quoteDataCache[sourceKey] = result;
-        if (_quoteDataCache.length > 24) {
+        if (_quoteDataCache.length > 48) {
           _quoteDataCache.remove(_quoteDataCache.keys.first);
         }
       }
@@ -837,58 +1041,87 @@ class CotizacionPdfService {
     _fontsFuture = () async {
       switch (preferredFamily.toLowerCase()) {
         case 'montserrat':
-          return _CotizacionPdfFonts(
-            base: await PdfGoogleFonts.montserratRegular(),
-            bold: await PdfGoogleFonts.montserratBold(),
-            italic: await PdfGoogleFonts.montserratItalic(),
-            boldItalic: await PdfGoogleFonts.montserratBoldItalic(),
+          return _loadGoogleFontBundle(
+            regular: PdfGoogleFonts.montserratRegular,
+            bold: PdfGoogleFonts.montserratBold,
+            italic: PdfGoogleFonts.montserratItalic,
+            boldItalic: PdfGoogleFonts.montserratBoldItalic,
           );
         case 'lora':
-          return _CotizacionPdfFonts(
-            base: await PdfGoogleFonts.loraRegular(),
-            bold: await PdfGoogleFonts.loraBold(),
-            italic: await PdfGoogleFonts.loraItalic(),
-            boldItalic: await PdfGoogleFonts.loraBoldItalic(),
+          return _loadGoogleFontBundle(
+            regular: PdfGoogleFonts.loraRegular,
+            bold: PdfGoogleFonts.loraBold,
+            italic: PdfGoogleFonts.loraItalic,
+            boldItalic: PdfGoogleFonts.loraBoldItalic,
           );
         case 'poppins':
-          return _CotizacionPdfFonts(
-            base: await PdfGoogleFonts.poppinsRegular(),
-            bold: await PdfGoogleFonts.poppinsBold(),
-            italic: await PdfGoogleFonts.poppinsItalic(),
-            boldItalic: await PdfGoogleFonts.poppinsBoldItalic(),
+          return _loadGoogleFontBundle(
+            regular: PdfGoogleFonts.poppinsRegular,
+            bold: PdfGoogleFonts.poppinsBold,
+            italic: PdfGoogleFonts.poppinsItalic,
+            boldItalic: PdfGoogleFonts.poppinsBoldItalic,
           );
         case 'playfair display':
-          return _CotizacionPdfFonts(
-            base: await PdfGoogleFonts.playfairDisplayRegular(),
-            bold: await PdfGoogleFonts.playfairDisplayBold(),
-            italic: await PdfGoogleFonts.playfairDisplayItalic(),
-            boldItalic: await PdfGoogleFonts.playfairDisplayBoldItalic(),
+          return _loadGoogleFontBundle(
+            regular: PdfGoogleFonts.playfairDisplayRegular,
+            bold: PdfGoogleFonts.playfairDisplayBold,
+            italic: PdfGoogleFonts.playfairDisplayItalic,
+            boldItalic: PdfGoogleFonts.playfairDisplayBoldItalic,
           );
         case 'merriweather':
-          return _CotizacionPdfFonts(
-            base: await PdfGoogleFonts.merriweatherRegular(),
-            bold: await PdfGoogleFonts.merriweatherBold(),
-            italic: await PdfGoogleFonts.merriweatherItalic(),
-            boldItalic: await PdfGoogleFonts.merriweatherBoldItalic(),
+          return _loadGoogleFontBundle(
+            regular: PdfGoogleFonts.merriweatherRegular,
+            bold: PdfGoogleFonts.merriweatherBold,
+            italic: PdfGoogleFonts.merriweatherItalic,
+            boldItalic: PdfGoogleFonts.merriweatherBoldItalic,
           );
         case 'open sans':
-          return _CotizacionPdfFonts(
-            base: await PdfGoogleFonts.openSansRegular(),
-            bold: await PdfGoogleFonts.openSansBold(),
-            italic: await PdfGoogleFonts.openSansItalic(),
-            boldItalic: await PdfGoogleFonts.openSansBoldItalic(),
+          return _loadGoogleFontBundle(
+            regular: PdfGoogleFonts.openSansRegular,
+            bold: PdfGoogleFonts.openSansBold,
+            italic: PdfGoogleFonts.openSansItalic,
+            boldItalic: PdfGoogleFonts.openSansBoldItalic,
           );
         case 'arimo':
         default:
-          return _CotizacionPdfFonts(
-            base: await PdfGoogleFonts.arimoRegular(),
-            bold: await PdfGoogleFonts.arimoBold(),
-            italic: await PdfGoogleFonts.arimoItalic(),
-            boldItalic: await PdfGoogleFonts.arimoBoldItalic(),
+          return _loadGoogleFontBundle(
+            regular: PdfGoogleFonts.arimoRegular,
+            bold: PdfGoogleFonts.arimoBold,
+            italic: PdfGoogleFonts.arimoItalic,
+            boldItalic: PdfGoogleFonts.arimoBoldItalic,
           );
       }
     }();
     return _fontsFuture!;
+  }
+
+  static Future<_CotizacionPdfFonts> _loadGoogleFontBundle({
+    required Future<pw.Font> Function() regular,
+    required Future<pw.Font> Function() bold,
+    required Future<pw.Font> Function() italic,
+    required Future<pw.Font> Function() boldItalic,
+  }) async {
+    try {
+      final loaded = await Future.wait<pw.Font>([
+        regular(),
+        bold(),
+        italic(),
+        boldItalic(),
+      ]).timeout(_googleFontsTimeout);
+      return _CotizacionPdfFonts(
+        base: loaded[0],
+        bold: loaded[1],
+        italic: loaded[2],
+        boldItalic: loaded[3],
+      );
+    } catch (_) {
+      return _CotizacionPdfFonts(
+        base: pw.Font.helvetica(),
+        bold: pw.Font.helveticaBold(),
+        italic: pw.Font.helveticaOblique(),
+        boldItalic: pw.Font.helveticaBoldOblique(),
+      );
+    }
   }
 
   static List<pw.Widget> _buildRichTextSection({
@@ -907,6 +1140,16 @@ class CotizacionPdfService {
       pw.SizedBox(height: 6),
       _buildRichTextDocument(stored, baseStyle: contentStyle),
     ];
+  }
+
+  static String _effectiveQuoteRichText(String preferred, String fallback) {
+    if (richTextPlainTextFromStorage(preferred).isNotEmpty) {
+      return preferred;
+    }
+    if (richTextPlainTextFromStorage(fallback).isNotEmpty) {
+      return fallback;
+    }
+    return '';
   }
 
   static pw.Widget _buildRichTextDocument(
@@ -1201,6 +1444,85 @@ class CotizacionPdfService {
     );
   }
 
+  static pw.Widget _cellWithThumbnail(
+    String text, {
+    required pw.ImageProvider? thumbnail,
+    PdfColor? color,
+    pw.TextAlign align = pw.TextAlign.left,
+    pw.FontWeight? fontWeight,
+  }) {
+    if (thumbnail == null) {
+      return _cell(text, color: color, align: align, fontWeight: fontWeight);
+    }
+    final resolvedColor = color ?? PdfColor.fromHex('#374151');
+    return pw.Padding(
+      padding: const pw.EdgeInsets.all(8),
+      child: pw.Row(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Container(
+            width: 22,
+            height: 22,
+            decoration: pw.BoxDecoration(
+              border: pw.Border.all(color: PdfColor.fromHex('#D1D5DB')),
+            ),
+            child: pw.Image(thumbnail, fit: pw.BoxFit.cover),
+          ),
+          pw.SizedBox(width: 6),
+          pw.Expanded(
+            child: pw.Text(
+              text,
+              textAlign: align,
+              style: pw.TextStyle(
+                fontSize: 9,
+                fontWeight: fontWeight ?? pw.FontWeight.normal,
+                color: resolvedColor,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static Future<Map<String, pw.ImageProvider?>> _loadProductImagesByProductId(
+    List<DetalleCotizacion> detalles, {
+    required bool fastPreview,
+  }) async {
+    final urlsByProductId = <String, String>{};
+    for (final item in detalles) {
+      final productId = item.productoServicioId.trim();
+      final url = item.productoImagenUrl.trim();
+      if (productId.isEmpty || url.isEmpty) continue;
+      urlsByProductId[productId] = url;
+    }
+    if (urlsByProductId.isEmpty) return const {};
+
+    final entries = urlsByProductId.entries.toList(growable: false);
+    final limited = fastPreview && entries.length > 4
+        ? entries.take(4).toList()
+        : entries;
+
+    final futures = <Future<MapEntry<String, pw.ImageProvider?>>>[];
+    for (final entry in limited) {
+      final future = _productImageCache.putIfAbsent(entry.value, () async {
+        try {
+          return await networkImage(entry.value).timeout(
+            fastPreview
+                ? const Duration(milliseconds: 320)
+                : const Duration(milliseconds: 900),
+          );
+        } catch (_) {
+          return null;
+        }
+      });
+      futures.add(future.then((provider) => MapEntry(entry.key, provider)));
+    }
+
+    final results = await Future.wait(futures);
+    return {for (final item in results) item.key: item.value};
+  }
+
   static pw.Widget _totalLine(
     String label,
     String value, {
@@ -1274,11 +1596,22 @@ class CotizacionPdfService {
     required DateFormat dateFormat,
     required bool isEnglish,
     required pw.ImageProvider? logoProvider,
+    required Map<String, pw.ImageProvider?> productImagesById,
     required double fontScale,
     required double logoExtent,
-    required bool showPaidStamp,
   }) {
-    final notes = richTextPlainTextFromStorage(cotizacion.notas).trim();
+    final effectiveTerms = _effectiveQuoteRichText(
+      cotizacion.terminos,
+      empresa.terminosDefault,
+    );
+    final effectiveNotes = _effectiveQuoteRichText(
+      cotizacion.notas,
+      empresa.notasDefault,
+    );
+    final effectiveFooter = _effectiveQuoteRichText(
+      cotizacion.piePagina,
+      empresa.piePaginaDefault,
+    );
     final orderNumber = cliente.idNumber.trim().isNotEmpty
         ? cliente.idNumber.trim()
         : (cliente.numero.trim().isNotEmpty ? cliente.numero.trim() : '-');
@@ -1344,26 +1677,6 @@ class CotizacionPdfService {
           ],
         ),
       ),
-      if (showPaidStamp)
-        pw.Align(
-          alignment: pw.Alignment.centerRight,
-          child: pw.Container(
-            margin: const pw.EdgeInsets.only(top: 8),
-            padding: const pw.EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-            decoration: pw.BoxDecoration(
-              color: _mix(pdfTheme.secondary, PdfColors.white, 0.82),
-              border: pw.Border.all(color: pdfTheme.secondary),
-            ),
-            child: pw.Text(
-              isEnglish ? 'PAID' : 'PAGADO',
-              style: pw.TextStyle(
-                color: pdfTheme.secondary,
-                fontWeight: pw.FontWeight.bold,
-                fontSize: 10,
-              ),
-            ),
-          ),
-        ),
       pw.SizedBox(height: 14),
       pw.Text(
         isEnglish ? 'QUOTE' : 'COTIZACION',
@@ -1439,6 +1752,7 @@ class CotizacionPdfService {
         rows: detalles,
         currency: currency,
         isEnglish: isEnglish,
+        productImagesById: productImagesById,
       ),
       pw.SizedBox(height: 12),
       pw.Row(
@@ -1448,18 +1762,28 @@ class CotizacionPdfService {
             child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                pw.Text(
-                  isEnglish ? 'Public notes' : 'Notas públicas',
-                  style: pw.TextStyle(
+                ..._buildRichTextSection(
+                  label: isEnglish ? 'Terms' : 'Términos',
+                  stored: effectiveTerms,
+                  labelStyle: pw.TextStyle(
                     fontSize: 10,
                     color: pdfTheme.textPrimary,
                     fontWeight: pw.FontWeight.bold,
                   ),
+                  contentStyle: pw.TextStyle(
+                    fontSize: 9.5,
+                    color: pdfTheme.textPrimary,
+                  ),
                 ),
-                pw.SizedBox(height: 4),
-                pw.Text(
-                  notes.isEmpty ? '-' : notes,
-                  style: pw.TextStyle(
+                ..._buildRichTextSection(
+                  label: isEnglish ? 'Notes' : 'Notas',
+                  stored: effectiveNotes,
+                  labelStyle: pw.TextStyle(
+                    fontSize: 10,
+                    color: pdfTheme.textPrimary,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                  contentStyle: pw.TextStyle(
                     fontSize: 9.5,
                     color: pdfTheme.textPrimary,
                   ),
@@ -1496,6 +1820,13 @@ class CotizacionPdfService {
           ),
         ],
       ),
+      if (richTextPlainTextFromStorage(effectiveFooter).isNotEmpty) ...[
+        pw.SizedBox(height: 14),
+        _buildRichTextDocument(
+          effectiveFooter,
+          baseStyle: pw.TextStyle(fontSize: 9.2, color: pdfTheme.textMuted),
+        ),
+      ],
     ];
   }
 
@@ -1589,6 +1920,7 @@ class CotizacionPdfService {
     required List<DetalleCotizacion> rows,
     required NumberFormat currency,
     required bool isEnglish,
+    required Map<String, pw.ImageProvider?> productImagesById,
   }) {
     final contentRows = rows.isEmpty ? <DetalleCotizacion?>[null] : rows;
     return pw.Table(
@@ -1627,7 +1959,12 @@ class CotizacionPdfService {
                   : PdfColor.fromHex('#E5E7EB'),
             ),
             children: [
-              _cell(contentRows[index]?.concepto ?? '-'),
+              _cellWithThumbnail(
+                contentRows[index]?.concepto ?? '-',
+                thumbnail: contentRows[index] == null
+                    ? null
+                    : productImagesById[contentRows[index]!.productoServicioId],
+              ),
               _cell(contentRows[index]?.descripcion ?? '-'),
               _cell(
                 contentRows[index] == null
@@ -1706,9 +2043,22 @@ class CotizacionPdfService {
     required DateFormat dateFormat,
     required bool isEnglish,
     required pw.ImageProvider? logoProvider,
+    required Map<String, pw.ImageProvider?> productImagesById,
     required double fontScale,
     required double logoExtent,
   }) {
+    final effectiveTerms = _effectiveQuoteRichText(
+      cotizacion.terminos,
+      empresa.terminosDefault,
+    );
+    final effectiveNotes = _effectiveQuoteRichText(
+      cotizacion.notas,
+      empresa.notasDefault,
+    );
+    final effectiveFooter = _effectiveQuoteRichText(
+      cotizacion.piePagina,
+      empresa.piePaginaDefault,
+    );
     final accent = pdfTheme.primary;
     final lightAccent = pdfTheme.rule;
     final textDark = pdfTheme.textPrimary;
@@ -1778,102 +2128,115 @@ class CotizacionPdfService {
               ],
             ),
             pw.SizedBox(height: 22),
-            pw.Row(
+            pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                pw.Expanded(
-                  child: pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      pw.Text(
-                        isEnglish ? 'Quote' : 'Cotización',
-                        style: pw.TextStyle(
-                          color: accent,
-                          fontWeight: pw.FontWeight.bold,
-                          fontSize: 56 * 0.36 * fontScale,
-                        ),
-                      ),
-                      pw.SizedBox(height: 4),
-                      if (quoteIntro.isNotEmpty)
-                        pw.SizedBox(
-                          width: 320,
-                          child: pw.Text(
-                            quoteIntro,
-                            style: pw.TextStyle(
-                              color: textDark,
-                              fontSize: 10.2,
-                              lineSpacing: 2,
-                            ),
-                          ),
-                        ),
-                    ],
+                pw.Text(
+                  isEnglish ? 'Quote' : 'Cotización',
+                  style: pw.TextStyle(
+                    color: accent,
+                    fontWeight: pw.FontWeight.bold,
+                    fontSize: 56 * 0.36 * fontScale,
                   ),
                 ),
-                pw.SizedBox(width: 18),
-                pw.SizedBox(
-                  width: 220,
-                  child: pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.end,
-                    children: [
-                      pw.Text(
-                        isEnglish ? 'CLIENT:' : 'CLIENTE:',
-                        style: pw.TextStyle(
-                          color: accent,
-                          fontWeight: pw.FontWeight.bold,
-                          fontSize: 12.5,
-                        ),
+                pw.SizedBox(height: 4),
+                if (quoteIntro.isNotEmpty)
+                  pw.SizedBox(
+                    width: 420,
+                    child: pw.Text(
+                      quoteIntro,
+                      style: pw.TextStyle(
+                        color: textDark,
+                        fontSize: 10.2,
+                        lineSpacing: 2,
                       ),
-                      pw.SizedBox(height: 10),
-                      if (cliente.nombre.trim().isNotEmpty)
-                        pw.Text(
-                          cliente.nombre.trim(),
-                          style: pw.TextStyle(
-                            color: textDark,
-                            fontSize: 11,
-                            fontWeight: pw.FontWeight.bold,
-                          ),
-                          textAlign: pw.TextAlign.right,
-                        ),
-                      for (final line in clientAddress)
-                        pw.Padding(
-                          padding: const pw.EdgeInsets.only(top: 2),
-                          child: pw.Text(
-                            line,
-                            style: pw.TextStyle(
-                              color: textDark,
-                              fontSize: 10.5,
-                            ),
-                            textAlign: pw.TextAlign.right,
-                          ),
-                        ),
-                      if (clientPhone.isNotEmpty)
-                        pw.Padding(
-                          padding: const pw.EdgeInsets.only(top: 4),
-                          child: pw.Text(
-                            clientPhone,
-                            style: pw.TextStyle(
-                              color: textDark,
-                              fontSize: 10.5,
-                            ),
-                            textAlign: pw.TextAlign.right,
-                          ),
-                        ),
-                      pw.SizedBox(height: 26),
-                      pw.Text(
-                        '${isEnglish ? 'FOLIO' : 'FOLIO'} ${cotizacion.folio}',
-                        style: pw.TextStyle(
-                          color: accent,
-                          fontSize: 11,
-                          fontWeight: pw.FontWeight.bold,
-                        ),
-                      ),
-                      pw.SizedBox(height: 4),
-                      pw.Text(
-                        dateFormat.format(cotizacion.fechaEmision),
-                        style: pw.TextStyle(color: textMuted, fontSize: 9.5),
-                      ),
-                    ],
+                    ),
                   ),
+                pw.SizedBox(height: 12),
+                pw.Row(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Expanded(
+                      child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text(
+                            isEnglish ? 'CLIENT:' : 'CLIENTE:',
+                            style: pw.TextStyle(
+                              color: accent,
+                              fontWeight: pw.FontWeight.bold,
+                              fontSize: 12.5,
+                            ),
+                          ),
+                          pw.SizedBox(height: 6),
+                          if (cliente.nombre.trim().isNotEmpty)
+                            pw.Text(
+                              cliente.nombre.trim(),
+                              style: pw.TextStyle(
+                                color: textDark,
+                                fontSize: 11,
+                                fontWeight: pw.FontWeight.bold,
+                              ),
+                            ),
+                          if (clientAddress.isNotEmpty)
+                            pw.Padding(
+                              padding: const pw.EdgeInsets.only(top: 2),
+                              child: pw.Wrap(
+                                spacing: 10,
+                                runSpacing: 2,
+                                children: clientAddress
+                                    .map(
+                                      (line) => pw.Text(
+                                        line,
+                                        style: pw.TextStyle(
+                                          color: textDark,
+                                          fontSize: 10.2,
+                                        ),
+                                      ),
+                                    )
+                                    .toList(growable: false),
+                              ),
+                            ),
+                          if (clientPhone.isNotEmpty)
+                            pw.Padding(
+                              padding: const pw.EdgeInsets.only(top: 4),
+                              child: pw.Text(
+                                clientPhone,
+                                style: pw.TextStyle(
+                                  color: textDark,
+                                  fontSize: 10.5,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    pw.SizedBox(width: 16),
+                    pw.SizedBox(
+                      width: 190,
+                      child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.end,
+                        children: [
+                          pw.Text(
+                            '${isEnglish ? 'FOLIO' : 'FOLIO'} ${cotizacion.folio}',
+                            style: pw.TextStyle(
+                              color: accent,
+                              fontSize: 11,
+                              fontWeight: pw.FontWeight.bold,
+                            ),
+                          ),
+                          pw.SizedBox(height: 4),
+                          pw.Text(
+                            dateFormat.format(cotizacion.fechaEmision),
+                            style: pw.TextStyle(
+                              color: textMuted,
+                              fontSize: 9.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -1885,6 +2248,7 @@ class CotizacionPdfService {
               currency: currency,
               textDark: textDark,
               isEnglish: isEnglish,
+              productImagesById: productImagesById,
             ),
             pw.SizedBox(height: 18),
             pw.Align(
@@ -1935,29 +2299,32 @@ class CotizacionPdfService {
                         ),
                       ),
                       pw.SizedBox(height: 6),
-                      ...(leftContacts.isEmpty
-                              ? [
-                                  'hello@interiores.com',
-                                  isEnglish
-                                      ? 'Call us at 123 456 789'
-                                      : 'Llámanos al 123 456 789',
-                                  isEnglish
-                                      ? '123 Any Street, Any City'
-                                      : 'Calle Cualquiera 123 Cualquier Lugar',
-                                ]
-                              : leftContacts)
-                          .map(
-                            (line) => pw.Padding(
-                              padding: const pw.EdgeInsets.only(bottom: 2),
-                              child: pw.Text(
-                                line,
-                                style: pw.TextStyle(
-                                  color: textDark,
-                                  fontSize: 10.3,
-                                ),
-                              ),
-                            ),
-                          ),
+                      pw.Wrap(
+                        spacing: 12,
+                        runSpacing: 6,
+                        children:
+                            (leftContacts.isEmpty
+                                    ? [
+                                        'hello@interiores.com',
+                                        isEnglish
+                                            ? 'Call us at 123 456 789'
+                                            : 'Llámanos al 123 456 789',
+                                        isEnglish
+                                            ? '123 Any Street, Any City'
+                                            : 'Calle Cualquiera 123 Cualquier Lugar',
+                                      ]
+                                    : leftContacts)
+                                .map(
+                                  (line) => pw.Text(
+                                    line,
+                                    style: pw.TextStyle(
+                                      color: textDark,
+                                      fontSize: 10.3,
+                                    ),
+                                  ),
+                                )
+                                .toList(growable: false),
+                      ),
                     ],
                   ),
                 ),
@@ -1965,7 +2332,7 @@ class CotizacionPdfService {
             ),
             ..._buildRichTextSection(
               label: isEnglish ? 'Terms' : 'Términos',
-              stored: cotizacion.terminos,
+              stored: effectiveTerms,
               labelStyle: pw.TextStyle(
                 fontSize: 10,
                 fontWeight: pw.FontWeight.bold,
@@ -1975,7 +2342,7 @@ class CotizacionPdfService {
             ),
             ..._buildRichTextSection(
               label: isEnglish ? 'Notes' : 'Notas',
-              stored: cotizacion.notas,
+              stored: effectiveNotes,
               labelStyle: pw.TextStyle(
                 fontSize: 10,
                 fontWeight: pw.FontWeight.bold,
@@ -1983,12 +2350,10 @@ class CotizacionPdfService {
               ),
               contentStyle: pw.TextStyle(fontSize: 10, color: textDark),
             ),
-            if (richTextPlainTextFromStorage(
-              cotizacion.piePagina,
-            ).isNotEmpty) ...[
+            if (richTextPlainTextFromStorage(effectiveFooter).isNotEmpty) ...[
               pw.SizedBox(height: 12),
               _buildRichTextDocument(
-                cotizacion.piePagina,
+                effectiveFooter,
                 baseStyle: pw.TextStyle(fontSize: 9.5, color: textMuted),
               ),
             ],
@@ -2003,6 +2368,7 @@ class CotizacionPdfService {
     required NumberFormat currency,
     required PdfColor textDark,
     required bool isEnglish,
+    required Map<String, pw.ImageProvider?> productImagesById,
   }) {
     return pw.Table(
       columnWidths: {
@@ -2043,10 +2409,13 @@ class CotizacionPdfService {
           pw.TableRow(
             children: [
               _cell('${index + 1}', color: textDark),
-              _cell(
+              _cellWithThumbnail(
                 rows[index]?.descripcion.trim().isNotEmpty == true
                     ? rows[index]!.descripcion
                     : (rows[index]?.concepto ?? '-'),
+                thumbnail: rows[index] == null
+                    ? null
+                    : productImagesById[rows[index]!.productoServicioId],
                 color: textDark,
               ),
               _cell(
@@ -2124,9 +2493,22 @@ class CotizacionPdfService {
     required DateFormat dateFormat,
     required bool isEnglish,
     required pw.ImageProvider? logoProvider,
+    required Map<String, pw.ImageProvider?> productImagesById,
     required double fontScale,
     required double logoExtent,
   }) {
+    final effectiveTerms = _effectiveQuoteRichText(
+      cotizacion.terminos,
+      empresa.terminosDefault,
+    );
+    final effectiveNotes = _effectiveQuoteRichText(
+      cotizacion.notas,
+      empresa.notasDefault,
+    );
+    final effectiveFooter = _effectiveQuoteRichText(
+      cotizacion.piePagina,
+      empresa.piePaginaDefault,
+    );
     final primary = pdfTheme.primary;
     final secondary = pdfTheme.secondary;
     final dark = pdfTheme.textPrimary;
@@ -2275,7 +2657,13 @@ class CotizacionPdfService {
               ),
               children: [
                 _cell('${i + 1}', color: dark),
-                _cell(rows[i]?.descripcion ?? '-', color: dark),
+                _cellWithThumbnail(
+                  rows[i]?.descripcion ?? '-',
+                  thumbnail: rows[i] == null
+                      ? null
+                      : productImagesById[rows[i]!.productoServicioId],
+                  color: dark,
+                ),
                 _cell(
                   rows[i] == null
                       ? '-'
@@ -2385,7 +2773,7 @@ class CotizacionPdfService {
       ),
       ..._buildRichTextSection(
         label: isEnglish ? 'Terms' : 'Términos',
-        stored: cotizacion.terminos,
+        stored: effectiveTerms,
         labelStyle: pw.TextStyle(
           fontSize: 10,
           fontWeight: pw.FontWeight.bold,
@@ -2395,7 +2783,7 @@ class CotizacionPdfService {
       ),
       ..._buildRichTextSection(
         label: isEnglish ? 'Notes' : 'Notas',
-        stored: cotizacion.notas,
+        stored: effectiveNotes,
         labelStyle: pw.TextStyle(
           fontSize: 10,
           fontWeight: pw.FontWeight.bold,
@@ -2403,10 +2791,10 @@ class CotizacionPdfService {
         ),
         contentStyle: pw.TextStyle(fontSize: 10, color: dark),
       ),
-      if (richTextPlainTextFromStorage(cotizacion.piePagina).isNotEmpty) ...[
+      if (richTextPlainTextFromStorage(effectiveFooter).isNotEmpty) ...[
         pw.SizedBox(height: 14),
         _buildRichTextDocument(
-          cotizacion.piePagina,
+          effectiveFooter,
           baseStyle: pw.TextStyle(fontSize: 9.5, color: pdfTheme.textMuted),
         ),
       ],
@@ -2423,9 +2811,22 @@ class CotizacionPdfService {
     required DateFormat dateFormat,
     required bool isEnglish,
     required pw.ImageProvider? logoProvider,
+    required Map<String, pw.ImageProvider?> productImagesById,
     required double fontScale,
     required double logoExtent,
   }) {
+    final effectiveTerms = _effectiveQuoteRichText(
+      cotizacion.terminos,
+      empresa.terminosDefault,
+    );
+    final effectiveNotes = _effectiveQuoteRichText(
+      cotizacion.notas,
+      empresa.notasDefault,
+    );
+    final effectiveFooter = _effectiveQuoteRichText(
+      cotizacion.piePagina,
+      empresa.piePaginaDefault,
+    );
     final ink = pdfTheme.textPrimary;
     final secondary = pdfTheme.secondary;
     final containerBg = _mix(secondary, pdfTheme.background, 0.975);
@@ -2621,10 +3022,13 @@ class CotizacionPdfService {
             pw.TableRow(
               children: [
                 _cell('${i + 1}', color: ink),
-                _cell(
+                _cellWithThumbnail(
                   rows[i]?.concepto.trim().isNotEmpty == true
                       ? rows[i]!.concepto
                       : (rows[i]?.descripcion ?? '-'),
+                  thumbnail: rows[i] == null
+                      ? null
+                      : productImagesById[rows[i]!.productoServicioId],
                   color: ink,
                 ),
                 _cell(
@@ -2712,7 +3116,7 @@ class CotizacionPdfService {
       ),
       ..._buildRichTextSection(
         label: isEnglish ? 'Terms' : 'Términos',
-        stored: cotizacion.terminos,
+        stored: effectiveTerms,
         labelStyle: pw.TextStyle(
           fontSize: 10,
           fontWeight: pw.FontWeight.bold,
@@ -2722,7 +3126,7 @@ class CotizacionPdfService {
       ),
       ..._buildRichTextSection(
         label: isEnglish ? 'Notes' : 'Notas',
-        stored: cotizacion.notas,
+        stored: effectiveNotes,
         labelStyle: pw.TextStyle(
           fontSize: 10,
           fontWeight: pw.FontWeight.bold,
@@ -2730,10 +3134,10 @@ class CotizacionPdfService {
         ),
         contentStyle: pw.TextStyle(fontSize: 10, color: ink),
       ),
-      if (richTextPlainTextFromStorage(cotizacion.piePagina).isNotEmpty) ...[
+      if (richTextPlainTextFromStorage(effectiveFooter).isNotEmpty) ...[
         pw.SizedBox(height: 14),
         _buildRichTextDocument(
-          cotizacion.piePagina,
+          effectiveFooter,
           baseStyle: pw.TextStyle(fontSize: 9.5, color: pdfTheme.textMuted),
         ),
       ],
@@ -2750,9 +3154,22 @@ class CotizacionPdfService {
     required DateFormat dateFormat,
     required bool isEnglish,
     required pw.ImageProvider? logoProvider,
+    required Map<String, pw.ImageProvider?> productImagesById,
     required double fontScale,
     required double logoExtent,
   }) {
+    final effectiveTerms = _effectiveQuoteRichText(
+      cotizacion.terminos,
+      empresa.terminosDefault,
+    );
+    final effectiveNotes = _effectiveQuoteRichText(
+      cotizacion.notas,
+      empresa.notasDefault,
+    );
+    final effectiveFooter = _effectiveQuoteRichText(
+      cotizacion.piePagina,
+      empresa.piePaginaDefault,
+    );
     final headerBlue = pdfTheme.primary;
     final stripeBlue = pdfTheme.accentPanel;
     final lightBorder = pdfTheme.border;
@@ -2968,6 +3385,7 @@ class CotizacionPdfService {
         borderColor: lightBorder,
         textColor: textDark,
         isEnglish: isEnglish,
+        productImagesById: productImagesById,
       ),
       pw.SizedBox(height: 8),
       pw.Align(
@@ -3026,7 +3444,7 @@ class CotizacionPdfService {
               children: [
                 ..._buildRichTextSection(
                   label: isEnglish ? 'Terms' : 'Términos',
-                  stored: cotizacion.terminos,
+                  stored: effectiveTerms,
                   labelStyle: pw.TextStyle(
                     fontSize: 11,
                     fontWeight: pw.FontWeight.bold,
@@ -3036,7 +3454,7 @@ class CotizacionPdfService {
                 ),
                 ..._buildRichTextSection(
                   label: isEnglish ? 'Notes' : 'Notas',
-                  stored: cotizacion.notas,
+                  stored: effectiveNotes,
                   labelStyle: pw.TextStyle(
                     fontSize: 11,
                     fontWeight: pw.FontWeight.bold,
@@ -3113,10 +3531,10 @@ class CotizacionPdfService {
             )
             .toList(growable: false),
       ),
-      if (richTextPlainTextFromStorage(cotizacion.piePagina).isNotEmpty) ...[
+      if (richTextPlainTextFromStorage(effectiveFooter).isNotEmpty) ...[
         pw.SizedBox(height: 12),
         _buildRichTextDocument(
-          cotizacion.piePagina,
+          effectiveFooter,
           baseStyle: pw.TextStyle(fontSize: 9.2, color: muted),
         ),
       ],
@@ -3133,6 +3551,7 @@ class CotizacionPdfService {
     required PdfColor borderColor,
     required PdfColor textColor,
     required bool isEnglish,
+    required Map<String, pw.ImageProvider?> productImagesById,
   }) {
     return pw.Table(
       border: pw.TableBorder.all(color: borderColor, width: 0.8),
@@ -3170,10 +3589,13 @@ class CotizacionPdfService {
             ),
             children: [
               _cell('${index + 1}', color: textColor),
-              _cell(
+              _cellWithThumbnail(
                 rows[index]?.concepto.trim().isNotEmpty == true
                     ? rows[index]!.concepto
                     : (rows[index]?.descripcion ?? '-'),
+                thumbnail: rows[index] == null
+                    ? null
+                    : productImagesById[rows[index]!.productoServicioId],
                 color: textColor,
               ),
               _cell(
@@ -3254,6 +3676,23 @@ class _QuotePdfSourceData {
   final List<DetalleCotizacion> detalles;
 }
 
+Future<pw.MemoryImage?> _loadCotimaxWatermarkLogo() {
+  final existing = CotizacionPdfService._cotimaxWatermarkFuture;
+  if (existing != null) return existing;
+
+  final future = () async {
+    try {
+      final asset = await rootBundle.load('assets/img/cotimax-logo.png');
+      return pw.MemoryImage(asset.buffer.asUint8List());
+    } catch (_) {
+      return null;
+    }
+  }();
+
+  CotizacionPdfService._cotimaxWatermarkFuture = future;
+  return future;
+}
+
 class _QuotePdfTheme {
   _QuotePdfTheme({
     required this.primary,
@@ -3330,6 +3769,33 @@ String _normalizeThemePreset(String raw) {
   }
 }
 
+Cotizacion _buildFastPreviewQuote(Cotizacion source) {
+  return Cotizacion(
+    id: source.id,
+    folio: source.folio,
+    clienteId: source.clienteId,
+    fechaEmision: source.fechaEmision,
+    fechaVencimiento: source.fechaVencimiento,
+    impuestoPorcentaje: source.impuestoPorcentaje,
+    retIsr: source.retIsr,
+    subtotal: source.subtotal,
+    descuentoTotal: source.descuentoTotal,
+    impuestoTotal: source.impuestoTotal,
+    total: source.total,
+    notas: '',
+    notasPrivadas: '',
+    terminos: '',
+    piePagina: '',
+    estatus: source.estatus,
+    usuarioId: source.usuarioId,
+    empresaId: source.empresaId,
+    createdAt: source.createdAt,
+    updatedAt: source.updatedAt,
+    pagadoTotal: source.pagadoTotal,
+    saldoTotal: source.saldoTotal,
+  );
+}
+
 PdfColor _safePdfHex(String raw, String fallback) {
   var normalized = raw.trim();
   if (normalized.isEmpty) normalized = fallback;
@@ -3338,6 +3804,49 @@ PdfColor _safePdfHex(String raw, String fallback) {
     normalized = fallback;
   }
   return PdfColor.fromHex(normalized);
+}
+
+pw.Widget _buildPaidWatermark({
+  required PdfPageFormat pageFormat,
+  required bool isEnglish,
+  required PdfColor background,
+}) {
+  final stampRed = PdfColor.fromHex('#C62828');
+  final borderRed = _mix(stampRed, background, 0.18);
+  final textRed = _mix(stampRed, background, 0.1);
+  final width = (pageFormat.width * 0.62).clamp(260.0, 430.0).toDouble();
+  final height = (width * 0.34).clamp(88.0, 138.0).toDouble();
+  final label = isEnglish ? 'PAID' : 'PAGADO';
+
+  return pw.Transform.rotate(
+    angle: -math.pi / 7.2,
+    child: pw.Container(
+      width: width,
+      height: height,
+      alignment: pw.Alignment.center,
+      decoration: pw.BoxDecoration(
+        borderRadius: pw.BorderRadius.circular(10),
+        border: pw.Border.all(color: borderRed, width: 6),
+      ),
+      child: pw.Container(
+        margin: const pw.EdgeInsets.all(10),
+        alignment: pw.Alignment.center,
+        decoration: pw.BoxDecoration(
+          borderRadius: pw.BorderRadius.circular(6),
+          border: pw.Border.all(color: borderRed, width: 2.6),
+        ),
+        child: pw.Text(
+          label,
+          style: pw.TextStyle(
+            color: textRed,
+            fontWeight: pw.FontWeight.bold,
+            fontSize: height * 0.48,
+            letterSpacing: 2.2,
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 PdfColor _mix(PdfColor a, PdfColor b, double t) {
@@ -3358,13 +3867,25 @@ Future<pw.ImageProvider?> _loadLogoProvider(String rawUrl) async {
   }
   final future = () async {
     try {
-      return await networkImage(url).timeout(const Duration(seconds: 3));
+      return await networkImage(url).timeout(const Duration(milliseconds: 450));
     } catch (_) {
       return null;
     }
   }();
   CotizacionPdfService._logoCache[url] = future;
   return future;
+}
+
+Future<pw.ImageProvider?> _loadLogoProviderFast(String rawUrl) async {
+  final url = rawUrl.trim();
+  if (url.isEmpty) return null;
+  final existing = CotizacionPdfService._logoCache[url];
+  if (existing == null) return null;
+  try {
+    return await existing.timeout(const Duration(milliseconds: 120));
+  } catch (_) {
+    return null;
+  }
 }
 
 PdfPageFormat _pageFormatFromName(String raw) {

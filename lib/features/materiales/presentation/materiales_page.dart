@@ -2,6 +2,7 @@ import 'package:cotimax/core/constants/app_colors.dart';
 import 'package:cotimax/core/localization/app_localization.dart';
 import 'package:cotimax/core/routing/route_paths.dart';
 import 'package:cotimax/features/materiales/application/materiales_controller.dart';
+import 'package:cotimax/features/planes/application/plan_access.dart';
 import 'package:cotimax/features/productos/application/productos_controller.dart';
 import 'package:cotimax/features/proveedores/application/proveedores_controller.dart';
 import 'package:cotimax/shared/models/domain_models.dart';
@@ -137,9 +138,9 @@ class _MaterialesPageState extends ConsumerState<MaterialesPage> {
       _handledCreateRoute = false;
     } else if (!_handledCreateRoute) {
       _handledCreateRoute = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (!mounted) return;
-        _openForm(context, null);
+        await _openForm(context, null);
         if (mounted) {
           context.go(RoutePaths.materiales);
         }
@@ -210,6 +211,18 @@ class _MaterialesPageState extends ConsumerState<MaterialesPage> {
             onRetry: () => ref.invalidate(materialesControllerProvider),
           ),
           data: (materiales) {
+            if (materiales.isEmpty) {
+              return EmptyStateWidget(
+                title: 'Todavía no hay materiales',
+                subtitle: 'Registra tu primer material para comenzar.',
+                action: ElevatedButton.icon(
+                  onPressed: () => _openForm(context, null),
+                  icon: Icon(Icons.add),
+                  label: Text(trText('Nuevo material')),
+                ),
+              );
+            }
+
             final productosCatalogo =
                 ref.watch(productosControllerProvider).valueOrNull ??
                 const <ProductoServicio>[];
@@ -404,7 +417,27 @@ class _MaterialesPageState extends ConsumerState<MaterialesPage> {
     );
   }
 
-  void _openForm(BuildContext context, MaterialInsumo? material) {
+  Future<void> _openForm(BuildContext context, MaterialInsumo? material) async {
+    if (material == null) {
+      final planAccess = await ref.read(activePlanAccessProvider.future);
+      final materiales =
+          ref.read(materialesControllerProvider).valueOrNull ??
+          await ref.read(materialesControllerProvider.future);
+      if (!mounted) return;
+      if (hasReachedPlanLimit(
+        limit: planAccess.plan.limiteMateriales,
+        used: materiales?.length ?? 0,
+      )) {
+        await showPlanUpgradeDialog(
+          context,
+          title: 'Límite del plan Starter',
+          message:
+              'Tu plan Starter permite hasta 5 materiales. Actualiza a Pro para registrar más materiales.',
+        );
+        return;
+      }
+    }
+
     showDialog<void>(
       context: context,
       builder: (_) => ModalBase(
@@ -418,10 +451,13 @@ class _MaterialesPageState extends ConsumerState<MaterialesPage> {
     final confirmed = await showDeleteConfirmation(
       context,
       entityLabel: 'material',
+      dependencyEntityType: 'material',
+      dependencyIds: [id],
       onConfirmAsync: () async {
         try {
           await ref.read(materialesRepositoryProvider).delete(id);
           ref.invalidate(materialesControllerProvider);
+          ref.invalidate(productosControllerProvider);
           if (!mounted) return;
           ToastHelper.showSuccess(context, 'Material eliminado.');
         } catch (error) {
@@ -448,6 +484,8 @@ class _MaterialesPageState extends ConsumerState<MaterialesPage> {
       message: count == 1
           ? '¿Estás seguro que quieres eliminar este material?'
           : '¿Estás seguro que quieres eliminar los $count materiales seleccionados?',
+      dependencyEntityType: 'material',
+      dependencyIds: _selectedMaterialIds.toList(),
       onConfirmAsync: () async {
         try {
           final ids = _selectedMaterialIds.toList();
@@ -455,6 +493,7 @@ class _MaterialesPageState extends ConsumerState<MaterialesPage> {
             await ref.read(materialesRepositoryProvider).delete(id);
           }
           ref.invalidate(materialesControllerProvider);
+          ref.invalidate(productosControllerProvider);
           if (!mounted) return;
           setState(() => _selectedMaterialIds.clear());
           ToastHelper.showSuccess(
@@ -515,6 +554,7 @@ class _MaterialFormState extends ConsumerState<_MaterialForm> {
   String? _selectedProveedorId;
   String _productosQuery = '';
   bool _isSaving = false;
+  bool _hasEditedProductoRelations = false;
 
   @override
   void initState() {
@@ -729,7 +769,11 @@ class _MaterialFormState extends ConsumerState<_MaterialForm> {
             helper: 'Captura el costo de una sola unidad de medida.',
             keyboardType: TextInputType.numberWithOptions(decimal: true),
             inputFormatters: const [
-              NumericTextInputFormatter(useGrouping: true, maxDecimalDigits: 2),
+              NumericTextInputFormatter(
+                useGrouping: true,
+                maxDecimalDigits: 2,
+                moneyInputBehavior: true,
+              ),
             ],
           ),
           _MaterialFieldRow(
@@ -900,6 +944,7 @@ class _MaterialFormState extends ConsumerState<_MaterialForm> {
                           selected: _productoIds.contains(producto.id),
                           label: Text(producto.nombre),
                           onSelected: (_) => setState(() {
+                            _hasEditedProductoRelations = true;
                             if (_productoIds.contains(producto.id)) {
                               _productoIds.remove(producto.id);
                             } else {
@@ -977,6 +1022,25 @@ class _MaterialFormState extends ConsumerState<_MaterialForm> {
     }
 
     final now = DateTime.now();
+    if (widget.material == null) {
+      final planAccess = await ref.read(activePlanAccessProvider.future);
+      final materiales =
+          ref.read(materialesControllerProvider).valueOrNull ??
+          const <MaterialInsumo>[];
+      if (hasReachedPlanLimit(
+        limit: planAccess.plan.limiteMateriales,
+        used: materiales.length,
+      )) {
+        if (!mounted) return;
+        await showPlanUpgradeDialog(
+          context,
+          title: 'Límite del plan Starter',
+          message:
+              'Tu plan Starter permite hasta 5 materiales. Actualiza a Pro para registrar más materiales.',
+        );
+        return;
+      }
+    }
     final proveedores =
         ref.read(proveedoresControllerProvider).valueOrNull ??
         const <Proveedor>[];
@@ -1017,8 +1081,13 @@ class _MaterialFormState extends ConsumerState<_MaterialForm> {
 
     setState(() => _isSaving = true);
     try {
-      await ref.read(materialesRepositoryProvider).upsert(material);
+      final shouldSyncProductoIds =
+          widget.material == null || _hasEditedProductoRelations;
+      await ref
+          .read(materialesRepositoryProvider)
+          .upsert(material, syncProductoIds: shouldSyncProductoIds);
       ref.invalidate(materialesControllerProvider);
+      ref.invalidate(productosControllerProvider);
       if (!mounted) return;
       ToastHelper.showSuccess(
         context,
@@ -1100,7 +1169,11 @@ class _MaterialSection extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Padding(
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.background,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
+            ),
             padding: EdgeInsets.fromLTRB(16, 14, 16, 14),
             child: Row(
               children: [
@@ -1186,6 +1259,9 @@ class _MaterialFieldRow extends StatelessWidget {
                   keyboardType: keyboardType,
                   inputFormatters: inputFormatters,
                   decoration: InputDecoration(
+                    hintText: suffixText == currentCurrencyCode()
+                        ? '0.00'
+                        : null,
                     suffixText: suffixText == null ? null : trText(suffixText!),
                     helperText: helper == null ? null : trText(helper!),
                   ),

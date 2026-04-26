@@ -26,7 +26,7 @@ abstract class ProductosRepository {
 
 abstract class MaterialesRepository {
   Future<List<MaterialInsumo>> getAll({String query = ''});
-  Future<void> upsert(MaterialInsumo material);
+  Future<void> upsert(MaterialInsumo material, {bool syncProductoIds = false});
   Future<void> delete(String id);
 }
 
@@ -34,6 +34,8 @@ abstract class CotizacionesRepository {
   Future<List<Cotizacion>> getAll({String query = ''});
   Future<List<DetalleCotizacion>> getDetalles({String? cotizacionId});
   Future<void> updateStatus(String id, QuoteStatus status);
+  Future<void> markPaid(String id);
+  Future<void> markUnpaid(String id);
   Future<void> upsert(CotizacionUpsertPayload cotizacion);
   Future<void> delete(String id);
 }
@@ -65,6 +67,12 @@ abstract class GastosRepository {
   });
   Future<void> deleteCategoria(String id);
   Future<void> upsert(Gasto gasto);
+  Future<void> delete(String id);
+}
+
+abstract class RecordatoriosRepository {
+  Future<List<Recordatorio>> getAll();
+  Future<void> upsert(Recordatorio recordatorio);
   Future<void> delete(String id);
 }
 
@@ -236,7 +244,10 @@ class SupabaseMaterialesRepository implements MaterialesRepository {
   }
 
   @override
-  Future<void> upsert(MaterialInsumo material) async {
+  Future<void> upsert(
+    MaterialInsumo material, {
+    bool syncProductoIds = false,
+  }) async {
     await _client.rpc(
       'upsert_material',
       params: {
@@ -251,7 +262,8 @@ class SupabaseMaterialesRepository implements MaterialesRepository {
           'proveedor_id': material.proveedorId,
           'proveedor_nombre': material.proveedor,
           'sku': material.sku,
-          'producto_ids': material.productoIds,
+          'sync_producto_ids': syncProductoIds,
+          if (syncProductoIds) 'producto_ids': material.productoIds,
           'activo': material.activo,
         },
       },
@@ -293,6 +305,16 @@ class SupabaseCotizacionesRepository implements CotizacionesRepository {
       'update_cotizacion_status',
       params: {'p_id': id, 'p_status': status.key},
     );
+  }
+
+  @override
+  Future<void> markPaid(String id) async {
+    await _client.rpc('mark_cotizacion_pagada', params: {'p_id': id});
+  }
+
+  @override
+  Future<void> markUnpaid(String id) async {
+    await _client.rpc('desmarcar_cotizacion_pagada', params: {'p_id': id});
   }
 
   @override
@@ -360,6 +382,7 @@ class SupabaseIngresosRepository implements IngresosRepository {
       params: {
         'p_payload': {
           'id': ingreso.id,
+          'titulo': ingreso.titulo,
           'ingreso_categoria_id': _nullIfEmpty(ingreso.ingresoCategoriaId),
           'cliente_id': _nullIfEmpty(ingreso.clienteId),
           'cotizacion_id': _nullIfEmpty(ingreso.cotizacionId),
@@ -460,11 +483,13 @@ class SupabaseGastosRepository implements GastosRepository {
       params: {
         'p_payload': {
           'id': gasto.id,
+          'titulo': gasto.titulo,
           'gasto_categoria_id': _nullIfEmpty(gasto.gastoCategoriaId),
           'monto': gasto.monto,
           'fecha': gasto.fecha.toIso8601String(),
           'fecha_inicio': gasto.fechaInicioRecurrencia?.toIso8601String(),
           'descripcion': gasto.descripcion,
+          'proveedor_id': _nullIfEmpty(gasto.proveedorId),
           'proveedor_nombre': gasto.proveedor,
           'referencia': gasto.referencia,
           'notas': gasto.notas,
@@ -480,6 +505,104 @@ class SupabaseGastosRepository implements GastosRepository {
   @override
   Future<void> delete(String id) async {
     await _client.rpc('delete_gasto', params: {'p_id': id});
+  }
+}
+
+class SupabaseRecordatoriosRepository implements RecordatoriosRepository {
+  SupabaseRecordatoriosRepository(this._client);
+
+  final SupabaseClient _client;
+
+  @override
+  Future<List<Recordatorio>> getAll() async {
+    try {
+      final response = await _client.rpc('list_recordatorios');
+      return _mapList(response, _recordatorioFromRow);
+    } catch (_) {
+      final response = await _client
+          .from('recordatorios')
+          .select('*, recordatorios_dias(weekday_iso)')
+          .order('fecha', ascending: true)
+          .order('created_at', ascending: true);
+      return _mapList(response, _recordatorioFromRow);
+    }
+  }
+
+  @override
+  Future<void> upsert(Recordatorio recordatorio) async {
+    DateTime dateOnly(DateTime value) =>
+        DateTime(value.year, value.month, value.day);
+    final normalizedId = _nullIfInvalidUuid(recordatorio.id);
+    final weekdays =
+        recordatorio.recurrente &&
+            recordatorio.recurrencia.supportsWeekdaySelection
+        ? () {
+            final values = recordatorio.diasSemana.toList();
+            values.sort();
+            return values;
+          }()
+        : <int>[];
+    final payload = {
+      if (normalizedId != null) 'id': normalizedId,
+      'cliente_id': _nullIfEmpty(recordatorio.clienteId),
+      'cliente_nombre_snapshot': recordatorio.clienteNombre,
+      'cotizacion_id': _nullIfEmpty(recordatorio.cotizacionId),
+      'nombre': recordatorio.nombre,
+      'descripcion': recordatorio.descripcion,
+      'fecha': dateOnly(recordatorio.fecha).toIso8601String(),
+      'fecha_inicio': dateOnly(
+        recordatorio.fechaInicioRecurrencia ?? recordatorio.fecha,
+      ).toIso8601String(),
+      'fecha_fin': recordatorio.fechaFin == null
+          ? null
+          : dateOnly(recordatorio.fechaFin!).toIso8601String(),
+      'frecuencia': recordatorio.recurrente
+          ? recordatorio.recurrencia.key
+          : RecurrenceFrequency.ninguna.key,
+      'activo': recordatorio.activo,
+      'icon_key': recordatorio.iconKey,
+      'dias_semana': weekdays,
+    };
+    try {
+      await _client.rpc('upsert_recordatorio', params: {'p_payload': payload});
+      return;
+    } catch (_) {
+      final response = await _client
+          .from('recordatorios')
+          .upsert(payload)
+          .select('id')
+          .single();
+      final recordatorioId = response['id'].toString();
+
+      await _client
+          .from('recordatorios_dias')
+          .delete()
+          .eq('recordatorio_id', recordatorioId);
+      if (weekdays.isNotEmpty) {
+        await _client
+            .from('recordatorios_dias')
+            .insert(
+              weekdays
+                  .map(
+                    (weekday) => {
+                      'recordatorio_id': recordatorioId,
+                      'weekday_iso': weekday,
+                    },
+                  )
+                  .toList(growable: false),
+            );
+      }
+    }
+  }
+
+  @override
+  Future<void> delete(String id) async {
+    try {
+      await _client.rpc('delete_recordatorio', params: {'p_id': id});
+      return;
+    } catch (_) {
+      await _client.from('recordatorios').delete().eq('id', id);
+    }
   }
 }
 
@@ -670,6 +793,15 @@ String? _nullIfEmpty(String? value) {
   return trimmed.isEmpty ? null : trimmed;
 }
 
+String? _nullIfInvalidUuid(String? value) {
+  final trimmed = value?.trim() ?? '';
+  if (trimmed.isEmpty) return null;
+  final isUuid = RegExp(
+    r'^[0-9a-fA-F]{8}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{12}$',
+  ).hasMatch(trimmed);
+  return isUuid ? trimmed : null;
+}
+
 List<String> _stringListFrom(dynamic value) {
   if (value is! List) return const [];
   return value
@@ -789,6 +921,8 @@ ProductoServicio _productoFromRow(Map<String, dynamic> row) {
     unidad: (row['unidad_medida'] ?? row['unidad'] ?? '') as String,
     sku: (row['sku'] ?? '') as String,
     imagenUrl: (row['imagen_url'] ?? row['imagenUrl'] ?? '') as String,
+    imagenBucket: (row['imagen_bucket'] ?? row['imagenBucket'] ?? '') as String,
+    imagenPath: (row['imagen_path'] ?? row['imagenPath'] ?? '') as String,
     activo: _boolFrom(row['activo'], fallback: true),
     createdAt: _dateTimeFrom(row['created_at']),
     updatedAt: _dateTimeFrom(row['updated_at']),
@@ -832,6 +966,8 @@ Cotizacion _cotizacionFromRow(Map<String, dynamic> row) {
             as String,
     createdAt: _dateTimeFrom(row['created_at']),
     updatedAt: _dateTimeFrom(row['updated_at']),
+    pagadoTotal: _doubleFrom(row['pagado_total'] ?? row['pagadoTotal']),
+    saldoTotal: _doubleFrom(row['saldo_total'] ?? row['saldoTotal']),
   );
 }
 
@@ -849,6 +985,15 @@ DetalleCotizacion _detalleCotizacionFromRow(Map<String, dynamic> row) {
     impuestoPorcentaje: _doubleFrom(row['impuesto_porcentaje']),
     importe: _doubleFrom(row['importe']),
     orden: (row['orden'] as num?)?.toInt() ?? 0,
+    productoImagenUrl:
+        (row['producto_imagen_url'] ?? row['productoImagenUrl'] ?? '')
+            as String,
+    productoImagenBucket:
+        (row['producto_imagen_bucket'] ?? row['productoImagenBucket'] ?? '')
+            as String,
+    productoImagenPath:
+        (row['producto_imagen_path'] ?? row['productoImagenPath'] ?? '')
+            as String,
     createdAt: _dateTimeFrom(row['created_at']),
     updatedAt: _dateTimeFrom(row['updated_at']),
   );
@@ -860,6 +1005,7 @@ Ingreso _ingresoFromRow(Map<String, dynamic> row) {
       : const <int>[];
   return Ingreso(
     id: row['id'] as String,
+    titulo: (row['titulo'] ?? '') as String,
     ingresoCategoriaId: (row['ingreso_categoria_id'] ?? '') as String,
     clienteId: (row['cliente_id'] ?? '') as String,
     cotizacionId: (row['cotizacion_id'] ?? '') as String,
@@ -922,6 +1068,7 @@ Gasto _gastoFromRow(Map<String, dynamic> row) {
       : const <int>[];
   return Gasto(
     id: row['id'] as String,
+    titulo: (row['titulo'] ?? '') as String,
     gastoCategoriaId: (row['gasto_categoria_id'] ?? '') as String,
     monto: _doubleFrom(row['monto']),
     fecha: _dateTimeFrom(row['fecha']),
@@ -929,6 +1076,7 @@ Gasto _gastoFromRow(Map<String, dynamic> row) {
         ? null
         : _dateTimeFrom(row['fecha_inicio']),
     descripcion: (row['descripcion'] ?? '') as String,
+    proveedorId: (row['proveedor_id'] ?? '') as String,
     proveedor: (row['proveedor_nombre'] ?? row['proveedor'] ?? '') as String,
     referencia: (row['referencia'] ?? '') as String,
     notas: (row['notas'] ?? '') as String,
@@ -966,6 +1114,54 @@ GastoRecurrente _gastoRecurrenteFromRow(Map<String, dynamic> row) {
     activo: _boolFrom(row['activo'], fallback: true),
     notas: (row['notas'] ?? '') as String,
     iconKey: (row['icon_key'] ?? 'shopping_cart') as String,
+    createdAt: _dateTimeFrom(row['created_at']),
+    updatedAt: _dateTimeFrom(row['updated_at']),
+  );
+}
+
+Recordatorio _recordatorioFromRow(Map<String, dynamic> row) {
+  final diasSemana = row['dias_semana'] is List
+      ? (row['dias_semana'] as List)
+            .map(
+              (item) => item is num
+                  ? item.toInt()
+                  : int.tryParse(item?.toString() ?? ''),
+            )
+            .whereType<int>()
+            .where((weekday) => weekday >= 1 && weekday <= 7)
+            .toList(growable: false)
+      : () {
+          final diasRaw = row['recordatorios_dias'] is List
+              ? row['recordatorios_dias'] as List
+              : const [];
+          return diasRaw
+              .map((item) => Map<String, dynamic>.from(item as Map))
+              .map((item) => (item['weekday_iso'] as num?)?.toInt())
+              .whereType<int>()
+              .toList(growable: false);
+        }();
+  final frecuencia = _enumByName(
+    RecurrenceFrequency.values,
+    row['frecuencia']?.toString(),
+    RecurrenceFrequency.ninguna,
+  );
+  return Recordatorio(
+    id: row['id'] as String,
+    nombre: (row['nombre'] ?? '') as String,
+    descripcion: (row['descripcion'] ?? '') as String,
+    fecha: _dateTimeFrom(row['fecha']),
+    fechaInicioRecurrencia: row['fecha_inicio'] == null
+        ? null
+        : _dateTimeFrom(row['fecha_inicio']),
+    fechaFin: row['fecha_fin'] == null ? null : _dateTimeFrom(row['fecha_fin']),
+    activo: _boolFrom(row['activo'], fallback: true),
+    recurrente: frecuencia != RecurrenceFrequency.ninguna,
+    recurrencia: frecuencia,
+    diasSemana: diasSemana,
+    iconKey: (row['icon_key'] ?? 'calendar_month') as String,
+    clienteId: (row['cliente_id'] ?? '') as String,
+    clienteNombre: (row['cliente_nombre_snapshot'] ?? '') as String,
+    cotizacionId: (row['cotizacion_id'] ?? '') as String,
     createdAt: _dateTimeFrom(row['created_at']),
     updatedAt: _dateTimeFrom(row['updated_at']),
   );
@@ -1094,6 +1290,7 @@ Plan _planFromRow(Map<String, dynamic> row) {
     descripcion: (row['descripcion'] ?? '') as String,
     limiteClientes: (row['limite_clientes'] as num?)?.toInt() ?? 0,
     limiteProductos: (row['limite_productos'] as num?)?.toInt() ?? 0,
+    limiteMateriales: (row['limite_materiales'] as num?)?.toInt() ?? 0,
     limiteCotizacionesMensuales:
         (row['limite_cotizaciones_mensuales'] as num?)?.toInt() ?? 0,
     limiteUsuarios: (row['limite_usuarios'] as num?)?.toInt() ?? 0,
@@ -1102,6 +1299,7 @@ Plan _planFromRow(Map<String, dynamic> row) {
     usuariosMaximos: (row['usuarios_maximos'] as num?)?.toInt() ?? 0,
     incluyeIngresosGastos: _boolFrom(row['incluye_ingresos_gastos']),
     incluyeDashboard: _boolFrom(row['incluye_dashboard']),
+    incluyeAnalitica: _boolFrom(row['incluye_analitica']),
     incluyePersonalizacionPdf: _boolFrom(row['incluye_personalizacion_pdf']),
     incluyeNotasPrivadas: _boolFrom(row['incluye_notas_privadas']),
     incluyeEstadosCotizacion: _boolFrom(row['incluye_estados_cotizacion']),

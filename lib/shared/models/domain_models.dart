@@ -232,6 +232,8 @@ class ProductoServicio {
     required this.unidad,
     required this.sku,
     required this.imagenUrl,
+    this.imagenBucket = '',
+    this.imagenPath = '',
     required this.activo,
     required this.createdAt,
     required this.updatedAt,
@@ -247,6 +249,8 @@ class ProductoServicio {
   final String unidad;
   final String sku;
   final String imagenUrl;
+  final String imagenBucket;
+  final String imagenPath;
   final bool activo;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -274,6 +278,8 @@ class Cotizacion {
     required this.empresaId,
     required this.createdAt,
     required this.updatedAt,
+    this.pagadoTotal = 0,
+    this.saldoTotal = 0,
   });
 
   final String id;
@@ -296,8 +302,19 @@ class Cotizacion {
   final String empresaId;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final double pagadoTotal;
+  final double saldoTotal;
 
-  Cotizacion copyWith({QuoteStatus? estatus}) {
+  bool get isPaid {
+    if (total <= 0) return false;
+    return pagadoTotal >= total - 0.01 || saldoTotal <= 0.01;
+  }
+
+  Cotizacion copyWith({
+    QuoteStatus? estatus,
+    double? pagadoTotal,
+    double? saldoTotal,
+  }) {
     return Cotizacion(
       id: id,
       folio: folio,
@@ -319,6 +336,8 @@ class Cotizacion {
       empresaId: empresaId,
       createdAt: createdAt,
       updatedAt: DateTime.now(),
+      pagadoTotal: pagadoTotal ?? this.pagadoTotal,
+      saldoTotal: saldoTotal ?? this.saldoTotal,
     );
   }
 }
@@ -337,6 +356,9 @@ class DetalleCotizacion {
     required this.impuestoPorcentaje,
     required this.importe,
     required this.orden,
+    this.productoImagenUrl = '',
+    this.productoImagenBucket = '',
+    this.productoImagenPath = '',
     required this.createdAt,
     required this.updatedAt,
   });
@@ -353,6 +375,9 @@ class DetalleCotizacion {
   final double impuestoPorcentaje;
   final double importe;
   final int orden;
+  final String productoImagenUrl;
+  final String productoImagenBucket;
+  final String productoImagenPath;
   final DateTime createdAt;
   final DateTime updatedAt;
 }
@@ -360,6 +385,7 @@ class DetalleCotizacion {
 class Ingreso {
   Ingreso({
     required this.id,
+    required this.titulo,
     required this.ingresoCategoriaId,
     required this.clienteId,
     required this.cotizacionId,
@@ -380,6 +406,7 @@ class Ingreso {
   });
 
   final String id;
+  final String titulo;
   final String ingresoCategoriaId;
   final String clienteId;
   final String cotizacionId;
@@ -438,11 +465,13 @@ class GastoCategoria {
 class Gasto {
   Gasto({
     required this.id,
+    required this.titulo,
     required this.gastoCategoriaId,
     required this.monto,
     required this.fecha,
     required this.fechaInicioRecurrencia,
     required this.descripcion,
+    required this.proveedorId,
     required this.proveedor,
     required this.referencia,
     required this.notas,
@@ -455,11 +484,13 @@ class Gasto {
   });
 
   final String id;
+  final String titulo;
   final String gastoCategoriaId;
   final double monto;
   final DateTime fecha;
   final DateTime? fechaInicioRecurrencia;
   final String descripcion;
+  final String proveedorId;
   final String proveedor;
   final String referencia;
   final String notas;
@@ -501,6 +532,44 @@ class GastoRecurrente {
   final bool activo;
   final String notas;
   final String iconKey;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+}
+
+class Recordatorio {
+  Recordatorio({
+    required this.id,
+    required this.nombre,
+    required this.descripcion,
+    required this.fecha,
+    required this.fechaInicioRecurrencia,
+    required this.fechaFin,
+    required this.activo,
+    required this.recurrente,
+    required this.recurrencia,
+    required this.diasSemana,
+    required this.iconKey,
+    required this.clienteId,
+    required this.clienteNombre,
+    required this.cotizacionId,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  final String id;
+  final String nombre;
+  final String descripcion;
+  final DateTime fecha;
+  final DateTime? fechaInicioRecurrencia;
+  final DateTime? fechaFin;
+  final bool activo;
+  final bool recurrente;
+  final RecurrenceFrequency recurrencia;
+  final List<int> diasSemana;
+  final String iconKey;
+  final String clienteId;
+  final String clienteNombre;
+  final String cotizacionId;
   final DateTime createdAt;
   final DateTime updatedAt;
 }
@@ -872,6 +941,7 @@ class Plan {
     required this.descripcion,
     required this.limiteClientes,
     required this.limiteProductos,
+    required this.limiteMateriales,
     required this.limiteCotizacionesMensuales,
     required this.limiteUsuarios,
     required this.limiteEmpresas,
@@ -879,6 +949,7 @@ class Plan {
     required this.usuariosMaximos,
     required this.incluyeIngresosGastos,
     required this.incluyeDashboard,
+    required this.incluyeAnalitica,
     required this.incluyePersonalizacionPdf,
     required this.incluyeNotasPrivadas,
     required this.incluyeEstadosCotizacion,
@@ -894,6 +965,7 @@ class Plan {
   final String descripcion;
   final int limiteClientes;
   final int limiteProductos;
+  final int limiteMateriales;
   final int limiteCotizacionesMensuales;
   final int limiteUsuarios;
   final int limiteEmpresas;
@@ -901,6 +973,7 @@ class Plan {
   final int usuariosMaximos;
   final bool incluyeIngresosGastos;
   final bool incluyeDashboard;
+  final bool incluyeAnalitica;
   final bool incluyePersonalizacionPdf;
   final bool incluyeNotasPrivadas;
   final bool incluyeEstadosCotizacion;

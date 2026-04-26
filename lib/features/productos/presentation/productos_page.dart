@@ -1,10 +1,15 @@
 import 'package:cotimax/core/constants/app_colors.dart';
 import 'package:cotimax/core/localization/app_localization.dart';
+import 'package:cotimax/core/platform/product_image_picker.dart';
 import 'package:cotimax/core/routing/route_paths.dart';
 import 'package:cotimax/core/services/backend_providers.dart';
+import 'package:cotimax/core/utils/uuid.dart';
 import 'package:cotimax/features/configuracion/application/configuracion_controller.dart';
+import 'package:cotimax/features/cotizaciones/application/cotizaciones_controller.dart';
 import 'package:cotimax/features/materiales/application/materiales_controller.dart';
+import 'package:cotimax/features/planes/application/plan_access.dart';
 import 'package:cotimax/features/productos/application/productos_controller.dart';
+import 'package:cotimax/features/workspace/application/workspace_controller.dart';
 import 'package:cotimax/shared/enums/app_enums.dart';
 import 'package:cotimax/shared/models/domain_models.dart';
 import 'package:cotimax/shared/models/upsert_payloads.dart';
@@ -13,29 +18,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
-const List<String> _productTaxCategoryOptions = [
-  'Bienes gravados IVA 16%',
-  'Bienes tasa 0% IVA',
-  'Bienes exentos de IVA',
-  'Servicios gravados IVA 16%',
-  'Servicios tasa 0% IVA',
-  'Servicios exentos de IVA',
-  'Exportación de bienes 0%',
-  'Exportación de servicios 0%',
-  'Región fronteriza IVA 8%',
-  'Arrendamiento gravado IVA 16%',
-  'Honorarios gravados IVA 16%',
-  'Actividad mixta gravada',
-  'Alimentos tasa 0%',
-  'Medicinas tasa 0%',
-  'Equipo médico tasa 0%',
-  'Libros y revistas tasa 0%',
-  'Transporte exento',
-  'Educación exenta',
-  'Servicios financieros exentos',
-  'Donativos exentos',
-];
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 const List<String> _productCategoryOptions = [
   'General',
@@ -272,7 +255,15 @@ class _ProductosPageState extends ConsumerState<ProductosPage> {
                 ),
           data: (items) {
             if (items.isEmpty) {
-              return SectionCard(child: InlineEmptyMessage());
+              return EmptyStateWidget(
+                title: 'Todavía no hay productos',
+                subtitle: 'Registra tu primer producto para comenzar.',
+                action: ElevatedButton.icon(
+                  onPressed: () => _openForm(context),
+                  icon: Icon(Icons.add),
+                  label: Text(trText('Nuevo item')),
+                ),
+              );
             }
 
             final allSelected = _selectedProductoIds.length == items.length;
@@ -397,7 +388,27 @@ class _ProductosPageState extends ConsumerState<ProductosPage> {
     );
   }
 
-  Future<void> _openForm(BuildContext context, [ProductoServicio? item]) {
+  Future<void> _openForm(BuildContext context, [ProductoServicio? item]) async {
+    if (item == null) {
+      final planAccess = await ref.read(activePlanAccessProvider.future);
+      final productos =
+          ref.read(productosControllerProvider).valueOrNull ??
+          await ref.read(productosControllerProvider.future);
+      if (!mounted) return;
+      if (hasReachedPlanLimit(
+        limit: planAccess.plan.limiteProductos,
+        used: productos?.length ?? 0,
+      )) {
+        await showPlanUpgradeDialog(
+          context,
+          title: 'Límite del plan Starter',
+          message:
+              'Tu plan Starter permite hasta 5 productos o servicios. Actualiza a Pro para registrar más items.',
+        );
+        return;
+      }
+    }
+
     return showDialog<void>(
       context: context,
       builder: (_) => ModalBase(
@@ -411,10 +422,13 @@ class _ProductosPageState extends ConsumerState<ProductosPage> {
     final confirmed = await showDeleteConfirmation(
       context,
       entityLabel: 'producto',
+      dependencyEntityType: 'producto',
+      dependencyIds: [item.id],
       onConfirmAsync: () async {
         try {
           await ref.read(productosRepositoryProvider).delete(item.id);
           ref.invalidate(productosControllerProvider);
+          ref.invalidate(cotizacionesControllerProvider);
           if (!mounted) return;
           ToastHelper.showSuccess(context, 'Producto eliminado.');
         } catch (error) {
@@ -441,6 +455,8 @@ class _ProductosPageState extends ConsumerState<ProductosPage> {
       message: count == 1
           ? '¿Estás seguro que quieres eliminar este producto?'
           : '¿Estás seguro que quieres eliminar los $count productos seleccionados?',
+      dependencyEntityType: 'producto',
+      dependencyIds: _selectedProductoIds.toList(),
       onConfirmAsync: () async {
         try {
           final ids = _selectedProductoIds.toList();
@@ -448,6 +464,7 @@ class _ProductosPageState extends ConsumerState<ProductosPage> {
             await ref.read(productosRepositoryProvider).delete(id);
           }
           ref.invalidate(productosControllerProvider);
+          ref.invalidate(cotizacionesControllerProvider);
           if (!mounted) return;
           setState(() => _selectedProductoIds.clear());
           ToastHelper.showSuccess(
@@ -514,6 +531,9 @@ class _ProductoForm extends ConsumerStatefulWidget {
 }
 
 class _ProductoFormState extends ConsumerState<_ProductoForm> {
+  static const int _maxProductImageBytes = 5 * 1024 * 1024;
+  static const String _productImagesBucket = 'producto_imagenes';
+
   late final ScrollController _scrollController;
   late final TextEditingController _conceptoController;
   late final TextEditingController _descripcionController;
@@ -521,8 +541,6 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
   late final TextEditingController _costoBaseController;
   late final TextEditingController _cantidadDefaultController;
   late final TextEditingController _cantidadMaximaController;
-  late final TextEditingController _categoriaImpuestosController;
-  late final TextEditingController _imagenController;
   late final TextEditingController _impuestoController;
   late final TextEditingController _categoriaController;
   late final TextEditingController _unidadController;
@@ -536,11 +554,16 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
   late List<_PrecioRangoDraft> _preciosPorRango;
   bool _isSaving = false;
   bool _isHydrating = false;
+  late final String _draftProductId;
+  ProductImagePickResult? _pendingImage;
+  bool _removeImage = false;
+  String _materialDraftCatalogSyncKey = '';
 
   @override
   void initState() {
     super.initState();
     _scrollController = ScrollController();
+    _draftProductId = widget.item?.id ?? generateUuidV4();
     final item = widget.item;
     _conceptoController = seededTextController(item?.nombre);
     _descripcionController = seededTextController(item?.descripcion ?? '');
@@ -560,16 +583,6 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
     );
     _cantidadDefaultController = seededTextController('1');
     _cantidadMaximaController = seededTextController();
-    _categoriaImpuestosController = seededTextController(
-      _resolvedOptionValue(
-        null,
-        options: _productTaxCategoryOptions,
-        fallback: item?.tipo == ProductType.producto
-            ? 'Bienes gravados IVA 16%'
-            : 'Servicios gravados IVA 16%',
-      ),
-    );
-    _imagenController = seededTextController(item?.imagenUrl);
     _impuestoController = seededTextController();
     _categoriaController = seededTextController(
       _resolvedOptionValue(
@@ -626,8 +639,6 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
     _costoBaseController.dispose();
     _cantidadDefaultController.dispose();
     _cantidadMaximaController.dispose();
-    _categoriaImpuestosController.dispose();
-    _imagenController.dispose();
     _impuestoController.dispose();
     _categoriaController.dispose();
     _unidadController.dispose();
@@ -723,34 +734,149 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
   Widget _buildCreateTab() {
     final empresa = ref.watch(empresaPerfilControllerProvider).valueOrNull;
     final impuestosRegistrados = _buildConfiguredTaxOptions(empresa);
+    final materialesCatalogo =
+        ref.watch(materialesControllerProvider).valueOrNull ??
+        const <MaterialInsumo>[];
+    final planAccess = ref.watch(activePlanAccessProvider).valueOrNull;
+    final canManageImages = _canManageProductImages(planAccess);
+
+    _scheduleMaterialDraftSync(materialesCatalogo);
+    final noneTaxOption = tr('Ninguno', 'None');
     final impuestoActual = _impuestoController.text.trim();
     final impuestoSeleccionado = impuestoActual.isNotEmpty
         ? impuestoActual
-        : (impuestosRegistrados.isNotEmpty ? impuestosRegistrados.first : '');
-    if (impuestoActual.isEmpty && impuestosRegistrados.isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted || _impuestoController.text.trim().isNotEmpty) return;
-        assignControllerText(_impuestoController, impuestosRegistrados.first);
-      });
-    }
+        : noneTaxOption;
 
     return _ProductoSection(
       title: widget.item == null ? 'Nuevo producto' : 'Editar producto',
       child: Column(
         children: [
+          _ProductoCustomFieldRow(
+            label: 'Imagen',
+            labelSuffix: Icon(
+              Icons.workspace_premium_rounded,
+              size: 16,
+              color: AppColors.accent,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Builder(
+                  builder: (context) {
+                    if (_pendingImage != null) {
+                      return ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.memory(
+                          _pendingImage!.bytes,
+                          width: 120,
+                          height: 120,
+                          fit: BoxFit.cover,
+                        ),
+                      );
+                    }
+                    final existingUrl = (widget.item?.imagenUrl ?? '').trim();
+                    final showExisting =
+                        existingUrl.isNotEmpty && !_removeImage;
+                    if (showExisting) {
+                      return ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.network(
+                          existingUrl,
+                          width: 120,
+                          height: 120,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            width: 120,
+                            height: 120,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: AppColors.background,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: AppColors.border),
+                            ),
+                            child: Text(
+                              'No se pudo cargar la imagen.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: AppColors.textSecondary,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+                    return Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.background,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Text(
+                        'Sin imagen. Máximo 5MB.',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                SizedBox(height: 10),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: _isSaving ? null : _pickProductImage,
+                      icon: Icon(Icons.photo_library_outlined, size: 16),
+                      label: Text(
+                        trText(
+                          (_pendingImage != null ||
+                                  ((widget.item?.imagenUrl ?? '')
+                                          .trim()
+                                          .isNotEmpty &&
+                                      !_removeImage))
+                              ? 'Cambiar imagen'
+                              : 'Cargar imagen',
+                        ),
+                      ),
+                    ),
+                    if (_pendingImage != null ||
+                        (((widget.item?.imagenUrl ?? '').trim().isNotEmpty) &&
+                            !_removeImage))
+                      TextButton.icon(
+                        onPressed: _isSaving ? null : _clearProductImage,
+                        icon: Icon(Icons.delete_outline_rounded, size: 16),
+                        label: Text(trText('Quitar imagen')),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.error,
+                        ),
+                      ),
+                  ],
+                ),
+                if (!canManageImages) ...[
+                  SizedBox(height: 8),
+                  Text(
+                    'Imágenes de producto disponibles en Pro o Empresa.',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
           _ProductoTypeFieldRow(
             value: _selectedTipo,
             onChanged: (value) {
               if (value == null) return;
-              setState(() {
-                _selectedTipo = value;
-                assignControllerText(
-                  _categoriaImpuestosController,
-                  value == ProductType.producto
-                      ? 'Bienes gravados IVA 16%'
-                      : 'Servicios gravados IVA 16%',
-                );
-              });
+              setState(() => _selectedTipo = value);
             },
           ),
           _ProductoFieldRow(
@@ -768,7 +894,11 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
             suffixText: currentCurrencyCode(),
             keyboardType: TextInputType.numberWithOptions(decimal: true),
             inputFormatters: const [
-              NumericTextInputFormatter(useGrouping: true, maxDecimalDigits: 2),
+              NumericTextInputFormatter(
+                useGrouping: true,
+                maxDecimalDigits: 2,
+                moneyInputBehavior: true,
+              ),
             ],
           ),
           _ProductoDropdownFieldRow(
@@ -807,7 +937,11 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
             onHelperAction: _goToMaterialsTab,
             keyboardType: TextInputType.numberWithOptions(decimal: true),
             inputFormatters: const [
-              NumericTextInputFormatter(useGrouping: true, maxDecimalDigits: 2),
+              NumericTextInputFormatter(
+                useGrouping: true,
+                maxDecimalDigits: 2,
+                moneyInputBehavior: true,
+              ),
             ],
           ),
           _ProductoFieldRow(
@@ -827,20 +961,6 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
             inputFormatters: const [
               NumericTextInputFormatter(maxDecimalDigits: 2),
             ],
-          ),
-          _ProductoDropdownFieldRow(
-            label: 'Categoría de impuestos',
-            value: _categoriaImpuestosController.text.trim().isEmpty
-                ? (_selectedTipo == ProductType.producto
-                      ? 'Bienes gravados IVA 16%'
-                      : 'Servicios gravados IVA 16%')
-                : _categoriaImpuestosController.text.trim(),
-            options: _optionsWithCurrent(
-              _productTaxCategoryOptions,
-              _categoriaImpuestosController.text.trim(),
-            ),
-            onChanged: (value) =>
-                assignControllerText(_categoriaImpuestosController, value),
           ),
           _ProductoDropdownFieldRow(
             label: 'Categoría',
@@ -869,10 +989,6 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
                 assignControllerText(_unidadController, value),
           ),
           _ProductoFieldRow(label: 'SKU', controller: _skuController),
-          _ProductoFieldRow(
-            label: 'URL de la imagen',
-            controller: _imagenController,
-          ),
           impuestosRegistrados.isEmpty
               ? _ProductoCustomFieldRow(
                   label: 'Impuesto',
@@ -887,12 +1003,17 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
               : _ProductoDropdownFieldRow(
                   label: 'Impuesto',
                   value: impuestoSeleccionado,
-                  options: _optionsWithCurrent(
-                    impuestosRegistrados,
-                    impuestoSeleccionado,
-                  ),
-                  onChanged: (value) =>
-                      assignControllerText(_impuestoController, value),
+                  options: _optionsWithCurrent([
+                    noneTaxOption,
+                    ...impuestosRegistrados,
+                  ], impuestoSeleccionado),
+                  onChanged: (value) {
+                    if (value == noneTaxOption) {
+                      clearControllerText(_impuestoController);
+                      return;
+                    }
+                    assignControllerText(_impuestoController, value);
+                  },
                 ),
           _ProductoSwitchRow(
             label: 'Producto activo',
@@ -908,6 +1029,8 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
     final materialesCatalogo =
         ref.watch(materialesControllerProvider).valueOrNull ??
         const <MaterialInsumo>[];
+
+    _scheduleMaterialDraftSync(materialesCatalogo);
 
     return Column(
       children: [
@@ -961,6 +1084,67 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
     );
   }
 
+  String _buildMaterialCatalogSyncKey(List<MaterialInsumo> catalogo) {
+    final ids = _materiales
+        .map((item) => item.materialId)
+        .whereType<String>()
+        .where((id) => id.trim().isNotEmpty)
+        .toSet();
+    if (ids.isEmpty) return '';
+    final map = <String, MaterialInsumo>{
+      for (final item in catalogo) item.id: item,
+    };
+    final parts = <String>[];
+    for (final id in ids) {
+      final material = map[id];
+      if (material == null) continue;
+      parts.add(
+        '$id:${material.updatedAt.microsecondsSinceEpoch}:${material.costoUnitario}:${material.nombre}:${material.unidad}',
+      );
+    }
+    parts.sort();
+    return parts.join('|');
+  }
+
+  void _scheduleMaterialDraftSync(List<MaterialInsumo> catalogo) {
+    if (!mounted || _isHydrating) return;
+    final nextKey = _buildMaterialCatalogSyncKey(catalogo);
+    if (nextKey == _materialDraftCatalogSyncKey) return;
+    _materialDraftCatalogSyncKey = nextKey;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _isHydrating) return;
+      final materialMap = <String, MaterialInsumo>{
+        for (final item in catalogo) item.id: item,
+      };
+      for (final draft in _materiales) {
+        final materialId = draft.materialId;
+        if (materialId == null || materialId.trim().isEmpty) continue;
+        if (draft.tipoController.text.trim() != 'Material') continue;
+        final material = materialMap[materialId];
+        if (material == null) continue;
+
+        final desiredName = material.nombre;
+        final desiredUnit = material.unidad;
+        final desiredCost = formatNumericValue(
+          material.costoUnitario,
+          decimalDigits: 2,
+          useGrouping: true,
+        );
+
+        if (draft.nombreController.text.trim() != desiredName.trim()) {
+          assignControllerText(draft.nombreController, desiredName);
+        }
+        if (draft.unidadController.text.trim() != desiredUnit.trim()) {
+          assignControllerText(draft.unidadController, desiredUnit);
+        }
+        if (draft.costoUnitarioController.text.trim() != desiredCost.trim()) {
+          assignControllerText(draft.costoUnitarioController, desiredCost);
+        }
+      }
+    });
+  }
+
   void _agregarMaterial() {
     setState(() {
       _materiales = [
@@ -991,7 +1175,7 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
   }
 
   void _goToTaxSettings() {
-    context.go(RoutePaths.configuracion);
+    context.go('${RoutePaths.configuracion}?main=impuestos');
   }
 
   void _removerMaterial(int index) {
@@ -1129,14 +1313,21 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
     setState(() => _isHydrating = true);
     try {
       final client = ref.read(supabaseClientProvider);
-      final productRow = await client
+      final empresaId = ref
+          .read(workspaceStatusProvider)
+          .valueOrNull
+          ?.empresaId;
+      dynamic productQuery = client
           .from('productos_servicios')
           .select(
             'modo_precio,auto_calcular_costo_base,cantidad_predeterminada,'
-            'cantidad_maxima,categoria_impuesto_nombre,tasa_impuesto_nombre',
+            'cantidad_maxima,tasa_impuesto_nombre',
           )
-          .eq('id', productId)
-          .maybeSingle();
+          .eq('id', productId);
+      if (empresaId != null && empresaId.trim().isNotEmpty) {
+        productQuery = productQuery.eq('empresa_id', empresaId.trim());
+      }
+      final productRow = await productQuery.maybeSingle();
 
       final componentesRows = await client
           .from('producto_componentes')
@@ -1162,10 +1353,14 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
 
       final materialMap = <String, Map<String, dynamic>>{};
       if (materialIds.isNotEmpty) {
-        final materialRows = await client
+        dynamic materialQuery = client
             .from('materiales_insumos')
-            .select('id,nombre,unidad_medida')
+            .select('id,nombre,unidad_medida,costo_unitario')
             .inFilter('id', materialIds);
+        if (empresaId != null && empresaId.trim().isNotEmpty) {
+          materialQuery = materialQuery.eq('empresa_id', empresaId.trim());
+        }
+        final materialRows = await materialQuery;
         for (final row in (materialRows as List).cast<Map<String, dynamic>>()) {
           materialMap[row['id'] as String] = row;
         }
@@ -1182,7 +1377,9 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
               (row['cantidad'] as num?)?.toDouble() ?? 0,
             );
             final costoUnitario = formatNumericValue(
-              (row['costo_unitario_snapshot'] as num?)?.toDouble() ?? 0,
+              (materialData?['costo_unitario'] as num?)?.toDouble() ??
+                  (row['costo_unitario_snapshot'] as num?)?.toDouble() ??
+                  0,
               decimalDigits: 2,
               useGrouping: true,
             );
@@ -1243,10 +1440,6 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
           ),
         );
         assignControllerText(
-          _categoriaImpuestosController,
-          productRow?['categoria_impuesto_nombre']?.toString() ?? '',
-        );
-        assignControllerText(
           _impuestoController,
           productRow?['tasa_impuesto_nombre']?.toString() ?? '',
         );
@@ -1301,6 +1494,66 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
     return formatNumericValue(value, decimalDigits: 2);
   }
 
+  bool _canManageProductImages(ActivePlanAccess? access) {
+    final planId = access?.plan.id ?? 'starter';
+    return planId == 'pro' || planId == 'empresa';
+  }
+
+  Future<void> _pickProductImage() async {
+    final access = await ref.read(activePlanAccessProvider.future);
+    if (!_canManageProductImages(access)) {
+      if (!mounted) return;
+      await showPlanUpgradeDialog(
+        context,
+        title: 'Imágenes disponibles en Pro',
+        message:
+            'Necesitas el plan Pro o Empresa para agregar o actualizar imágenes en productos.',
+      );
+      return;
+    }
+
+    final picked = await pickProductImage();
+    if (!mounted || picked == null) return;
+
+    if (picked.mimeType.trim().isNotEmpty &&
+        !picked.mimeType.toLowerCase().startsWith('image/')) {
+      ToastHelper.showWarning(context, 'Selecciona un archivo de imagen.');
+      return;
+    }
+
+    if (picked.sizeBytes > _maxProductImageBytes) {
+      ToastHelper.showWarning(
+        context,
+        'La imagen supera 5MB. Selecciona una imagen más ligera.',
+      );
+      return;
+    }
+
+    setState(() {
+      _pendingImage = picked;
+      _removeImage = false;
+    });
+  }
+
+  Future<void> _clearProductImage() async {
+    final access = await ref.read(activePlanAccessProvider.future);
+    if (!_canManageProductImages(access)) {
+      if (!mounted) return;
+      await showPlanUpgradeDialog(
+        context,
+        title: 'Imágenes disponibles en Pro',
+        message:
+            'Necesitas el plan Pro o Empresa para quitar imágenes en productos.',
+      );
+      return;
+    }
+
+    setState(() {
+      _pendingImage = null;
+      _removeImage = true;
+    });
+  }
+
   Future<void> _save() async {
     if (_isSaving) return;
     final nombre = _conceptoController.text.trim();
@@ -1312,8 +1565,29 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
       );
       return;
     }
+    if (widget.item == null) {
+      final planAccess = await ref.read(activePlanAccessProvider.future);
+      final productos =
+          ref.read(productosControllerProvider).valueOrNull ??
+          const <ProductoServicio>[];
+      if (hasReachedPlanLimit(
+        limit: planAccess.plan.limiteProductos,
+        used: productos.length,
+      )) {
+        if (!mounted) return;
+        await showPlanUpgradeDialog(
+          context,
+          title: 'Límite del plan Starter',
+          message:
+              'Tu plan Starter permite hasta 5 productos o servicios. Actualiza a Pro para registrar más items.',
+        );
+        return;
+      }
+    }
+    final productId = _draftProductId;
+
     final payload = ProductoUpsertPayload(
-      id: widget.item?.id,
+      id: productId,
       tipo: _selectedTipo,
       nombre: nombre,
       descripcion: _descripcionController.text.trim(),
@@ -1324,13 +1598,14 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
       cantidadPredeterminada: parseNumericText(_cantidadDefaultController.text),
       cantidadMaxima: parseNumericText(_cantidadMaximaController.text),
       categoriaNombre: _categoriaController.text.trim(),
-      categoriaImpuestoNombre: _categoriaImpuestosController.text.trim(),
       tasaImpuestoNombre: _impuestoController.text.trim(),
       unidadMedida: _unidadController.text.trim().isEmpty
           ? 'pieza'
           : _unidadController.text.trim(),
       sku: sku,
-      imagenUrl: _imagenController.text.trim(),
+      imagenUrl: _pendingImage != null || _removeImage
+          ? ''
+          : (widget.item?.imagenUrl ?? ''),
       activo: _activo,
       componentes: List.generate(_materiales.length, (index) {
         final item = _materiales[index];
@@ -1365,6 +1640,66 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
     setState(() => _isSaving = true);
     try {
       await ref.read(productosRepositoryProvider).upsert(payload);
+
+      if (_pendingImage != null || _removeImage) {
+        final access = await ref.read(activePlanAccessProvider.future);
+        if (_canManageProductImages(access)) {
+          final client = ref.read(supabaseClientProvider);
+          final existingBucket = widget.item?.imagenBucket ?? '';
+          final existingPath = widget.item?.imagenPath ?? '';
+
+          if (existingBucket.trim().isNotEmpty &&
+              existingPath.trim().isNotEmpty) {
+            try {
+              await client.storage.from(existingBucket).remove([existingPath]);
+            } catch (_) {
+              // Ignore storage cleanup errors.
+            }
+          }
+
+          if (_removeImage) {
+            await client.rpc(
+              'update_producto_imagen',
+              params: {
+                'p_id': productId,
+                'p_imagen_bucket': '',
+                'p_imagen_path': '',
+                'p_imagen_url': '',
+              },
+            );
+          } else if (_pendingImage != null) {
+            final empresaId =
+                ref.read(workspaceStatusProvider).valueOrNull?.empresaId ??
+                access.suscripcion.empresaId;
+            final ext = _pendingImage!.extension;
+            final mime = _pendingImage!.mimeType.trim().isEmpty
+                ? 'image/$ext'
+                : _pendingImage!.mimeType.trim();
+            final path = '${empresaId.trim()}/$productId/main.$ext';
+
+            await client.storage
+                .from(_productImagesBucket)
+                .uploadBinary(
+                  path,
+                  _pendingImage!.bytes,
+                  fileOptions: FileOptions(contentType: mime, upsert: true),
+                );
+            final publicUrl = client.storage
+                .from(_productImagesBucket)
+                .getPublicUrl(path);
+            await client.rpc(
+              'update_producto_imagen',
+              params: {
+                'p_id': productId,
+                'p_imagen_bucket': _productImagesBucket,
+                'p_imagen_path': path,
+                'p_imagen_url': publicUrl,
+              },
+            );
+          }
+        }
+      }
+
       ref.invalidate(productosControllerProvider);
       if (!mounted) return;
       ToastHelper.showSuccess(
@@ -1443,7 +1778,11 @@ class _ProductoSection extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Padding(
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.background,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
+            ),
             padding: EdgeInsets.fromLTRB(16, 14, 16, 14),
             child: Row(
               children: [
@@ -1517,6 +1856,7 @@ class _ProductoFieldRow extends StatelessWidget {
           keyboardType: keyboardType,
           inputFormatters: inputFormatters,
           decoration: InputDecoration(
+            hintText: suffixText == currentCurrencyCode() ? '0.00' : null,
             suffixText: suffixText == null ? null : trText(suffixText!),
             helperText: helper == null ? null : trText(helper!),
           ),
@@ -1875,16 +2215,40 @@ class _ProductoPriceRangesSection extends StatelessWidget {
 }
 
 class _ProductoCustomFieldRow extends StatelessWidget {
-  _ProductoCustomFieldRow({required this.label, required this.child});
+  _ProductoCustomFieldRow({
+    required this.label,
+    required this.child,
+    this.labelSuffix,
+  });
 
   final String label;
   final Widget child;
+  final Widget? labelSuffix;
+
+  Widget _buildLabel(TextStyle style) {
+    if (labelSuffix == null) {
+      return Text(trText(label), style: style);
+    }
+    return Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 6,
+      children: [
+        Text(trText(label), style: style),
+        labelSuffix!,
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final stacked = constraints.maxWidth < 760;
+        final labelStyle = TextStyle(
+          color: AppColors.textSecondary,
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+        );
 
         return Padding(
           padding: EdgeInsets.only(bottom: 10),
@@ -1892,14 +2256,7 @@ class _ProductoCustomFieldRow extends StatelessWidget {
               ? Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      trText(label),
-                      style: TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
+                    _buildLabel(labelStyle),
                     SizedBox(height: 6),
                     child,
                   ],
@@ -1911,14 +2268,7 @@ class _ProductoCustomFieldRow extends StatelessWidget {
                       width: 220,
                       child: Padding(
                         padding: EdgeInsets.only(top: 12),
-                        child: Text(
-                          trText(label),
-                          style: TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
+                        child: _buildLabel(labelStyle),
                       ),
                     ),
                     Expanded(child: child),
@@ -2292,6 +2642,7 @@ class _MaterialRow extends StatelessWidget {
                     NumericTextInputFormatter(
                       useGrouping: true,
                       maxDecimalDigits: 2,
+                      moneyInputBehavior: true,
                     ),
                   ],
                 ),
@@ -2390,6 +2741,7 @@ class _PrecioRangoRow extends StatelessWidget {
                     NumericTextInputFormatter(
                       useGrouping: true,
                       maxDecimalDigits: 2,
+                      moneyInputBehavior: true,
                     ),
                   ],
                 ),
@@ -2438,7 +2790,10 @@ class _CompactFieldColumn extends StatelessWidget {
           enabled: enabled,
           keyboardType: keyboardType,
           inputFormatters: inputFormatters,
-          decoration: InputDecoration(suffixText: suffixText),
+          decoration: InputDecoration(
+            hintText: suffixText == currentCurrencyCode() ? '0.00' : null,
+            suffixText: suffixText,
+          ),
         ),
       ],
     );

@@ -10,6 +10,7 @@ class RoutePaths {
   static const cotizaciones = '/cotizaciones';
   static const ingresos = '/ingresos';
   static const gastos = '/gastos';
+  static const recordatorios = '/recordatorios';
   static const analitica = '/analitica';
   static const configuracion = '/configuracion';
   static const usuarios = '/usuarios';

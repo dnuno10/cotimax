@@ -4,11 +4,14 @@ import 'package:cotimax/core/constants/app_colors.dart';
 import 'package:cotimax/core/constants/app_spacing.dart';
 import 'package:cotimax/core/localization/app_localization.dart';
 import 'package:cotimax/core/routing/route_paths.dart';
+import 'package:cotimax/core/utils/delete_dependencies.dart';
+import 'package:cotimax/features/planes/application/plan_access.dart';
 import 'package:cotimax/shared/enums/app_enums.dart';
 import 'package:cotimax/shared/models/domain_models.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
@@ -42,6 +45,11 @@ List<(String label, IconData icon, String path)> get appNavEntries => [
     RoutePaths.gastos,
   ),
   (
+    tr('Recordatorios', 'Reminders'),
+    FontAwesomeIcons.calendarDays,
+    RoutePaths.recordatorios,
+  ),
+  (
     tr('Analítica', 'Analytics'),
     FontAwesomeIcons.chartLine,
     RoutePaths.analitica,
@@ -55,8 +63,8 @@ List<(String label, IconData icon, String path)> get appNavEntries => [
   (tr('Planes', 'Plans'), FontAwesomeIcons.crown, RoutePaths.planes),
 ];
 
-const primaryNavIndexes = <int>[0, 1, 2, 3, 4, 5, 6, 7, 8];
-const secondaryNavIndexes = <int>[9, 10, 11];
+const primaryNavIndexes = <int>[0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+const secondaryNavIndexes = <int>[10, 11, 12];
 const creatablePaths = <String>{
   RoutePaths.clientes,
   RoutePaths.proveedores,
@@ -65,6 +73,7 @@ const creatablePaths = <String>{
   RoutePaths.cotizaciones,
   RoutePaths.ingresos,
   RoutePaths.gastos,
+  RoutePaths.recordatorios,
 };
 
 String formatMxn(num value) => formatMoney(value);
@@ -275,10 +284,12 @@ class NumericTextInputFormatter extends TextInputFormatter {
   const NumericTextInputFormatter({
     this.maxDecimalDigits = 2,
     this.useGrouping = false,
+    this.moneyInputBehavior = false,
   });
 
   final int maxDecimalDigits;
   final bool useGrouping;
+  final bool moneyInputBehavior;
 
   @override
   TextEditingValue formatEditUpdate(
@@ -302,7 +313,21 @@ class NumericTextInputFormatter extends TextInputFormatter {
     if (decimalIndex != -1) {
       final decimals = sanitized.length - decimalIndex - 1;
       if (decimals > maxDecimalDigits) {
-        return oldValue;
+        final shiftedValue = _shiftTrailingOverflowToInteger(
+          oldValue: oldValue,
+          newValue: newValue,
+          sanitizedNewValue: sanitized,
+        );
+        if (shiftedValue == null) {
+          return oldValue;
+        }
+        final formattedShifted = useGrouping
+            ? _applyGroupingToNumericText(shiftedValue)
+            : shiftedValue;
+        return TextEditingValue(
+          text: formattedShifted,
+          selection: TextSelection.collapsed(offset: formattedShifted.length),
+        );
       }
     }
 
@@ -319,6 +344,38 @@ class NumericTextInputFormatter extends TextInputFormatter {
 
   bool _isValidNumericText(String value) {
     return RegExp(r'^\d*\.?\d*$').hasMatch(value);
+  }
+
+  String? _shiftTrailingOverflowToInteger({
+    required TextEditingValue oldValue,
+    required TextEditingValue newValue,
+    required String sanitizedNewValue,
+  }) {
+    if (!moneyInputBehavior || maxDecimalDigits <= 0) return null;
+    if (!newValue.selection.isCollapsed ||
+        newValue.selection.baseOffset != newValue.text.length) {
+      return null;
+    }
+
+    final oldSanitized = sanitizeNumericText(oldValue.text);
+    if (oldSanitized.isEmpty || !oldSanitized.contains('.')) return null;
+
+    final oldParts = oldSanitized.split('.');
+    if (oldParts.length != 2) return null;
+    if (oldParts[1].length != maxDecimalDigits) return null;
+    if (oldParts[1].replaceAll('0', '').isNotEmpty) return null;
+    if (!sanitizedNewValue.startsWith(oldSanitized)) return null;
+
+    final appendedDigits = sanitizedNewValue.substring(oldSanitized.length);
+    if (appendedDigits.isEmpty || !RegExp(r'^\d+$').hasMatch(appendedDigits)) {
+      return null;
+    }
+
+    final integerPart = oldParts.first.replaceFirst(RegExp(r'^0+(?=\d)'), '');
+    final mergedInteger =
+        '${integerPart == '0' ? '' : integerPart}$appendedDigits';
+    final normalizedInteger = mergedInteger.isEmpty ? '0' : mergedInteger;
+    return '$normalizedInteger.${'0' * maxDecimalDigits}';
   }
 
   String _normalizeNumericText(String value) {
@@ -1228,6 +1285,7 @@ class SectionCard extends StatelessWidget {
     this.title,
     this.titleIcon,
     this.trailing,
+    this.headerBackgroundColor,
     super.key,
   });
 
@@ -1235,61 +1293,109 @@ class SectionCard extends StatelessWidget {
   final String? title;
   final IconData? titleIcon;
   final Widget? trailing;
+  final Color? headerBackgroundColor;
 
   @override
   Widget build(BuildContext context) {
     final helpText = title == null ? null : resolveContainerHelpText(title!);
+    final showColoredHeader = title != null && headerBackgroundColor != null;
 
     return _MotionSurface(
       hoverOffset: 0,
       enablePress: false,
       child: Card(
         clipBehavior: Clip.antiAlias,
-        child: Padding(
-          padding: EdgeInsets.all(AppSpacing.md),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (title != null)
-                Row(
-                  children: [
-                    Expanded(
-                      child: Row(
-                        children: [
-                          if (titleIcon != null) ...[
-                            Icon(
-                              titleIcon,
-                              size: 16,
-                              color: AppColors.textPrimary,
-                            ),
-                            SizedBox(width: 8),
-                          ],
-                          Expanded(
-                            child: Text(
-                              trText(title!),
-                              style: TextStyle(
-                                fontWeight: FontWeight.w800,
-                                fontSize: 17,
-                                color: AppColors.textPrimary,
+        child: showColoredHeader
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    color: headerBackgroundColor,
+                    padding: EdgeInsets.all(AppSpacing.md),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Row(
+                            children: [
+                              if (titleIcon != null) ...[
+                                Icon(
+                                  titleIcon,
+                                  size: 16,
+                                  color: AppColors.textPrimary,
+                                ),
+                                SizedBox(width: 8),
+                              ],
+                              Expanded(
+                                child: Text(
+                                  trText(title!),
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 17,
+                                    color: AppColors.textPrimary,
+                                  ),
+                                ),
                               ),
+                            ],
+                          ),
+                        ),
+                        if (trailing != null) ...[
+                          trailing!,
+                          if (helpText != null) SizedBox(width: 8),
+                        ],
+                        if (helpText != null)
+                          ContainerHelpTooltip(message: helpText),
+                      ],
+                    ),
+                  ),
+                  Container(height: 1, color: AppColors.border),
+                  Padding(padding: EdgeInsets.all(AppSpacing.md), child: child),
+                ],
+              )
+            : Padding(
+                padding: EdgeInsets.all(AppSpacing.md),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (title != null)
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Row(
+                              children: [
+                                if (titleIcon != null) ...[
+                                  Icon(
+                                    titleIcon,
+                                    size: 16,
+                                    color: AppColors.textPrimary,
+                                  ),
+                                  SizedBox(width: 8),
+                                ],
+                                Expanded(
+                                  child: Text(
+                                    trText(title!),
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 17,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
+                          if (trailing != null) ...[
+                            trailing!,
+                            if (helpText != null) SizedBox(width: 8),
+                          ],
+                          if (helpText != null)
+                            ContainerHelpTooltip(message: helpText),
                         ],
                       ),
-                    ),
-                    if (trailing != null) ...[
-                      trailing!,
-                      if (helpText != null) SizedBox(width: 8),
-                    ],
-                    if (helpText != null)
-                      ContainerHelpTooltip(message: helpText),
+                    if (title != null) SizedBox(height: 14),
+                    child,
                   ],
                 ),
-              if (title != null) SizedBox(height: 14),
-              child,
-            ],
-          ),
-        ),
+              ),
       ),
     );
   }
@@ -1779,12 +1885,16 @@ class ConfirmDialog extends StatefulWidget {
     required this.title,
     required this.message,
     this.onConfirmAsync,
+    this.dependencyEntityType,
+    this.dependencyIds = const <String>[],
     super.key,
   });
 
   final String title;
   final String message;
   final Future<void> Function()? onConfirmAsync;
+  final String? dependencyEntityType;
+  final List<String> dependencyIds;
 
   @override
   State<ConfirmDialog> createState() => _ConfirmDialogState();
@@ -1792,6 +1902,39 @@ class ConfirmDialog extends StatefulWidget {
 
 class _ConfirmDialogState extends State<ConfirmDialog> {
   bool _isSubmitting = false;
+  bool _isLoadingDependencies = false;
+  String _dependencyMessage = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDependencies();
+  }
+
+  Future<void> _loadDependencies() async {
+    final entityType = widget.dependencyEntityType?.trim();
+    if (entityType == null ||
+        entityType.isEmpty ||
+        widget.dependencyIds.isEmpty) {
+      return;
+    }
+
+    setState(() => _isLoadingDependencies = true);
+    try {
+      final dependencies = await fetchDeleteDependencies(
+        entityType: entityType,
+        ids: widget.dependencyIds,
+      );
+      if (!mounted) return;
+      setState(() {
+        _dependencyMessage = buildDeleteDependencyMessage(dependencies);
+        _isLoadingDependencies = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isLoadingDependencies = false);
+    }
+  }
 
   Future<void> _handleConfirm() async {
     if (_isSubmitting) return;
@@ -1814,9 +1957,47 @@ class _ConfirmDialogState extends State<ConfirmDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final hasDependencyMessage = _dependencyMessage.trim().isNotEmpty;
+
     return AlertDialog(
       title: Text(trText(widget.title)),
-      content: Text(trText(widget.message)),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(trText(widget.message)),
+          if (_isLoadingDependencies || hasDependencyMessage) ...[
+            SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.background,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: _isLoadingDependencies
+                  ? Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            trText('Revisando relaciones antes de eliminar...'),
+                          ),
+                        ),
+                      ],
+                    )
+                  : Text(_dependencyMessage),
+            ),
+          ],
+        ],
+      ),
       actions: [
         OutlinedButton(
           onPressed: _isSubmitting
@@ -1825,7 +2006,7 @@ class _ConfirmDialogState extends State<ConfirmDialog> {
           child: Text(trText('Cancelar')),
         ),
         ElevatedButton(
-          onPressed: _handleConfirm,
+          onPressed: _isLoadingDependencies ? null : _handleConfirm,
           child: _isSubmitting
               ? SizedBox(
                   width: 16,
@@ -1845,6 +2026,8 @@ Future<bool> showDeleteConfirmation(
   String? title,
   String? message,
   Future<void> Function()? onConfirmAsync,
+  String? dependencyEntityType,
+  List<String> dependencyIds = const <String>[],
 }) async {
   final translatedEntityLabel = trText(entityLabel);
   final confirmed = await showDialog<bool>(
@@ -1859,6 +2042,8 @@ Future<bool> showDeleteConfirmation(
             'Are you sure you want to delete this $translatedEntityLabel?',
           ),
       onConfirmAsync: onConfirmAsync,
+      dependencyEntityType: dependencyEntityType,
+      dependencyIds: dependencyIds,
     ),
   );
   return confirmed ?? false;
@@ -1996,10 +2181,20 @@ class FormFieldWrapper extends StatelessWidget {
 }
 
 class CurrencyInput extends StatelessWidget {
-  CurrencyInput({required this.controller, this.label = 'Monto', super.key});
+  CurrencyInput({
+    required this.controller,
+    this.label = 'Monto',
+    this.focusNode,
+    this.textInputAction,
+    this.onSubmitted,
+    super.key,
+  });
 
   final TextEditingController controller;
   final String label;
+  final FocusNode? focusNode;
+  final TextInputAction? textInputAction;
+  final ValueChanged<String>? onSubmitted;
 
   @override
   Widget build(BuildContext context) {
@@ -2007,11 +2202,21 @@ class CurrencyInput extends StatelessWidget {
       label: label,
       child: TextFormField(
         controller: controller,
+        focusNode: focusNode,
         keyboardType: TextInputType.numberWithOptions(decimal: true),
+        textInputAction: textInputAction,
+        onFieldSubmitted: onSubmitted,
         inputFormatters: const [
-          NumericTextInputFormatter(useGrouping: true, maxDecimalDigits: 2),
+          NumericTextInputFormatter(
+            useGrouping: true,
+            maxDecimalDigits: 2,
+            moneyInputBehavior: true,
+          ),
         ],
-        decoration: InputDecoration(prefixText: '${currentCurrencyCode()} '),
+        decoration: InputDecoration(
+          hintText: '0.00',
+          suffixText: currentCurrencyCode(),
+        ),
       ),
     );
   }
@@ -2209,6 +2414,7 @@ class StatusBadge extends StatelessWidget {
       QuoteStatus.borrador: (AppColors.textMuted, 'Borrador'),
       QuoteStatus.enviada: (AppColors.primary, 'Enviada'),
       QuoteStatus.aprobada: (AppColors.success, 'Aprobada'),
+      QuoteStatus.pagada: (AppColors.error, 'Pagada'),
       QuoteStatus.rechazada: (AppColors.error, 'Rechazada'),
     };
     final style = map[status]!;
@@ -2464,6 +2670,26 @@ class CotimaxDataTable extends StatelessWidget {
           else
             LayoutBuilder(
               builder: (context, constraints) {
+                final columnCount = columns.isEmpty ? 1 : columns.length;
+                const horizontalMargin = 10.0;
+                const columnSpacing = 14.0;
+                final availableWidth =
+                    constraints.maxWidth - (horizontalMargin * 2);
+                final baseCellWidth =
+                    ((availableWidth - (columnSpacing * (columnCount - 1))) /
+                            columnCount)
+                        .clamp(84.0, 180.0)
+                        .toDouble();
+                final normalizedRows = rows
+                    .map(
+                      (row) => _normalizeDataRow(
+                        row,
+                        columnCount: columnCount,
+                        baseCellWidth: baseCellWidth,
+                      ),
+                    )
+                    .toList(growable: false);
+
                 return ClipRRect(
                   borderRadius: BorderRadius.circular(AppSpacing.radius),
                   child: SingleChildScrollView(
@@ -2475,9 +2701,9 @@ class CotimaxDataTable extends StatelessWidget {
                       child: DataTable(
                         headingRowHeight: 44,
                         columns: columns,
-                        rows: rows,
-                        horizontalMargin: 14,
-                        columnSpacing: 24,
+                        rows: normalizedRows,
+                        horizontalMargin: horizontalMargin,
+                        columnSpacing: columnSpacing,
                         dividerThickness: 1,
                       ),
                     ),
@@ -2489,6 +2715,133 @@ class CotimaxDataTable extends StatelessWidget {
       ),
     );
   }
+}
+
+DataRow _normalizeDataRow(
+  DataRow row, {
+  required int columnCount,
+  required double baseCellWidth,
+}) {
+  return DataRow(
+    key: row.key,
+    selected: row.selected,
+    onSelectChanged: row.onSelectChanged,
+    onLongPress: row.onLongPress,
+    color: row.color,
+    mouseCursor: row.mouseCursor,
+    cells: row.cells
+        .asMap()
+        .entries
+        .map(
+          (entry) => _normalizeDataCell(
+            entry.value,
+            columnIndex: entry.key,
+            columnCount: columnCount,
+            baseCellWidth: baseCellWidth,
+          ),
+        )
+        .toList(growable: false),
+  );
+}
+
+DataCell _normalizeDataCell(
+  DataCell cell, {
+  required int columnIndex,
+  required int columnCount,
+  required double baseCellWidth,
+}) {
+  final isLastColumn = columnIndex == columnCount - 1;
+  final child = isLastColumn
+      ? SizedBox(
+          width: 44,
+          child: Align(alignment: Alignment.centerLeft, child: cell.child),
+        )
+      : _normalizeDataCellChild(cell.child, maxWidth: baseCellWidth);
+
+  return DataCell(
+    child,
+    placeholder: cell.placeholder,
+    showEditIcon: cell.showEditIcon,
+    onTap: cell.onTap,
+    onDoubleTap: cell.onDoubleTap,
+    onLongPress: cell.onLongPress,
+    onTapCancel: cell.onTapCancel,
+    onTapDown: cell.onTapDown,
+  );
+}
+
+Widget _normalizeDataCellChild(Widget child, {required double maxWidth}) {
+  if (child is Checkbox) {
+    return SizedBox(width: 40, child: child);
+  }
+
+  if (child is Text) {
+    return SizedBox(
+      width: maxWidth,
+      child: Text(
+        child.data ?? '',
+        key: child.key,
+        style: child.style,
+        strutStyle: child.strutStyle,
+        textAlign: child.textAlign,
+        textDirection: child.textDirection,
+        locale: child.locale,
+        softWrap: false,
+        overflow: TextOverflow.ellipsis,
+        textScaler: child.textScaler,
+        maxLines: 1,
+        semanticsLabel: child.semanticsLabel,
+        textWidthBasis: child.textWidthBasis,
+        textHeightBehavior: child.textHeightBehavior,
+        selectionColor: child.selectionColor,
+      ),
+    );
+  }
+
+  if (child is Row) {
+    return SizedBox(
+      width: maxWidth,
+      child: Row(
+        key: child.key,
+        mainAxisAlignment: child.mainAxisAlignment,
+        mainAxisSize: MainAxisSize.max,
+        crossAxisAlignment: child.crossAxisAlignment,
+        textDirection: child.textDirection,
+        verticalDirection: child.verticalDirection,
+        textBaseline: child.textBaseline,
+        children: child.children
+            .map(
+              (rowChild) => rowChild is Text
+                  ? Flexible(
+                      child: Text(
+                        rowChild.data ?? '',
+                        key: rowChild.key,
+                        style: rowChild.style,
+                        strutStyle: rowChild.strutStyle,
+                        textAlign: rowChild.textAlign,
+                        textDirection: rowChild.textDirection,
+                        locale: rowChild.locale,
+                        softWrap: false,
+                        overflow: TextOverflow.ellipsis,
+                        textScaler: rowChild.textScaler,
+                        maxLines: 1,
+                        semanticsLabel: rowChild.semanticsLabel,
+                        textWidthBasis: rowChild.textWidthBasis,
+                        textHeightBehavior: rowChild.textHeightBehavior,
+                        selectionColor: rowChild.selectionColor,
+                      ),
+                    )
+                  : rowChild,
+            )
+            .toList(growable: false),
+      ),
+    );
+  }
+
+  return SizedBox(
+    width: maxWidth,
+    child: Align(alignment: Alignment.centerLeft, child: child),
+  );
 }
 
 class TableSelectionToolbar extends StatelessWidget {
@@ -2612,7 +2965,7 @@ class _InlineEmptyTableState extends StatelessWidget {
   }
 }
 
-class _NavItem extends StatelessWidget {
+class _NavItem extends ConsumerWidget {
   _NavItem({
     required this.entry,
     required this.compact,
@@ -2628,13 +2981,23 @@ class _NavItem extends StatelessWidget {
   final bool closeAfterTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final activePlan = ref.watch(activePlanAccessProvider).valueOrNull;
+    final analyticsLocked =
+        entry.$3 == RoutePaths.analitica &&
+        activePlan != null &&
+        !activePlan.plan.incluyeAnalitica;
     return Material(
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(AppSpacing.radius),
-        onTap: () {
+        onTap: () async {
           if (closeAfterTap) Navigator.of(context).pop();
+          if (analyticsLocked) {
+            await showAnalyticsUpgradeDialog(context);
+            return;
+          }
+          if (!context.mounted) return;
           context.go(entry.$3);
         },
         child: AnimatedContainer(
@@ -2674,6 +3037,17 @@ class _NavItem extends StatelessWidget {
                     ),
                   ),
                 ),
+                if (entry.$3 == RoutePaths.analitica)
+                  Padding(
+                    padding: EdgeInsets.only(right: showCreate ? 8 : 0),
+                    child: Icon(
+                      Icons.workspace_premium_rounded,
+                      size: 16,
+                      color: selected
+                          ? AppColors.white
+                          : AppColors.accent,
+                    ),
+                  ),
                 if (showCreate)
                   _HoverCircleButton(
                     onTap: () {
@@ -2703,13 +3077,14 @@ class _NavItem extends StatelessWidget {
   }
 }
 
-class _MobileBottomNavigation extends StatelessWidget {
+class _MobileBottomNavigation extends ConsumerWidget {
   _MobileBottomNavigation({required this.activePath});
 
   final String activePath;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final activePlan = ref.watch(activePlanAccessProvider).valueOrNull;
     return AnimatedContainer(
       duration: Duration(milliseconds: 180),
       height: 78,
@@ -2729,7 +3104,18 @@ class _MobileBottomNavigation extends StatelessWidget {
               padding: EdgeInsets.only(right: 8),
               child: InkWell(
                 borderRadius: BorderRadius.circular(10),
-                onTap: () => context.go(entry.$3),
+                onTap: () async {
+                  final analyticsLocked =
+                      entry.$3 == RoutePaths.analitica &&
+                      activePlan != null &&
+                      !activePlan.plan.incluyeAnalitica;
+                  if (analyticsLocked) {
+                    await showAnalyticsUpgradeDialog(context);
+                    return;
+                  }
+                  if (!context.mounted) return;
+                  context.go(entry.$3);
+                },
                 child: Container(
                   padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(

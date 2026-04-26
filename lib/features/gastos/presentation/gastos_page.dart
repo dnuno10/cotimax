@@ -5,6 +5,7 @@ import 'package:cotimax/core/localization/app_localization.dart';
 import 'package:cotimax/core/routing/route_paths.dart';
 import 'package:cotimax/features/gastos/application/gastos_controller.dart';
 import 'package:cotimax/features/ingresos/application/ingresos_controller.dart';
+import 'package:cotimax/features/proveedores/application/proveedores_controller.dart';
 import 'package:cotimax/shared/enums/app_enums.dart';
 import 'package:cotimax/shared/models/domain_models.dart';
 import 'package:cotimax/shared/widgets/cotimax_widgets.dart';
@@ -849,11 +850,14 @@ class _GastosPageState extends ConsumerState<GastosPage> {
       final confirmed = await showDeleteConfirmation(
         context,
         entityLabel: 'gasto',
+        dependencyEntityType: 'gasto',
+        dependencyIds: [item.id],
         onConfirmAsync: () async {
           try {
             await ref.read(gastosRepositoryProvider).delete(item.id);
             if (!context.mounted) return;
             ref.invalidate(gastosControllerProvider);
+            ref.invalidate(ingresosControllerProvider);
             ToastHelper.showSuccess(context, 'Gasto eliminado.');
           } catch (error) {
             if (!context.mounted) rethrow;
@@ -880,6 +884,8 @@ class _GastosPageState extends ConsumerState<GastosPage> {
       message: count == 1
           ? '¿Estás seguro que quieres eliminar este gasto?'
           : '¿Estás seguro que quieres eliminar los $count gastos seleccionados?',
+      dependencyEntityType: 'gasto',
+      dependencyIds: _selectedGastoIds.toList(),
       onConfirmAsync: () async {
         try {
           final ids = _selectedGastoIds.toList();
@@ -888,6 +894,7 @@ class _GastosPageState extends ConsumerState<GastosPage> {
           }
           if (!mounted) return;
           ref.invalidate(gastosControllerProvider);
+          ref.invalidate(ingresosControllerProvider);
           setState(() => _selectedGastoIds.clear());
           ToastHelper.showSuccess(
             context,
@@ -923,15 +930,25 @@ class _GastoForm extends ConsumerStatefulWidget {
 
 class _GastoFormState extends ConsumerState<_GastoForm> {
   late final ScrollController _scrollController;
+  late final TextEditingController _tituloController;
   late final TextEditingController _montoController;
   late final TextEditingController _fechaController;
   late final TextEditingController _fechaInicioRecurrenciaController;
-  late final TextEditingController _proveedorController;
   late final TextEditingController _referenciaController;
   late final TextEditingController _descripcionController;
   late final TextEditingController _notasController;
+  late final FocusNode _tituloFocusNode;
+  late final FocusNode _categoriaFocusNode;
+  late final FocusNode _montoFocusNode;
+  late final FocusNode _fechaFocusNode;
+  late final FocusNode _proveedorFocusNode;
+  late final FocusNode _referenciaFocusNode;
+  late final FocusNode _descripcionFocusNode;
+  late final FocusNode _notasFocusNode;
   String _categoriaValue = '';
   String _categoriaDisplayLabel = '';
+  String _proveedorIdValue = '';
+  String _proveedorDisplayLabel = '';
   bool _recurrente = false;
   RecurrenceFrequency _recurrencia = RecurrenceFrequency.ninguna;
   final Set<int> _diasSemana = <int>{};
@@ -942,8 +959,19 @@ class _GastoFormState extends ConsumerState<_GastoForm> {
   void initState() {
     super.initState();
     _scrollController = ScrollController();
+    _tituloFocusNode = FocusNode();
+    _categoriaFocusNode = FocusNode();
+    _montoFocusNode = FocusNode();
+    _fechaFocusNode = FocusNode();
+    _proveedorFocusNode = FocusNode();
+    _referenciaFocusNode = FocusNode();
+    _descripcionFocusNode = FocusNode();
+    _notasFocusNode = FocusNode();
     final item = widget.item;
     _categoriaValue = item?.gastoCategoriaId ?? '';
+    _proveedorIdValue = item?.proveedorId ?? '';
+    _proveedorDisplayLabel = item?.proveedor ?? '';
+    _tituloController = seededTextController(item?.titulo ?? '');
     _montoController = seededTextController(
       item == null
           ? '0.00'
@@ -954,10 +982,9 @@ class _GastoFormState extends ConsumerState<_GastoForm> {
     );
     _fechaInicioRecurrenciaController = seededTextController(
       DateFormat(
-        'yyyy-MM-dd',
+      'yyyy-MM-dd',
       ).format(item?.fechaInicioRecurrencia ?? item?.fecha ?? DateTime.now()),
     );
-    _proveedorController = seededTextController(item?.proveedor);
     _referenciaController = seededTextController(item?.referencia);
     _descripcionController = seededTextController(item?.descripcion ?? '');
     _notasController = seededTextController(item?.notas);
@@ -972,13 +999,21 @@ class _GastoFormState extends ConsumerState<_GastoForm> {
   @override
   void dispose() {
     _scrollController.dispose();
+    _tituloController.dispose();
     _montoController.dispose();
     _fechaController.dispose();
     _fechaInicioRecurrenciaController.dispose();
-    _proveedorController.dispose();
     _referenciaController.dispose();
     _descripcionController.dispose();
     _notasController.dispose();
+    _tituloFocusNode.dispose();
+    _categoriaFocusNode.dispose();
+    _montoFocusNode.dispose();
+    _fechaFocusNode.dispose();
+    _proveedorFocusNode.dispose();
+    _referenciaFocusNode.dispose();
+    _descripcionFocusNode.dispose();
+    _notasFocusNode.dispose();
     super.dispose();
   }
 
@@ -987,6 +1022,7 @@ class _GastoFormState extends ConsumerState<_GastoForm> {
     final categoriasCatalogo =
         ref.watch(gastoCategoriasControllerProvider).valueOrNull ??
         const <GastoCategoria>[];
+    final proveedoresAsync = ref.watch(proveedoresCatalogControllerProvider);
     final categoriaOptions = categoriasCatalogo
         .map((item) => _CategoryOption(value: item.id, label: item.nombre))
         .toList();
@@ -998,217 +1034,379 @@ class _GastoFormState extends ConsumerState<_GastoForm> {
           : _categoriaValue,
     );
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Expanded(
-          child: Scrollbar(
-            controller: _scrollController,
-            child: SingleChildScrollView(
+    return FocusTraversalGroup(
+      policy: OrderedTraversalPolicy(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: Scrollbar(
               controller: _scrollController,
-              child: Column(
-                children: [
-                  SectionCard(
-                    title: 'Datos del gasto',
-                    titleIcon: FontAwesomeIcons.receipt,
-                    child: Column(
-                      children: [
-                        FormFieldWrapper(
-                          label: 'Icono del gasto',
-                          child: FinanceIconPicker(
-                            selectedKey: _iconKey,
-                            onChanged: (value) =>
-                                setState(() => _iconKey = value),
-                          ),
-                        ),
-                        SizedBox(height: 12),
-                        _ResponsiveFormRow(
-                          left: FormFieldWrapper(
-                            label: 'Categoria',
-                            child: _CategoryLookupField(
-                              value: _categoriaValue,
-                              options: categoriaSelectOptions,
-                              emptyLabel: 'Sin categoria',
-                              hintText: 'Selecciona una categoria',
-                              emptyStateMessage:
-                                  'No hay categorias de gasto registradas.',
-                              buttonLabel: 'Agregar categoria',
-                              onAddPressed: _createExpenseCategory,
-                              onChanged: (value) => setState(() {
-                                _categoriaValue = value;
-                                _categoriaDisplayLabel = '';
-                              }),
+              child: SingleChildScrollView(
+                controller: _scrollController,
+                child: Column(
+                  children: [
+                    SectionCard(
+                      title: 'Datos del gasto',
+                      titleIcon: FontAwesomeIcons.receipt,
+                      headerBackgroundColor: AppColors.background,
+                      child: Column(
+                        children: [
+                          FormFieldWrapper(
+                            label: 'Icono del gasto',
+                            child: Focus(
+                              canRequestFocus: false,
+                              skipTraversal: true,
+                              child: FinanceIconPicker(
+                                selectedKey: _iconKey,
+                                onChanged: (value) =>
+                                    setState(() => _iconKey = value),
+                              ),
                             ),
                           ),
-                          right: CurrencyInput(
-                            controller: _montoController,
-                            label: 'Monto',
-                          ),
-                        ),
-                        if (_categoriaValue.trim().isNotEmpty)
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: Wrap(
-                              spacing: 8,
-                              children: [
-                                TextButton.icon(
-                                  onPressed: _editExpenseCategory,
-                                  icon: Icon(Icons.edit_rounded, size: 16),
-                                  label: Text(trText('Editar categoria')),
+                          SizedBox(height: 12),
+                          FocusTraversalOrder(
+                            order: NumericFocusOrder(1),
+                            child: FormFieldWrapper(
+                              label: 'Título',
+                              child: TextField(
+                                focusNode: _tituloFocusNode,
+                                controller: _tituloController,
+                                textInputAction: TextInputAction.next,
+                                decoration: InputDecoration(
+                                  hintText: trText('Título del gasto'),
                                 ),
-                                TextButton.icon(
-                                  onPressed: _deleteExpenseCategory,
-                                  icon: Icon(Icons.delete_outline, size: 16),
-                                  label: Text(trText('Eliminar categoria')),
-                                ),
-                              ],
+                              ),
                             ),
                           ),
-                      ],
+                          SizedBox(height: 12),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: FocusTraversalOrder(
+                                  order: NumericFocusOrder(2),
+                                  child: FormFieldWrapper(
+                                    label: 'Categoria',
+                                    child: _CategoryLookupField(
+                                      focusNode: _categoriaFocusNode,
+                                      value: _categoriaValue,
+                                      options: categoriaSelectOptions,
+                                      emptyLabel: 'Sin categoria',
+                                      hintText: 'Selecciona una categoria',
+                                      emptyStateMessage:
+                                          'No hay categorias de gasto registradas.',
+                                      buttonLabel: 'Agregar categoria',
+                                      onAddPressed: _createExpenseCategory,
+                                      onChanged: (value) => setState(() {
+                                        _categoriaValue = value;
+                                        _categoriaDisplayLabel = '';
+                                      }),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              SizedBox(width: 12),
+                              Expanded(
+                                child: FocusTraversalOrder(
+                                  order: NumericFocusOrder(3),
+                                  child: CurrencyInput(
+                                    controller: _montoController,
+                                    label: 'Monto',
+                                    focusNode: _montoFocusNode,
+                                    textInputAction: TextInputAction.next,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (_categoriaValue.trim().isNotEmpty)
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: Wrap(
+                                spacing: 8,
+                                children: [
+                                  Focus(
+                                    canRequestFocus: false,
+                                    skipTraversal: true,
+                                    child: TextButton.icon(
+                                      onPressed: _editExpenseCategory,
+                                      icon: Icon(Icons.edit_rounded, size: 16),
+                                      label: Text(trText('Editar categoria')),
+                                    ),
+                                  ),
+                                  Focus(
+                                    canRequestFocus: false,
+                                    skipTraversal: true,
+                                    child: TextButton.icon(
+                                      onPressed: _deleteExpenseCategory,
+                                      icon: Icon(
+                                        Icons.delete_outline,
+                                        size: 16,
+                                      ),
+                                      label: Text(trText('Eliminar categoria')),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
-                  ),
-                  SizedBox(height: 12),
-                  SectionCard(
-                    title: 'Seguimiento',
-                    titleIcon: FontAwesomeIcons.calendarCheck,
-                    child: Column(
-                      children: [
-                        _ResponsiveFormRow(
-                          left: FormFieldWrapper(
-                            label: 'Fecha',
-                            child: TextField(
-                              controller: _fechaController,
-                              readOnly: true,
-                              onTap: _pickMovementDate,
-                              decoration: InputDecoration(
-                                hintText: trText('AAAA-MM-DD'),
-                                suffixIcon: const Icon(
-                                  Icons.calendar_month_rounded,
+                    SizedBox(height: 12),
+                    SectionCard(
+                      title: 'Seguimiento',
+                      titleIcon: FontAwesomeIcons.calendarCheck,
+                      headerBackgroundColor: AppColors.background,
+                      child: Column(
+                        children: [
+                          _ResponsiveFormRow(
+                            left: FocusTraversalOrder(
+                              order: NumericFocusOrder(4),
+                              child: FormFieldWrapper(
+                                label: 'Fecha',
+                                child: TextField(
+                                  focusNode: _fechaFocusNode,
+                                  controller: _fechaController,
+                                  readOnly: true,
+                                  onTap: _pickMovementDate,
+                                  decoration: InputDecoration(
+                                    hintText: trText('AAAA-MM-DD'),
+                                    suffixIcon: const Icon(
+                                      Icons.calendar_month_rounded,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            right: FocusTraversalOrder(
+                              order: NumericFocusOrder(5),
+                              child: FormFieldWrapper(
+                                label: 'Proveedor',
+                                child: proveedoresAsync.when(
+                                  loading: () => SizedBox(
+                                    height: 20,
+                                    child: Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  error: (_, __) => EmptyFieldState(
+                                    hintText:
+                                        'No fue posible cargar proveedores.',
+                                    message:
+                                        'Puedes dejar este campo vacío o intentar cargar los proveedores nuevamente.',
+                                    buttonLabel: 'Agregar proveedor',
+                                    onPressed: _goToCreateProvider,
+                                  ),
+                                  data: (proveedores) {
+                                    if (proveedores.isEmpty) {
+                                      return EmptyFieldState(
+                                        hintText:
+                                            'No hay proveedores registrados.',
+                                        message:
+                                            'Puedes dejar este campo vacío o registrar un proveedor para vincularlo a este gasto.',
+                                        buttonLabel: 'Agregar proveedor',
+                                        onPressed: _goToCreateProvider,
+                                      );
+                                    }
+
+                                    final resolvedProveedorId =
+                                        _resolveProveedorId(proveedores);
+                                    return DropdownButtonFormField<String>(
+                                      focusNode: _proveedorFocusNode,
+                                      value: resolvedProveedorId ?? '',
+                                      isExpanded: true,
+                                      menuMaxHeight: 320,
+                                      borderRadius: cotimaxMenuBorderRadius,
+                                      dropdownColor: AppColors.white,
+                                      icon: cotimaxDropdownIcon,
+                                      style: cotimaxDropdownTextStyle,
+                                      decoration: cotimaxDropdownDecoration(
+                                        helperText: 'Campo opcional.',
+                                      ),
+                                      items: [
+                                        DropdownMenuItem<String>(
+                                          value: '',
+                                          child: Text(
+                                            tr('Ninguno', 'None'),
+                                            overflow: TextOverflow.ellipsis,
+                                            style: cotimaxDropdownTextStyle,
+                                          ),
+                                        ),
+                                        ...proveedores.map(
+                                          (proveedor) =>
+                                              DropdownMenuItem<String>(
+                                                value: proveedor.id,
+                                                child: Text(
+                                                  _providerOptionLabel(
+                                                    proveedor,
+                                                  ),
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style:
+                                                      cotimaxDropdownTextStyle,
+                                                ),
+                                              ),
+                                        ),
+                                      ],
+                                      onChanged: (value) => setState(() {
+                                        final nextId = value ?? '';
+                                        _proveedorIdValue = nextId;
+                                        if (nextId.trim().isEmpty) {
+                                          _proveedorDisplayLabel = '';
+                                          return;
+                                        }
+                                        for (final proveedor in proveedores) {
+                                          if (proveedor.id == nextId) {
+                                            _proveedorDisplayLabel =
+                                                _providerOptionLabel(proveedor);
+                                            return;
+                                          }
+                                        }
+                                        _proveedorDisplayLabel = '';
+                                      }),
+                                    );
+                                  },
                                 ),
                               ),
                             ),
                           ),
-                          right: FormFieldWrapper(
-                            label: 'Proveedor',
-                            child: TextField(
-                              controller: _proveedorController,
-                              decoration: InputDecoration(
-                                hintText: trText('Proveedor o beneficiario'),
+                          SizedBox(height: 12),
+                          _ResponsiveFormRow(
+                            left: FocusTraversalOrder(
+                              order: NumericFocusOrder(6),
+                              child: FormFieldWrapper(
+                                label: 'Referencia',
+                                child: TextField(
+                                  focusNode: _referenciaFocusNode,
+                                  controller: _referenciaController,
+                                  textInputAction: TextInputAction.next,
+                                  decoration: InputDecoration(
+                                    hintText: trText('Folio o referencia'),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            right: FocusTraversalOrder(
+                              order: NumericFocusOrder(7),
+                              child: FormFieldWrapper(
+                                label: 'Descripcion',
+                                child: TextField(
+                                  focusNode: _descripcionFocusNode,
+                                  controller: _descripcionController,
+                                  textInputAction: TextInputAction.next,
+                                  decoration: InputDecoration(
+                                    hintText: trText('Descripcion breve'),
+                                  ),
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                        SizedBox(height: 12),
-                        _ResponsiveFormRow(
-                          left: FormFieldWrapper(
-                            label: 'Referencia',
-                            child: TextField(
-                              controller: _referenciaController,
-                              decoration: InputDecoration(
-                                hintText: trText('Folio o referencia'),
+                          SizedBox(height: 12),
+                          FocusTraversalOrder(
+                            order: NumericFocusOrder(8),
+                            child: FormFieldWrapper(
+                              label: 'Notas',
+                              child: TextField(
+                                focusNode: _notasFocusNode,
+                                controller: _notasController,
+                                textInputAction: TextInputAction.next,
+                                maxLines: 4,
+                                decoration: InputDecoration(
+                                  hintText: trText('Notas internas del gasto'),
+                                ),
                               ),
                             ),
                           ),
-                          right: FormFieldWrapper(
-                            label: 'Descripcion',
-                            child: TextField(
-                              controller: _descripcionController,
-                              decoration: InputDecoration(
-                                hintText: trText('Descripcion breve'),
-                              ),
-                            ),
-                          ),
-                        ),
-                        SizedBox(height: 12),
-                        FormFieldWrapper(
-                          label: 'Notas',
-                          child: TextField(
-                            controller: _notasController,
-                            maxLines: 4,
-                            decoration: InputDecoration(
-                              hintText: trText('Notas internas del gasto'),
-                            ),
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  SizedBox(height: 12),
-                  RecurrenceConfigurationCard(
-                    title: 'Recurrencia del gasto',
-                    titleIcon: FontAwesomeIcons.arrowsRotate,
-                    isRecurring: _recurrente,
-                    frequency: _recurrencia,
-                    selectedWeekdays: _diasSemana,
-                    startDateController: _fechaInicioRecurrenciaController,
-                    startDateLabel: 'Fecha de inicio',
-                    startDateHelperText:
-                        'A partir de esta fecha se calculará la siguiente recurrencia.',
-                    onStartDateTap: _pickRecurrenceStartDate,
-                    onRecurringChanged: (value) {
-                      setState(() {
-                        _recurrente = value;
-                        if (!value) {
-                          _recurrencia = RecurrenceFrequency.ninguna;
-                          _diasSemana.clear();
-                        }
-                      });
-                    },
-                    onFrequencyChanged: (value) {
-                      if (value == null) return;
-                      setState(() {
-                        _recurrencia = value;
-                        if (!value.supportsWeekdaySelection) {
-                          _diasSemana.clear();
-                        }
-                      });
-                    },
-                    onToggleWeekday: (value) {
-                      setState(() {
-                        if (_diasSemana.contains(value)) {
-                          _diasSemana.remove(value);
-                        } else {
-                          _diasSemana.add(value);
-                        }
-                      });
-                    },
-                  ),
-                ],
+                    SizedBox(height: 12),
+                    RecurrenceConfigurationCard(
+                      title: 'Recurrencia del gasto',
+                      titleIcon: FontAwesomeIcons.arrowsRotate,
+                      isRecurring: _recurrente,
+                      frequency: _recurrencia,
+                      selectedWeekdays: _diasSemana,
+                      startDateController: _fechaInicioRecurrenciaController,
+                      startDateLabel: 'Fecha de inicio',
+                      startDateHelperText:
+                          'A partir de esta fecha se calculará la siguiente recurrencia.',
+                      onStartDateTap: _pickRecurrenceStartDate,
+                      onRecurringChanged: (value) {
+                        setState(() {
+                          _recurrente = value;
+                          if (!value) {
+                            _recurrencia = RecurrenceFrequency.ninguna;
+                            _diasSemana.clear();
+                          }
+                        });
+                      },
+                      onFrequencyChanged: (value) {
+                        if (value == null) return;
+                        setState(() {
+                          _recurrencia = value;
+                          if (!value.supportsWeekdaySelection) {
+                            _diasSemana.clear();
+                          }
+                        });
+                      },
+                      onToggleWeekday: (value) {
+                        setState(() {
+                          if (_diasSemana.contains(value)) {
+                            _diasSemana.remove(value);
+                          } else {
+                            _diasSemana.add(value);
+                          }
+                        });
+                      },
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-        SizedBox(height: 16),
-        Align(
-          alignment: Alignment.centerRight,
-          child: Wrap(
-            spacing: 10,
-            children: [
-              OutlinedButton(
-                onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
-                child: Text(trText('Cancelar')),
-              ),
-              ElevatedButton.icon(
-                onPressed: _isSaving ? null : _save,
-                icon: _isSaving
-                    ? SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Icon(
-                        widget.item == null
-                            ? Icons.add_rounded
-                            : Icons.save_rounded,
-                      ),
-                label: Text(
-                  widget.item == null ? 'Registrar gasto' : 'Guardar gasto',
+          SizedBox(height: 16),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Wrap(
+              spacing: 10,
+              children: [
+                OutlinedButton(
+                  onPressed: _isSaving
+                      ? null
+                      : () => Navigator.of(context).pop(),
+                  child: Text(trText('Cancelar')),
                 ),
-              ),
-            ],
+                ElevatedButton.icon(
+                  onPressed: _isSaving ? null : _save,
+                  icon: _isSaving
+                      ? SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Icon(
+                          widget.item == null
+                              ? Icons.add_rounded
+                              : Icons.save_rounded,
+                        ),
+                  label: Text(
+                    widget.item == null ? 'Registrar gasto' : 'Guardar gasto',
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -1221,12 +1419,14 @@ class _GastoFormState extends ConsumerState<_GastoForm> {
         movementDate;
     final item = Gasto(
       id: widget.item?.id ?? 'gas-${now.microsecondsSinceEpoch}',
+      titulo: _tituloController.text.trim(),
       gastoCategoriaId: _categoriaValue.trim(),
       monto: parseNumericText(_montoController.text) ?? 0,
       fecha: movementDate,
       fechaInicioRecurrencia: _recurrente ? recurrenceStartDate : null,
       descripcion: _descripcionController.text.trim(),
-      proveedor: _proveedorController.text.trim(),
+      proveedorId: _proveedorIdValue.trim(),
+      proveedor: _resolveProviderLabelForSave(),
       referencia: _referenciaController.text.trim(),
       notas: _notasController.text.trim(),
       recurrente: _recurrente,
@@ -1267,6 +1467,49 @@ class _GastoFormState extends ConsumerState<_GastoForm> {
         setState(() => _isSaving = false);
       }
     }
+  }
+
+  String _providerOptionLabel(Proveedor proveedor) {
+    final nombre = proveedor.nombre.trim();
+    if (nombre.isNotEmpty) return nombre;
+    final empresa = proveedor.empresa.trim();
+    if (empresa.isNotEmpty) return empresa;
+    return proveedor.id;
+  }
+
+  String? _resolveProveedorId(List<Proveedor> proveedores) {
+    final selected = _proveedorIdValue.trim();
+    if (selected.isNotEmpty) {
+      return proveedores.any((item) => item.id == selected) ? selected : null;
+    }
+
+    final existingLabel = _proveedorDisplayLabel.trim().toLowerCase();
+    if (existingLabel.isEmpty) return null;
+    for (final proveedor in proveedores) {
+      if (_providerOptionLabel(proveedor).trim().toLowerCase() ==
+          existingLabel) {
+        return proveedor.id;
+      }
+    }
+    return null;
+  }
+
+  String _resolveProviderLabelForSave() {
+    final selected = _proveedorIdValue.trim();
+    if (selected.isEmpty) return '';
+    final proveedores =
+        ref.read(proveedoresCatalogControllerProvider).valueOrNull ??
+        const <Proveedor>[];
+    for (final proveedor in proveedores) {
+      if (proveedor.id == selected) {
+        return _providerOptionLabel(proveedor);
+      }
+    }
+    return _proveedorDisplayLabel.trim();
+  }
+
+  void _goToCreateProvider() {
+    context.go('${RoutePaths.proveedores}?create=1');
   }
 
   Future<void> _pickMovementDate() async {
@@ -1612,6 +1855,7 @@ class _CategoryOption {
 
 class _CategoryLookupField extends StatelessWidget {
   _CategoryLookupField({
+    this.focusNode,
     required this.value,
     required this.options,
     required this.emptyLabel,
@@ -1622,6 +1866,7 @@ class _CategoryLookupField extends StatelessWidget {
     required this.onChanged,
   });
 
+  final FocusNode? focusNode;
   final String value;
   final List<_CategoryOption> options;
   final String emptyLabel;
@@ -1648,6 +1893,7 @@ class _CategoryLookupField extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         DropdownButtonFormField<String>(
+          focusNode: focusNode,
           initialValue: selectedValue,
           isExpanded: true,
           menuMaxHeight: 320,
@@ -1679,10 +1925,14 @@ class _CategoryLookupField extends StatelessWidget {
           onChanged: (nextValue) => onChanged(nextValue ?? ''),
         ),
         SizedBox(height: 8),
-        TextButton.icon(
-          onPressed: onAddPressed,
-          icon: Icon(Icons.add_rounded, size: 16),
-          label: Text(trText(buttonLabel)),
+        Focus(
+          canRequestFocus: false,
+          skipTraversal: true,
+          child: TextButton.icon(
+            onPressed: onAddPressed,
+            icon: Icon(Icons.add_rounded, size: 16),
+            label: Text(trText(buttonLabel)),
+          ),
         ),
       ],
     );
@@ -1723,10 +1973,14 @@ class _CategoryLookupEmptyState extends StatelessWidget {
             ),
           ),
           SizedBox(height: 10),
-          TextButton.icon(
-            onPressed: onPressed,
-            icon: Icon(Icons.add_rounded, size: 16),
-            label: Text(trText(buttonLabel)),
+          Focus(
+            canRequestFocus: false,
+            skipTraversal: true,
+            child: TextButton.icon(
+              onPressed: onPressed,
+              icon: Icon(Icons.add_rounded, size: 16),
+              label: Text(trText(buttonLabel)),
+            ),
           ),
         ],
       ),

@@ -66,7 +66,6 @@ class RecurrenceConfigurationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(10),
@@ -75,64 +74,48 @@ class RecurrenceConfigurationCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Row(
-                  children: [
-                    FaIcon(titleIcon, size: 14, color: AppColors.textPrimary),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        trText(title),
-                        style: TextStyle(
-                          color: AppColors.textPrimary,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 15,
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.background,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
+            ),
+            padding: EdgeInsets.all(14),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      FaIcon(titleIcon, size: 14, color: AppColors.textPrimary),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          trText(title),
+                          style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 15,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-              Switch(value: isRecurring, onChanged: onRecurringChanged),
-            ],
-          ),
-          SizedBox(height: 4),
-          Text(
-            trText(
-              isRecurring
-                  ? 'Activa una regla para generar el movimiento de forma recurrente.'
-                  : 'Desactiva esta opcion si el movimiento solo ocurre una vez.',
-            ),
-            style: TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              height: 1.4,
-            ),
-          ),
-          if (isRecurring) ...[
-            SizedBox(height: 12),
-            if (startDateController != null) ...[
-              FormFieldWrapper(
-                label: startDateLabel,
-                child: TextField(
-                  controller: startDateController,
-                  readOnly: onStartDateTap != null,
-                  onTap: onStartDateTap,
-                  decoration: InputDecoration(
-                    hintText: trText(startDateHintText),
-                    suffixIcon: onStartDateTap == null
-                        ? null
-                        : const Icon(Icons.calendar_month_rounded),
+                    ],
                   ),
                 ),
-              ),
-              if (startDateHelperText != null) ...[
-                SizedBox(height: 8),
+                Switch(value: isRecurring, onChanged: onRecurringChanged),
+              ],
+            ),
+          ),
+          Container(height: 1, color: AppColors.border),
+          Padding(
+            padding: EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 Text(
-                  trText(startDateHelperText!),
+                  trText(
+                    isRecurring
+                        ? 'Activa una regla para generar el movimiento de forma recurrente.'
+                        : 'Desactiva esta opcion si el movimiento solo ocurre una vez.',
+                  ),
                   style: TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 12,
@@ -140,64 +123,98 @@ class RecurrenceConfigurationCard extends StatelessWidget {
                     height: 1.4,
                   ),
                 ),
-              ],
-              SizedBox(height: 12),
-            ],
-            FormFieldWrapper(
-              label: 'Frecuencia',
-              child: DropdownButtonFormField<RecurrenceFrequency>(
-                initialValue: frequency,
-                isExpanded: true,
-                menuMaxHeight: 320,
-                borderRadius: cotimaxMenuBorderRadius,
-                dropdownColor: AppColors.white,
-                icon: cotimaxDropdownIcon,
-                style: cotimaxDropdownTextStyle,
-                decoration: cotimaxDropdownDecoration(),
-                items: RecurrenceFrequency.values
-                    .map(
-                      (option) => DropdownMenuItem(
-                        value: option,
-                        child: Text(
-                          trText(option.label),
-                          overflow: TextOverflow.ellipsis,
-                          style: cotimaxDropdownTextStyle,
+                if (isRecurring) ...[
+                  SizedBox(height: 12),
+                  if (startDateController != null) ...[
+                    FormFieldWrapper(
+                      label: startDateLabel,
+                      child: TextField(
+                        controller: startDateController,
+                        readOnly: onStartDateTap != null,
+                        onTap: onStartDateTap,
+                        decoration: InputDecoration(
+                          hintText: trText(startDateHintText),
+                          suffixIcon: onStartDateTap == null
+                              ? null
+                              : const Icon(Icons.calendar_month_rounded),
                         ),
                       ),
-                    )
-                    .toList(),
-                onChanged: onFrequencyChanged,
-              ),
-            ),
-            if (frequency.supportsWeekdaySelection) ...[
-              SizedBox(height: 12),
-              FormFieldWrapper(
-                label: 'Dias de la semana',
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: weekdayOptions
-                      .map(
-                        (option) => FilterChip(
-                          selected: selectedWeekdays.contains(option.value),
-                          label: Text(trText(option.label)),
-                          onSelected: (_) => onToggleWeekday(option.value),
+                    ),
+                    if (startDateHelperText != null) ...[
+                      SizedBox(height: 8),
+                      Text(
+                        trText(startDateHelperText!),
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          height: 1.4,
                         ),
-                      )
-                      .toList(),
-                ),
-              ),
-              SizedBox(height: 8),
-              Text(
-                weekdaySummary(selectedWeekdays),
-                style: TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ],
+                      ),
+                    ],
+                    SizedBox(height: 12),
+                  ],
+                  FormFieldWrapper(
+                    label: 'Frecuencia',
+                    child: DropdownButtonFormField<RecurrenceFrequency>(
+                      initialValue: frequency,
+                      isExpanded: true,
+                      menuMaxHeight: 320,
+                      borderRadius: cotimaxMenuBorderRadius,
+                      dropdownColor: AppColors.white,
+                      icon: cotimaxDropdownIcon,
+                      style: cotimaxDropdownTextStyle,
+                      decoration: cotimaxDropdownDecoration(),
+                      items: RecurrenceFrequency.values
+                          .map(
+                            (option) => DropdownMenuItem(
+                              value: option,
+                              child: Text(
+                                trText(option.label),
+                                overflow: TextOverflow.ellipsis,
+                                style: cotimaxDropdownTextStyle,
+                              ),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: onFrequencyChanged,
+                    ),
+                  ),
+                  if (frequency.supportsWeekdaySelection) ...[
+                    SizedBox(height: 12),
+                    FormFieldWrapper(
+                      label: 'Dias de la semana',
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: weekdayOptions
+                            .map(
+                              (option) => FilterChip(
+                                selected: selectedWeekdays.contains(
+                                  option.value,
+                                ),
+                                label: Text(trText(option.label)),
+                                onSelected: (_) =>
+                                    onToggleWeekday(option.value),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      weekdaySummary(selectedWeekdays),
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ],
+              ],
+            ),
+          ),
         ],
       ),
     );

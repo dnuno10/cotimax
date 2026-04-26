@@ -10,7 +10,10 @@ import 'package:cotimax/features/cotizaciones/application/cotizacion_pdf_service
 import 'package:cotimax/features/cotizaciones/application/cotizaciones_controller.dart';
 import 'package:cotimax/features/gastos/application/gastos_controller.dart';
 import 'package:cotimax/features/ingresos/application/ingresos_controller.dart';
+import 'package:cotimax/features/planes/application/plan_access.dart';
 import 'package:cotimax/features/productos/application/productos_controller.dart';
+import 'package:cotimax/features/recordatorios/application/recordatorios_controller.dart';
+import 'package:cotimax/features/workspace/application/workspace_controller.dart';
 import 'package:cotimax/shared/enums/app_enums.dart';
 import 'package:cotimax/shared/models/domain_models.dart';
 import 'package:cotimax/shared/models/upsert_payloads.dart';
@@ -37,12 +40,22 @@ class _CotizacionesPageState extends ConsumerState<CotizacionesPage> {
   String _appliedRouteQuery = '';
   _QuoteViewMode _viewMode = _QuoteViewMode.table;
   final Set<String> _updatingQuoteIds = <String>{};
+  final Set<String> _previewingQuoteIds = <String>{};
+  final Set<String> _downloadingQuoteIds = <String>{};
   final Set<String> _selectedQuoteIds = <String>{};
+
+  Set<String> get _busyQuoteIds => <String>{
+    ..._updatingQuoteIds,
+    ..._previewingQuoteIds,
+    ..._downloadingQuoteIds,
+  };
 
   @override
   void initState() {
     super.initState();
     _searchController = TextEditingController();
+    CotizacionPdfService.prewarmFonts();
+    unawaited(CotizacionPdfService.prewarmDefaultAssets());
   }
 
   @override
@@ -69,9 +82,9 @@ class _CotizacionesPageState extends ConsumerState<CotizacionesPage> {
       _handledCreateRoute = false;
     } else if (!_handledCreateRoute) {
       _handledCreateRoute = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (!mounted) return;
-        _openQuoteForm(context);
+        await _openQuoteForm(context);
         if (mounted) {
           context.go(RoutePaths.cotizaciones);
         }
@@ -125,6 +138,7 @@ class _CotizacionesPageState extends ConsumerState<CotizacionesPage> {
                   'Borrador',
                   'Enviada',
                   'Aprobada',
+                  'Pagada',
                   'Rechazada',
                 ],
               ),
@@ -158,14 +172,22 @@ class _CotizacionesPageState extends ConsumerState<CotizacionesPage> {
           ),
           data: (items) {
             if (items.isEmpty) {
-              return SectionCard(child: InlineEmptyMessage());
+              return EmptyStateWidget(
+                title: 'Todavía no hay cotizaciones',
+                subtitle: 'Registra tu primera cotización para comenzar.',
+                action: ElevatedButton.icon(
+                  onPressed: () => _openQuoteForm(context),
+                  icon: Icon(Icons.add),
+                  label: Text(trText('Nueva cotización')),
+                ),
+              );
             }
 
             if (_viewMode == _QuoteViewMode.kanban) {
               return _QuotesKanbanBoard(
                 items: items,
                 clientesById: clientesById,
-                updatingQuoteIds: _updatingQuoteIds,
+                busyQuoteIds: _busyQuoteIds,
                 onMoveQuote: (quote, status) =>
                     _updateQuoteStatus(context, ref, quote, status),
                 onOpenActions: (quote, action) =>
@@ -263,36 +285,66 @@ class _CotizacionesPageState extends ConsumerState<CotizacionesPage> {
                         DataCell(Text(formatMoney(quote.total))),
                         DataCell(StatusBadge(status: quote.estatus)),
                         DataCell(
-                          RowActionMenu(
-                            onSelected: (action) => _onRowAction(
-                              context,
-                              ref,
-                              quote: quote,
-                              action: action,
-                            ),
-                            actions: [
-                              PopupMenuItem(
-                                value: 'edit',
-                                child: Text(trText('Editar')),
-                              ),
-                              PopupMenuItem(
-                                value: 'preview',
-                                child: Text(trText('Previsualizar')),
-                              ),
-                              PopupMenuItem(
-                                value: 'pdf',
-                                child: Text(trText('Descargar PDF')),
-                              ),
-                              PopupMenuItem(
-                                value: 'approved',
-                                child: Text(trText('Marcar aprobada')),
-                              ),
-                              PopupMenuItem(
-                                value: 'delete',
-                                child: Text(trText('Eliminar')),
-                              ),
-                            ],
-                          ),
+                          _busyQuoteIds.contains(quote.id)
+                              ? SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.2,
+                                  ),
+                                )
+                              : RowActionMenu(
+                                  onSelected: (action) => _onRowAction(
+                                    context,
+                                    ref,
+                                    quote: quote,
+                                    action: action,
+                                  ),
+                                  actions: [
+                                    PopupMenuItem(
+                                      value: 'edit',
+                                      child: Text(trText('Editar')),
+                                    ),
+                                    PopupMenuItem(
+                                      value: 'preview',
+                                      child: Text(trText('Previsualizar')),
+                                    ),
+                                    PopupMenuItem(
+                                      value: 'pdf',
+                                      child: Text(trText('Descargar PDF')),
+                                    ),
+                                    if (!quote.isPaid)
+                                      PopupMenuItem(
+                                        value:
+                                            quote.estatus ==
+                                                QuoteStatus.aprobada
+                                            ? 'unapproved'
+                                            : 'approved',
+                                        child: Text(
+                                          trText(
+                                            quote.estatus ==
+                                                    QuoteStatus.aprobada
+                                                ? 'Desmarcar aprobada'
+                                                : 'Marcar aprobada',
+                                          ),
+                                        ),
+                                      ),
+                                    if (quote.isPaid)
+                                      PopupMenuItem(
+                                        value: 'unpaid',
+                                        child: Text(trText('Desmarcar pagada')),
+                                      )
+                                    else
+                                      PopupMenuItem(
+                                        value: 'paid',
+                                        child: Text(trText('Marcar pagada')),
+                                      ),
+                                    PopupMenuItem(
+                                      value: 'delete',
+                                      child: Text(trText('Eliminar')),
+                                    ),
+                                  ],
+                                ),
                         ),
                       ],
                     ),
@@ -305,7 +357,31 @@ class _CotizacionesPageState extends ConsumerState<CotizacionesPage> {
     );
   }
 
-  void _openQuoteForm(BuildContext context, [Cotizacion? quote]) {
+  Future<void> _openQuoteForm(BuildContext context, [Cotizacion? quote]) async {
+    if (quote == null) {
+      final planAccess = await ref.read(activePlanAccessProvider.future);
+      final cotizaciones =
+          ref.read(cotizacionesControllerProvider).valueOrNull ??
+          await ref.read(cotizacionesControllerProvider.future);
+      final monthlyUsed = monthlyQuoteUsage(
+        cotizaciones ?? const <Cotizacion>[],
+        planAccess.suscripcion.fechaInicio,
+      );
+      if (!mounted) return;
+      if (hasReachedPlanLimit(
+        limit: planAccess.plan.limiteCotizacionesMensuales,
+        used: monthlyUsed,
+      )) {
+        await showPlanUpgradeDialog(
+          context,
+          title: 'Límite mensual de cotizaciones',
+          message:
+              'Tu plan Starter incluye hasta 10 cotizaciones por mes y aplica marca de agua de Cotimax. Actualiza a Pro para crear cotizaciones ilimitadas.',
+        );
+        return;
+      }
+    }
+
     showDialog<void>(
       barrierDismissible: false,
       context: context,
@@ -342,16 +418,12 @@ class _CotizacionesPageState extends ConsumerState<CotizacionesPage> {
     }
 
     if (action == 'preview') {
-      await _openPdfPreview(context, quote);
+      await _previewQuote(context, quote);
       return;
     }
 
     if (action == 'pdf') {
-      final bytes = await CotizacionPdfService.generate(quote);
-      await Printing.sharePdf(bytes: bytes, filename: '${quote.folio}.pdf');
-      if (context.mounted) {
-        ToastHelper.show(context, 'PDF generado para ${quote.folio}.');
-      }
+      await _downloadQuotePdf(context, quote);
       return;
     }
 
@@ -360,14 +432,33 @@ class _CotizacionesPageState extends ConsumerState<CotizacionesPage> {
       return;
     }
 
+    if (action == 'unapproved') {
+      await _updateQuoteStatus(context, ref, quote, QuoteStatus.enviada);
+      return;
+    }
+
+    if (action == 'paid') {
+      await _markQuotePaid(context, ref, quote);
+      return;
+    }
+
+    if (action == 'unpaid') {
+      await _markQuoteUnpaid(context, ref, quote);
+      return;
+    }
+
     if (action == 'delete') {
       final confirmed = await showDeleteConfirmation(
         context,
         entityLabel: 'cotización',
+        dependencyEntityType: 'cotizacion',
+        dependencyIds: [quote.id],
         onConfirmAsync: () async {
           try {
             await ref.read(cotizacionesRepositoryProvider).delete(quote.id);
             ref.invalidate(cotizacionesControllerProvider);
+            ref.invalidate(ingresosControllerProvider);
+            ref.invalidate(recordatoriosControllerProvider);
             if (!context.mounted) return;
             ToastHelper.showSuccess(context, 'Cotización eliminada.');
           } catch (error) {
@@ -398,6 +489,8 @@ class _CotizacionesPageState extends ConsumerState<CotizacionesPage> {
       message: count == 1
           ? '¿Estás seguro que quieres eliminar esta cotización?'
           : '¿Estás seguro que quieres eliminar las $count cotizaciones seleccionadas?',
+      dependencyEntityType: 'cotizacion',
+      dependencyIds: _selectedQuoteIds.toList(),
       onConfirmAsync: () async {
         try {
           final ids = _selectedQuoteIds.toList();
@@ -405,6 +498,8 @@ class _CotizacionesPageState extends ConsumerState<CotizacionesPage> {
             await ref.read(cotizacionesRepositoryProvider).delete(id);
           }
           ref.invalidate(cotizacionesControllerProvider);
+          ref.invalidate(ingresosControllerProvider);
+          ref.invalidate(recordatoriosControllerProvider);
           if (!mounted) return;
           setState(() => _selectedQuoteIds.clear());
           ToastHelper.showSuccess(
@@ -442,13 +537,7 @@ class _CotizacionesPageState extends ConsumerState<CotizacionesPage> {
           .read(cotizacionesRepositoryProvider)
           .updateStatus(quote.id, status);
       ref.invalidate(cotizacionesControllerProvider);
-      if (status == QuoteStatus.aprobada) {
-        final ingreso = await _ensureIncomeForApprovedQuote(ref, quote);
-        ref.invalidate(ingresosControllerProvider);
-        if (context.mounted) {
-          await _promptLinkApprovedIncomeToExpense(context, ref, ingreso);
-        }
-      }
+      ref.invalidate(ingresosControllerProvider);
       if (context.mounted) {
         ToastHelper.show(
           context,
@@ -462,56 +551,122 @@ class _CotizacionesPageState extends ConsumerState<CotizacionesPage> {
     }
   }
 
-  Future<void> _openPdfPreview(BuildContext context, Cotizacion quote) async {
+  Future<void> _markQuotePaid(
+    BuildContext context,
+    WidgetRef ref,
+    Cotizacion quote,
+  ) async {
+    if (quote.isPaid || _updatingQuoteIds.contains(quote.id)) return;
+    setState(() => _updatingQuoteIds.add(quote.id));
+    try {
+      await ref.read(cotizacionesRepositoryProvider).markPaid(quote.id);
+      ref.invalidate(cotizacionesControllerProvider);
+      final paidQuote = quote.copyWith(
+        estatus: QuoteStatus.pagada,
+        pagadoTotal: quote.total,
+        saldoTotal: 0,
+      );
+      final ingreso = await _ensureIngresoForQuotePayment(ref, paidQuote);
+      ref.invalidate(ingresosControllerProvider);
+      if (!context.mounted) return;
+      await _promptLinkApprovedIncomeToExpense(context, ref, ingreso);
+      if (!context.mounted) return;
+      ToastHelper.showSuccess(context, 'Cotización marcada como pagada.');
+    } finally {
+      if (mounted) {
+        setState(() => _updatingQuoteIds.remove(quote.id));
+      }
+    }
+  }
+
+  Future<void> _markQuoteUnpaid(
+    BuildContext context,
+    WidgetRef ref,
+    Cotizacion quote,
+  ) async {
+    if (!quote.isPaid || _updatingQuoteIds.contains(quote.id)) return;
+    setState(() => _updatingQuoteIds.add(quote.id));
+    try {
+      await ref.read(cotizacionesRepositoryProvider).markUnpaid(quote.id);
+      ref.invalidate(cotizacionesControllerProvider);
+      ref.invalidate(ingresosControllerProvider);
+      if (!context.mounted) return;
+      ToastHelper.showSuccess(context, 'Cotización desmarcada como pagada.');
+    } catch (error) {
+      if (!context.mounted) return;
+      ToastHelper.showError(
+        context,
+        buildActionErrorMessage(
+          error,
+          'No se pudo desmarcar como pagada la cotización.',
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _updatingQuoteIds.remove(quote.id));
+      }
+    }
+  }
+
+  Future<void> _previewQuote(BuildContext context, Cotizacion quote) async {
+    if (_busyQuoteIds.contains(quote.id)) return;
+    setState(() => _previewingQuoteIds.add(quote.id));
+    try {
+      final previewFuture = CotizacionPdfService.prewarmPreview(quote);
+      unawaited(CotizacionPdfService.prewarmFull(quote));
+      await _openPdfPreview(context, quote, initialFuture: previewFuture);
+    } finally {
+      if (mounted) {
+        setState(() => _previewingQuoteIds.remove(quote.id));
+      }
+    }
+  }
+
+  Future<void> _downloadQuotePdf(BuildContext context, Cotizacion quote) async {
+    if (_busyQuoteIds.contains(quote.id)) return;
+    setState(() => _downloadingQuoteIds.add(quote.id));
+    try {
+      final bytes = await CotizacionPdfService.generate(quote);
+      await Printing.sharePdf(bytes: bytes, filename: '${quote.folio}.pdf');
+      if (!context.mounted) return;
+      ToastHelper.show(context, 'PDF generado para ${quote.folio}.');
+    } catch (error) {
+      if (!context.mounted) return;
+      ToastHelper.showError(
+        context,
+        buildActionErrorMessage(error, 'No se pudo generar el PDF.'),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _downloadingQuoteIds.remove(quote.id));
+      }
+    }
+  }
+
+  Future<void> _openPdfPreview(
+    BuildContext context,
+    Cotizacion quote, {
+    Future<Uint8List>? initialFuture,
+  }) async {
     await showDialog<void>(
       context: context,
       builder: (_) {
+        final media = MediaQuery.of(context).size;
+        final dialogWidth = (media.width - 32).clamp(320.0, 1100.0).toDouble();
+        final dialogHeight = (media.height - 32).clamp(420.0, 820.0).toDouble();
         return Dialog(
-          insetPadding: EdgeInsets.all(24),
+          insetPadding: EdgeInsets.all(media.width < 600 ? 12 : 24),
           child: SizedBox(
-            width: 1000,
-            height: 760,
-            child: _QuotePdfPreviewDialog(quote: quote),
+            width: dialogWidth,
+            height: dialogHeight,
+            child: _QuotePdfPreviewDialog(
+              quote: quote,
+              initialFuture: initialFuture,
+            ),
           ),
         );
       },
     );
-  }
-
-  Future<Ingreso> _ensureIncomeForApprovedQuote(
-    WidgetRef ref,
-    Cotizacion quote,
-  ) async {
-    final ingresos =
-        ref.read(ingresosControllerProvider).valueOrNull ?? const <Ingreso>[];
-    for (final ingreso in ingresos) {
-      if (ingreso.cotizacionId == quote.id) {
-        return ingreso;
-      }
-    }
-
-    final now = DateTime.now();
-    final autoIngreso = Ingreso(
-      id: 'ing-auto-${now.microsecondsSinceEpoch}',
-      ingresoCategoriaId: '',
-      clienteId: quote.clienteId,
-      cotizacionId: quote.id,
-      monto: quote.total,
-      metodoPago: PaymentMethod.transferencia,
-      fecha: now,
-      referencia: quote.folio,
-      notas:
-          'Generado automáticamente al aprobar la cotización ${quote.folio}.',
-      recurrente: false,
-      recurrencia: RecurrenceFrequency.ninguna,
-      diasSemana: const <int>[],
-      fechaInicioRecurrencia: null,
-      iconKey: 'wallet',
-      createdAt: now,
-      updatedAt: now,
-    );
-    await ref.read(ingresosRepositoryProvider).upsert(autoIngreso);
-    return autoIngreso;
   }
 
   Future<void> _promptLinkApprovedIncomeToExpense(
@@ -522,6 +677,13 @@ class _CotizacionesPageState extends ConsumerState<CotizacionesPage> {
     final gastos =
         ref.read(gastosControllerProvider).valueOrNull ?? const <Gasto>[];
     if (gastos.isEmpty) return;
+
+    final categoriasCatalogo =
+        ref.read(gastoCategoriasControllerProvider).valueOrNull ??
+        const <GastoCategoria>[];
+    final categoriasById = {
+      for (final categoria in categoriasCatalogo) categoria.id: categoria,
+    };
 
     String selectedGastoId = ingreso.gastoFuenteId.trim();
     final result = await showDialog<bool>(
@@ -573,7 +735,13 @@ class _CotizacionesPageState extends ConsumerState<CotizacionesPage> {
                         ...gastos.map(
                           (item) => DropdownMenuItem<String>(
                             value: item.id,
-                            child: Text(_expenseSourceLabel(item)),
+                            child: Text(
+                              _expenseLinkLabel(
+                                item,
+                                categoriasById: categoriasById,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         ),
                       ],
@@ -610,8 +778,12 @@ class _CotizacionesPageState extends ConsumerState<CotizacionesPage> {
         break;
       }
     }
+    final gastoLabel = gasto == null
+        ? ''
+        : _expenseLinkLabel(gasto, categoriasById: categoriasById);
     final actualizado = Ingreso(
       id: ingreso.id,
+      titulo: ingreso.titulo,
       ingresoCategoriaId: ingreso.ingresoCategoriaId,
       clienteId: ingreso.clienteId,
       cotizacionId: ingreso.cotizacionId,
@@ -628,7 +800,7 @@ class _CotizacionesPageState extends ConsumerState<CotizacionesPage> {
       gastoFuenteId: selectedGastoId,
       gastoFuenteNombre: selectedGastoId.isEmpty
           ? ''
-          : _expenseSourceLabel(gasto),
+          : gastoLabel,
       createdAt: ingreso.createdAt,
       updatedAt: DateTime.now(),
     );
@@ -637,32 +809,79 @@ class _CotizacionesPageState extends ConsumerState<CotizacionesPage> {
   }
 }
 
-String _expenseSourceLabel(Gasto? gasto) {
-  if (gasto == null) return '';
+bool _looksLikeUuid(String value) {
+  return RegExp(
+    r'^[0-9a-fA-F]{8}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{12}$',
+  ).hasMatch(value.trim());
+}
+
+String _expenseLinkLabel(
+  Gasto gasto, {
+  required Map<String, GastoCategoria> categoriasById,
+}) {
+  final titulo = gasto.titulo.trim();
   final desc = gasto.descripcion.trim();
   final provider = gasto.proveedor.trim();
-  final focus = desc.isNotEmpty
-      ? desc
-      : (provider.isNotEmpty ? provider : trText('Gasto'));
+  final focus = titulo.isNotEmpty
+      ? titulo
+      : (desc.isNotEmpty
+            ? desc
+            : (provider.isNotEmpty ? provider : trText('Gasto')));
+  final rawCategoria = gasto.gastoCategoriaId.trim();
+  final resolvedCategoria = categoriasById[rawCategoria]?.nombre ??
+      (rawCategoria.isNotEmpty && !_looksLikeUuid(rawCategoria)
+          ? rawCategoria
+          : '');
+  final amount = formatMxn(gasto.monto);
+  if (resolvedCategoria.isEmpty) return '$focus · $amount';
+  return '$focus · $amount · $resolvedCategoria';
+}
+
+String _expenseSourceLabel(Gasto? gasto) {
+  if (gasto == null) return '';
+  final titulo = gasto.titulo.trim();
+  final desc = gasto.descripcion.trim();
+  final provider = gasto.proveedor.trim();
+  final focus = titulo.isNotEmpty
+      ? titulo
+      : (desc.isNotEmpty
+            ? desc
+            : (provider.isNotEmpty ? provider : trText('Gasto')));
   return '$focus · ${formatMxn(gasto.monto)}';
 }
 
 enum _QuoteViewMode { table, kanban }
 
 class _QuotePdfPreviewDialog extends StatefulWidget {
-  _QuotePdfPreviewDialog({required this.quote});
+  _QuotePdfPreviewDialog({
+    required this.quote,
+    this.initialFuture,
+    this.clienteOverride,
+    this.detallesOverride,
+  });
 
   final Cotizacion quote;
+  final Future<Uint8List>? initialFuture;
+  final Cliente? clienteOverride;
+  final List<DetalleCotizacion>? detallesOverride;
 
   @override
   State<_QuotePdfPreviewDialog> createState() => _QuotePdfPreviewDialogState();
 }
 
 class _QuotePdfPreviewDialogState extends State<_QuotePdfPreviewDialog> {
-  late Future<Uint8List> _pdfFuture;
+  Future<Uint8List>? _pdfFuture;
+  Uint8List? _lastPdfBytes;
+  String? _actionKey;
+
+  bool get _isProcessingAction => _actionKey != null;
 
   Future<Uint8List> _buildPdfFuture() {
-    return CotizacionPdfService.generate(widget.quote, useCache: true).timeout(
+    return CotizacionPdfService.prewarmPreview(
+      widget.quote,
+      clienteOverride: widget.clienteOverride,
+      detallesOverride: widget.detallesOverride,
+    ).timeout(
       const Duration(seconds: 25),
       onTimeout: () => throw TimeoutException(
         'La generación del PDF tardó demasiado. Intenta nuevamente.',
@@ -670,50 +889,335 @@ class _QuotePdfPreviewDialogState extends State<_QuotePdfPreviewDialog> {
     );
   }
 
+  Future<Uint8List> _buildPreviewRegeneration() {
+    return CotizacionPdfService.generate(
+      widget.quote,
+      useCache: false,
+      fastPreview: true,
+      clienteOverride: widget.clienteOverride,
+      detallesOverride: widget.detallesOverride,
+    ).timeout(
+      const Duration(seconds: 25),
+      onTimeout: () => throw TimeoutException(
+        'La generación del PDF tardó demasiado. Intenta nuevamente.',
+      ),
+    );
+  }
+
+  Future<Uint8List> _buildFullPdf() {
+    return CotizacionPdfService.prewarmFull(
+      widget.quote,
+      clienteOverride: widget.clienteOverride,
+      detallesOverride: widget.detallesOverride,
+    ).timeout(
+      const Duration(seconds: 25),
+      onTimeout: () => throw TimeoutException(
+        'La generación del PDF tardó demasiado. Intenta nuevamente.',
+      ),
+    );
+  }
+
+  void _warmFullPdf() {
+    unawaited(
+      CotizacionPdfService.prewarmFull(
+        widget.quote,
+        clienteOverride: widget.clienteOverride,
+        detallesOverride: widget.detallesOverride,
+      ),
+    );
+  }
+
+  Future<void> _runAction(String key, Future<void> Function() action) async {
+    if (_actionKey != null) return;
+    setState(() => _actionKey = key);
+    try {
+      await action();
+    } finally {
+      if (mounted) {
+        setState(() => _actionKey = null);
+      }
+    }
+  }
+
+  Widget _headerActionIcon(String key, IconData icon) {
+    if (_actionKey != key) return Icon(icon, size: 16);
+    return SizedBox(
+      width: 16,
+      height: 16,
+      child: CircularProgressIndicator(strokeWidth: 2),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
-    _pdfFuture = _buildPdfFuture();
+    _pdfFuture = widget.initialFuture ?? _buildPdfFuture();
+    _warmFullPdf();
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<Uint8List>(
-      future: _pdfFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return Center(
-            child: SizedBox(
-              width: 36,
-              height: 36,
-              child: CircularProgressIndicator(strokeWidth: 3),
+    final future = _pdfFuture;
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        children: [
+          Padding(
+            padding: EdgeInsets.fromLTRB(16, 14, 16, 10),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        trText('Vista previa de cotización'),
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        widget.quote.folio,
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        trText('Vista rápida · página 1'),
+                        style: TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: _isProcessingAction
+                          ? null
+                          : () => _runAction('print', () async {
+                              try {
+                                final bytes = await _buildFullPdf();
+                                await Printing.layoutPdf(
+                                  onLayout: (_) async => bytes,
+                                  name: '${widget.quote.folio}.pdf',
+                                );
+                              } catch (error) {
+                                if (!mounted) return;
+                                ToastHelper.showError(
+                                  context,
+                                  buildActionErrorMessage(
+                                    error,
+                                    'No se pudo imprimir el PDF.',
+                                  ),
+                                );
+                              }
+                            }),
+                      icon: _headerActionIcon('print', Icons.print_rounded),
+                      label: Text(trText('Imprimir')),
+                    ),
+                    FilledButton.icon(
+                      onPressed: _isProcessingAction
+                          ? null
+                          : () => _runAction('download', () async {
+                              try {
+                                final bytes = await _buildFullPdf();
+                                await Printing.sharePdf(
+                                  bytes: bytes,
+                                  filename: '${widget.quote.folio}.pdf',
+                                );
+                              } catch (error) {
+                                if (!mounted) return;
+                                ToastHelper.showError(
+                                  context,
+                                  buildActionErrorMessage(
+                                    error,
+                                    'No se pudo compartir el PDF.',
+                                  ),
+                                );
+                              }
+                            }),
+                      icon: _headerActionIcon(
+                        'download',
+                        Icons.download_rounded,
+                      ),
+                      label: Text(trText('Descargar PDF')),
+                    ),
+                    IconButton(
+                      tooltip: trText('Actualizar'),
+                      onPressed: _isProcessingAction
+                          ? null
+                          : () {
+                              setState(() {
+                                _pdfFuture = _buildPreviewRegeneration();
+                              });
+                            },
+                      icon: Icon(Icons.refresh_rounded),
+                    ),
+                    IconButton(
+                      tooltip: trText('Cerrar'),
+                      onPressed: _isProcessingAction
+                          ? null
+                          : () => Navigator.of(context).pop(),
+                      icon: Icon(Icons.close_rounded),
+                    ),
+                  ],
+                ),
+              ],
             ),
-          );
-        }
-        if (snapshot.hasError || !snapshot.hasData) {
-          return ErrorStateWidget(
-            message: buildActionErrorMessage(
-              snapshot.error ?? 'No se pudo generar el PDF.',
-              'No se pudo generar la vista previa.',
-            ),
-            onRetry: () {
-              setState(() {
-                _pdfFuture = _buildPdfFuture();
-              });
-            },
-          );
-        }
-        final pdfBytes = snapshot.data!;
-        return PdfPreview(
-          build: (_) async => pdfBytes,
-          canChangePageFormat: false,
-          canChangeOrientation: false,
-          allowSharing: true,
-          allowPrinting: true,
-          maxPageWidth: 420,
-          pdfFileName: '${widget.quote.folio}.pdf',
-        );
-      },
+          ),
+          Container(height: 1, color: AppColors.border),
+          Expanded(
+            child: future == null
+                ? Center(
+                    child: SizedBox(
+                      width: 36,
+                      height: 36,
+                      child: CircularProgressIndicator(strokeWidth: 3),
+                    ),
+                  )
+                : FutureBuilder<Uint8List>(
+                    future: future,
+                    builder: (context, snapshot) {
+                      final hasFreshData = snapshot.hasData;
+                      if (hasFreshData) {
+                        _lastPdfBytes = snapshot.data!;
+                      }
+                      final previewBytes = hasFreshData
+                          ? snapshot.data!
+                          : _lastPdfBytes;
+                      final isLoading =
+                          snapshot.connectionState != ConnectionState.done;
+
+                      if (snapshot.hasError && previewBytes == null) {
+                        return ErrorStateWidget(
+                          message: buildActionErrorMessage(
+                            snapshot.error ?? 'No se pudo generar el PDF.',
+                            'No se pudo generar la vista previa.',
+                          ),
+                          onRetry: () {
+                            setState(() {
+                              _pdfFuture = _buildPreviewRegeneration();
+                            });
+                          },
+                        );
+                      }
+                      if (previewBytes == null) {
+                        return Center(
+                          child: SizedBox(
+                            width: 36,
+                            height: 36,
+                            child: CircularProgressIndicator(strokeWidth: 3),
+                          ),
+                        );
+                      }
+                      final previewDpi =
+                          MediaQuery.of(context).devicePixelRatio >= 2
+                          ? 112.0
+                          : 96.0;
+                      return Stack(
+                        children: [
+                          PdfPreview.builder(
+                            build: (_) async => previewBytes,
+                            pages: const [0],
+                            dpi: previewDpi,
+                            pagesBuilder: (context, pages) {
+                              return ListView(
+                                padding: EdgeInsets.fromLTRB(10, 8, 10, 14),
+                                children: [
+                                  for (final page in pages)
+                                    Center(
+                                      child: ConstrainedBox(
+                                        constraints: BoxConstraints(
+                                          maxWidth: 880,
+                                        ),
+                                        child: Container(
+                                          margin: EdgeInsets.only(bottom: 12),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.white,
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                            border: Border.all(
+                                              color: AppColors.border,
+                                            ),
+                                            boxShadow: const [
+                                              BoxShadow(
+                                                color: Color(0x22000000),
+                                                blurRadius: 8,
+                                                offset: Offset(0, 2),
+                                              ),
+                                            ],
+                                          ),
+                                          child: AspectRatio(
+                                            aspectRatio: page.aspectRatio,
+                                            child: Image(
+                                              image: page.image,
+                                              fit: BoxFit.contain,
+                                              filterQuality:
+                                                  FilterQuality.medium,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              );
+                            },
+                            canChangePageFormat: false,
+                            canChangeOrientation: false,
+                            allowSharing: false,
+                            allowPrinting: false,
+                            useActions: false,
+                            maxPageWidth: 900,
+                            padding: EdgeInsets.zero,
+                            pdfFileName: '${widget.quote.folio}.pdf',
+                          ),
+                          if (isLoading)
+                            Positioned(
+                              top: 12,
+                              right: 12,
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  color: AppColors.white.withValues(
+                                    alpha: 0.92,
+                                  ),
+                                  borderRadius: BorderRadius.circular(999),
+                                  border: Border.all(color: AppColors.border),
+                                ),
+                                child: Padding(
+                                  padding: EdgeInsets.all(10),
+                                  child: SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2.4,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -791,14 +1295,14 @@ class _QuotesKanbanBoard extends StatelessWidget {
   _QuotesKanbanBoard({
     required this.items,
     required this.clientesById,
-    required this.updatingQuoteIds,
+    required this.busyQuoteIds,
     required this.onMoveQuote,
     required this.onOpenActions,
   });
 
   final List<Cotizacion> items;
   final Map<String, String> clientesById;
-  final Set<String> updatingQuoteIds;
+  final Set<String> busyQuoteIds;
   final Future<void> Function(Cotizacion quote, QuoteStatus status) onMoveQuote;
   final Future<void> Function(Cotizacion quote, String action) onOpenActions;
 
@@ -810,7 +1314,7 @@ class _QuotesKanbanBoard extends StatelessWidget {
             status: status,
             items: items.where((item) => item.estatus == status).toList(),
             clientesById: clientesById,
-            updatingQuoteIds: updatingQuoteIds,
+            busyQuoteIds: busyQuoteIds,
             onAcceptQuote: (quote) => onMoveQuote(quote, status),
             onOpenActions: onOpenActions,
           ),
@@ -840,7 +1344,7 @@ class _QuoteKanbanColumn extends StatelessWidget {
     required this.status,
     required this.items,
     required this.clientesById,
-    required this.updatingQuoteIds,
+    required this.busyQuoteIds,
     required this.onAcceptQuote,
     required this.onOpenActions,
   });
@@ -848,7 +1352,7 @@ class _QuoteKanbanColumn extends StatelessWidget {
   final QuoteStatus status;
   final List<Cotizacion> items;
   final Map<String, String> clientesById;
-  final Set<String> updatingQuoteIds;
+  final Set<String> busyQuoteIds;
   final ValueChanged<Cotizacion> onAcceptQuote;
   final Future<void> Function(Cotizacion quote, String action) onOpenActions;
 
@@ -946,7 +1450,7 @@ class _QuoteKanbanColumn extends StatelessWidget {
                           return _QuoteKanbanCard(
                             quote: quote,
                             clientLabel: _quoteClientLabel(quote, clientesById),
-                            isUpdating: updatingQuoteIds.contains(quote.id),
+                            isUpdating: busyQuoteIds.contains(quote.id),
                             onOpenActions: (action) =>
                                 onOpenActions(quote, action),
                           );
@@ -1023,28 +1527,57 @@ class _QuoteKanbanCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                RowActionMenu(
-                  onSelected: onOpenActions,
-                  actions: [
-                    PopupMenuItem(value: 'edit', child: Text(trText('Editar'))),
-                    PopupMenuItem(
-                      value: 'preview',
-                      child: Text(trText('Previsualizar')),
-                    ),
-                    PopupMenuItem(
-                      value: 'pdf',
-                      child: Text(trText('Descargar PDF')),
-                    ),
-                    PopupMenuItem(
-                      value: 'approved',
-                      child: Text(trText('Marcar aprobada')),
-                    ),
-                    PopupMenuItem(
-                      value: 'delete',
-                      child: Text(trText('Eliminar')),
-                    ),
-                  ],
-                ),
+                if (isUpdating)
+                  SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2.2),
+                  )
+                else
+                  RowActionMenu(
+                    onSelected: onOpenActions,
+                    actions: [
+                      PopupMenuItem(
+                        value: 'edit',
+                        child: Text(trText('Editar')),
+                      ),
+                      PopupMenuItem(
+                        value: 'preview',
+                        child: Text(trText('Previsualizar')),
+                      ),
+                      PopupMenuItem(
+                        value: 'pdf',
+                        child: Text(trText('Descargar PDF')),
+                      ),
+                      if (!quote.isPaid)
+                        PopupMenuItem(
+                          value: quote.estatus == QuoteStatus.aprobada
+                              ? 'unapproved'
+                              : 'approved',
+                          child: Text(
+                            trText(
+                              quote.estatus == QuoteStatus.aprobada
+                                  ? 'Desmarcar aprobada'
+                                  : 'Marcar aprobada',
+                            ),
+                          ),
+                        ),
+                      if (quote.isPaid)
+                        PopupMenuItem(
+                          value: 'unpaid',
+                          child: Text(trText('Desmarcar pagada')),
+                        )
+                      else
+                        PopupMenuItem(
+                          value: 'paid',
+                          child: Text(trText('Marcar pagada')),
+                        ),
+                      PopupMenuItem(
+                        value: 'delete',
+                        child: Text(trText('Eliminar')),
+                      ),
+                    ],
+                  ),
               ],
             ),
             SizedBox(height: 12),
@@ -1126,6 +1659,7 @@ const quoteKanbanStatuses = <QuoteStatus>[
   QuoteStatus.borrador,
   QuoteStatus.enviada,
   QuoteStatus.aprobada,
+  QuoteStatus.pagada,
   QuoteStatus.rechazada,
 ];
 
@@ -1137,6 +1671,8 @@ String _quoteStatusLabel(QuoteStatus status) {
       return 'Enviada';
     case QuoteStatus.aprobada:
       return 'Aprobada';
+    case QuoteStatus.pagada:
+      return 'Pagada';
     case QuoteStatus.rechazada:
       return 'Rechazada';
   }
@@ -1150,6 +1686,8 @@ Color _quoteStatusColor(QuoteStatus status) {
       return AppColors.primary;
     case QuoteStatus.aprobada:
       return AppColors.success;
+    case QuoteStatus.pagada:
+      return AppColors.error;
     case QuoteStatus.rechazada:
       return AppColors.error;
   }
@@ -1165,6 +1703,44 @@ String _clientDisplayName(Cliente cliente) {
 
 String _quoteClientLabel(Cotizacion quote, Map<String, String> clientesById) {
   return clientesById[quote.clienteId] ?? quote.clienteId;
+}
+
+Future<Ingreso> _ensureIngresoForQuotePayment(
+  WidgetRef ref,
+  Cotizacion quote,
+) async {
+  final ingresos =
+      ref.read(ingresosControllerProvider).valueOrNull ?? const <Ingreso>[];
+  for (final ingreso in ingresos) {
+    if (ingreso.cotizacionId == quote.id) {
+      return ingreso;
+    }
+  }
+
+  final now = DateTime.now();
+  final autoIngreso = Ingreso(
+    id: 'ing-auto-${now.microsecondsSinceEpoch}',
+    titulo: quote.folio.trim().isEmpty
+        ? tr('Pago de cotización', 'Quote payment')
+        : tr('Pago ${quote.folio}', 'Payment ${quote.folio}'),
+    ingresoCategoriaId: '',
+    clienteId: quote.clienteId,
+    cotizacionId: quote.id,
+    monto: quote.total,
+    metodoPago: PaymentMethod.transferencia,
+    fecha: now,
+    referencia: quote.folio,
+    notas: 'Generado automáticamente al pagar la cotización ${quote.folio}.',
+    recurrente: false,
+    recurrencia: RecurrenceFrequency.ninguna,
+    diasSemana: const <int>[],
+    fechaInicioRecurrencia: null,
+    iconKey: 'wallet',
+    createdAt: now,
+    updatedAt: now,
+  );
+  await ref.read(ingresosRepositoryProvider).upsert(autoIngreso);
+  return autoIngreso;
 }
 
 const List<String> _quoteDiscountTypeOptions = ['Cantidad', 'Porcentaje'];
@@ -1228,6 +1804,18 @@ class _QuoteProductOption {
   final String unidad;
 }
 
+class _QuotePreviewPayload {
+  _QuotePreviewPayload({
+    required this.quote,
+    this.cliente,
+    required this.detalles,
+  });
+
+  final Cotizacion quote;
+  final Cliente? cliente;
+  final List<DetalleCotizacion> detalles;
+}
+
 class _QuoteForm extends ConsumerStatefulWidget {
   _QuoteForm({this.quote});
 
@@ -1258,11 +1846,24 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
   String? _productCatalogError;
   List<_QuoteProductOption> _productOptions = const [];
   String? _selectedTaxRateId;
+  double _loadedSubtotalTaxPercent = 0;
   String _currentSuggestedFolio = 'COT-0001';
   String _lastAutoGeneratedFolio = '';
   bool _prefilledCompanyDefaults = false;
   QuoteStatus? _savingStatus;
-  bool _processingDialogAction = false;
+  String? _processingDialogActionKey;
+
+  bool get _processingDialogAction => _processingDialogActionKey != null;
+
+  String? _activeEmpresaId() {
+    final quoteEmpresaId = widget.quote?.empresaId.trim();
+    if (quoteEmpresaId != null && quoteEmpresaId.isNotEmpty) {
+      return quoteEmpresaId;
+    }
+    final status = ref.read(workspaceStatusProvider).valueOrNull;
+    final fromWorkspace = status?.empresaId?.trim() ?? '';
+    return fromWorkspace.isEmpty ? null : fromWorkspace;
+  }
 
   @override
   void initState() {
@@ -1412,12 +2013,17 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
     try {
       final products = await ref.read(productosRepositoryProvider).getAll();
       final client = ref.read(supabaseClientProvider);
-      final rows = await client
+      final empresaId = _activeEmpresaId();
+      dynamic query = client
           .from('productos_servicios')
           .select(
             'id,cantidad_predeterminada,tasa_impuesto_nombre,unidad_medida',
           )
           .eq('activo', true);
+      if (empresaId != null) {
+        query = query.eq('empresa_id', empresaId);
+      }
+      final rows = await query;
       final rowsById = {
         for (final row in (rows as List).cast<Map<String, dynamic>>())
           row['id'].toString(): row,
@@ -1461,15 +2067,19 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
     setState(() => _loadingExistingQuote = true);
     try {
       final client = ref.read(supabaseClientProvider);
-      final quoteRow = await client
+      final empresaId = _activeEmpresaId();
+      dynamic quoteQuery = client
           .from('cotizaciones')
           .select(
             'cliente_id,fecha_emision,fecha_vencimiento,deposito_parcial,'
             'folio,orden_numero,descuento_tipo,descuento_valor,subtotal,'
-            'ret_isr,notas,notas_privadas,terminos,pie_pagina',
+            'impuesto_porcentaje,ret_isr,notas,notas_privadas,terminos,pie_pagina',
           )
-          .eq('id', quoteId)
-          .maybeSingle();
+          .eq('id', quoteId);
+      if (empresaId != null) {
+        quoteQuery = quoteQuery.eq('empresa_id', empresaId);
+      }
+      final quoteRow = await quoteQuery.maybeSingle();
       final detalles = await ref
           .read(cotizacionesRepositoryProvider)
           .getDetalles(cotizacionId: quoteId);
@@ -1545,6 +2155,16 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
           shownDiscount > 0 ? _formatEditableNumber(shownDiscount) : '',
         );
         _retIsr = quoteRow['ret_isr'] == true;
+        _loadedSubtotalTaxPercent = _doubleFromValue(
+          quoteRow['impuesto_porcentaje'],
+        ).clamp(0, double.infinity).toDouble();
+        if (_loadedSubtotalTaxPercent <= 0) {
+          _selectedTaxRateId = null;
+        } else {
+          _selectedTaxRateId = _resolveNearestTaxRateIdForPercent(
+            _loadedSubtotalTaxPercent,
+          );
+        }
         replaceRichTextControllerContent(
           _notasController,
           (quoteRow['notas'] ?? '') as String,
@@ -1613,6 +2233,9 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
     ];
     final subtotal = _subtotalAmount;
     final discount = _discountAmount(subtotal);
+    final lineTaxes = _lineTaxTotalAmount;
+    final subtotalTaxPercent = _selectedSubtotalTaxPercent;
+    final subtotalTax = _subtotalTaxAmount;
     final taxes = _taxTotalAmount;
     final retIsrAmount = _retIsrAmount;
     final total = _totalAmount;
@@ -1634,9 +2257,12 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
         break;
       }
     }
-    final taxRateOptions = availableTaxRates
-        .map((rate) => (value: rate.id, label: rate.displayLabel))
-        .toList(growable: false);
+    final taxRateOptions = [
+      (value: '', label: 'Sin impuesto sobre subtotal'),
+      ...availableTaxRates.map(
+        (rate) => (value: rate.id, label: rate.displayLabel),
+      ),
+    ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1730,6 +2356,7 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
                                           NumericTextInputFormatter(
                                             useGrouping: true,
                                             maxDecimalDigits: 2,
+                                            moneyInputBehavior: true,
                                           ),
                                         ],
                                       ),
@@ -1790,9 +2417,15 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
                                                   NumericTextInputFormatter(
                                                     useGrouping: true,
                                                     maxDecimalDigits: 2,
+                                                    moneyInputBehavior: true,
                                                   ),
                                                 ],
                                                 decoration: InputDecoration(
+                                                  hintText:
+                                                      _discountType ==
+                                                          'Porcentaje'
+                                                      ? null
+                                                      : '0.00',
                                                   suffixText:
                                                       _discountType ==
                                                           'Porcentaje'
@@ -1897,9 +2530,18 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
                                       value: formatMoney(discount),
                                     ),
                                     _QuoteSummaryRow(
-                                      label: selectedTaxRate == null
-                                          ? 'Impuesto'
-                                          : 'Impuesto (${selectedTaxRate.nombre})',
+                                      label: 'Impuestos por producto',
+                                      value: formatMoney(lineTaxes),
+                                    ),
+                                    if (subtotalTaxPercent > 0)
+                                      _QuoteSummaryRow(
+                                        label: selectedTaxRate == null
+                                            ? 'Impuesto sobre subtotal (${_formatEditableNumber(subtotalTaxPercent)}%)'
+                                            : 'Impuesto sobre subtotal (${selectedTaxRate.nombre})',
+                                        value: formatMoney(subtotalTax),
+                                      ),
+                                    _QuoteSummaryRow(
+                                      label: 'Impuesto total',
                                       value: formatMoney(taxes),
                                     ),
                                     if (_retIsr)
@@ -1930,11 +2572,19 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
                                       Padding(
                                         padding: EdgeInsets.only(top: 10),
                                         child: _QuoteDropdownFieldRow(
-                                          label: 'Impuesto aplicado',
-                                          value: _selectedTaxRateId,
+                                          label: 'Impuesto sobre subtotal',
+                                          value: _selectedTaxRateId ?? '',
                                           options: taxRateOptions,
                                           onChanged: (value) {
-                                            if (value == null) return;
+                                            if (value == null ||
+                                                value.isEmpty) {
+                                              if (!mounted) return;
+                                              setState(() {
+                                                _selectedTaxRateId = null;
+                                                _loadedSubtotalTaxPercent = 0;
+                                              });
+                                              return;
+                                            }
                                             final selected = availableTaxRates
                                                 .where(
                                                   (rate) => rate.id == value,
@@ -2009,7 +2659,10 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
                   onPressed: _processingDialogAction || _savingStatus != null
                       ? null
                       : _previewFromDialog,
-                  icon: Icon(Icons.visibility_outlined),
+                  icon: _dialogActionIndicator(
+                    actionKey: 'preview',
+                    icon: Icons.visibility_outlined,
+                  ),
                   label: Text(trText('Previsualizar')),
                 ),
               if (widget.quote != null)
@@ -2017,23 +2670,66 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
                   onPressed: _processingDialogAction || _savingStatus != null
                       ? null
                       : _downloadPdfFromDialog,
-                  icon: Icon(Icons.download_rounded),
+                  icon: _dialogActionIndicator(
+                    actionKey: 'pdf',
+                    icon: Icons.download_rounded,
+                  ),
                   label: Text(trText('Descargar PDF')),
                 ),
-              if (widget.quote != null)
+              if (widget.quote != null && !widget.quote!.isPaid)
                 OutlinedButton.icon(
                   onPressed: _processingDialogAction || _savingStatus != null
                       ? null
+                      : widget.quote!.estatus == QuoteStatus.aprobada
+                      ? _unmarkApprovedFromDialog
                       : _markApprovedFromDialog,
-                  icon: Icon(Icons.verified_rounded),
-                  label: Text(trText('Marcar aprobada')),
+                  icon: _dialogActionIndicator(
+                    actionKey: widget.quote!.estatus == QuoteStatus.aprobada
+                        ? 'unapproved'
+                        : 'approved',
+                    icon: widget.quote!.estatus == QuoteStatus.aprobada
+                        ? Icons.undo_rounded
+                        : Icons.verified_rounded,
+                  ),
+                  label: Text(
+                    trText(
+                      widget.quote!.estatus == QuoteStatus.aprobada
+                          ? 'Desmarcar aprobada'
+                          : 'Marcar aprobada',
+                    ),
+                  ),
+                ),
+              if (widget.quote != null && !widget.quote!.isPaid)
+                OutlinedButton.icon(
+                  onPressed: _processingDialogAction || _savingStatus != null
+                      ? null
+                      : _markPaidFromDialog,
+                  icon: _dialogActionIndicator(
+                    actionKey: 'paid',
+                    icon: Icons.paid_rounded,
+                  ),
+                  label: Text(trText('Marcar pagada')),
+                ),
+              if (widget.quote != null && widget.quote!.isPaid)
+                OutlinedButton.icon(
+                  onPressed: _processingDialogAction || _savingStatus != null
+                      ? null
+                      : _markUnpaidFromDialog,
+                  icon: _dialogActionIndicator(
+                    actionKey: 'unpaid',
+                    icon: Icons.money_off_rounded,
+                  ),
+                  label: Text(trText('Desmarcar pagada')),
                 ),
               if (widget.quote != null)
                 OutlinedButton.icon(
                   onPressed: _processingDialogAction || _savingStatus != null
                       ? null
                       : _deleteFromDialog,
-                  icon: Icon(Icons.delete_outline_rounded),
+                  icon: _dialogActionIndicator(
+                    actionKey: 'delete',
+                    icon: Icons.delete_outline_rounded,
+                  ),
                   label: Text(trText('Eliminar')),
                 ),
               OutlinedButton(
@@ -2116,6 +2812,9 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
       _selectedTaxRateId = null;
       return;
     }
+    if (_selectedTaxRateId == null || _selectedTaxRateId!.trim().isEmpty) {
+      return;
+    }
     final stillExists = rates.any((rate) => rate.id == _selectedTaxRateId);
     if (stillExists) return;
 
@@ -2142,19 +2841,25 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
   }
 
   void _applySelectedTaxRate(EmpresaTasaImpuesto rate) {
-    for (final draft in _lineas) {
-      draft.syncing = true;
-      assignControllerText(
-        draft.impuestoController,
-        _formatEditableNumber(rate.porcentaje),
-      );
-      draft.syncing = false;
-      _recalculateLine(draft, notify: false);
-    }
     if (!mounted) return;
     setState(() {
       _selectedTaxRateId = rate.id;
+      _loadedSubtotalTaxPercent = rate.porcentaje;
     });
+  }
+
+  Widget _dialogActionIndicator({
+    required String actionKey,
+    required IconData icon,
+  }) {
+    if (_processingDialogActionKey != actionKey) {
+      return Icon(icon);
+    }
+    return SizedBox(
+      width: 16,
+      height: 16,
+      child: CircularProgressIndicator(strokeWidth: 2),
+    );
   }
 
   Widget _buildProductsSection() {
@@ -2292,14 +2997,18 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
     var product = _findProductById(productId);
     try {
       final client = ref.read(supabaseClientProvider);
-      final productRow = await client
+      final empresaId = _activeEmpresaId();
+      dynamic productQuery = client
           .from('productos_servicios')
           .select(
             'id,nombre,descripcion,precio_base,cantidad_predeterminada,'
             'tasa_impuesto_nombre,unidad_medida',
           )
-          .eq('id', productId)
-          .maybeSingle();
+          .eq('id', productId);
+      if (empresaId != null) {
+        productQuery = productQuery.eq('empresa_id', empresaId);
+      }
+      final productRow = await productQuery.maybeSingle();
       if (productRow != null) {
         final unidad = (productRow['unidad_medida']?.toString() ?? '').trim();
         product = _QuoteProductOption(
@@ -2389,6 +3098,29 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
     bool allowEmptyLineItems = false,
   }) async {
     if (_savingStatus != null) return;
+    if (widget.quote == null) {
+      final planAccess = await ref.read(activePlanAccessProvider.future);
+      final cotizaciones =
+          ref.read(cotizacionesControllerProvider).valueOrNull ??
+          const <Cotizacion>[];
+      final monthlyUsed = monthlyQuoteUsage(
+        cotizaciones,
+        planAccess.suscripcion.fechaInicio,
+      );
+      if (hasReachedPlanLimit(
+        limit: planAccess.plan.limiteCotizacionesMensuales,
+        used: monthlyUsed,
+      )) {
+        if (!mounted) return;
+        await showPlanUpgradeDialog(
+          context,
+          title: 'Límite mensual de cotizaciones',
+          message:
+              'Tu plan Starter incluye hasta 10 cotizaciones por mes y aplica marca de agua de Cotimax. Actualiza a Pro para crear cotizaciones ilimitadas.',
+        );
+        return;
+      }
+    }
     final meaningfulLines = _lineas.where(_hasMeaningfulLineData).toList();
     final subtotal = _subtotalAmount;
     final discount = _discountAmount(subtotal);
@@ -2515,33 +3247,156 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
     }
   }
 
-  Future<void> _previewFromDialog() async {
+  Cotizacion? _buildDocumentPreviewQuote() {
     final quote = widget.quote;
-    if (quote == null) return;
-    await showDialog<void>(
-      context: context,
-      builder: (_) {
-        return Dialog(
-          insetPadding: EdgeInsets.all(24),
-          child: SizedBox(
-            width: 1000,
-            height: 760,
-            child: _QuotePdfPreviewDialog(quote: quote),
-          ),
-        );
-      },
+    if (quote == null) return null;
+
+    final fechaEmision =
+        _parseDate(_fechaController.text) ?? quote.fechaEmision;
+    final fechaVencimiento =
+        _parseDate(_validaHastaController.text) ?? quote.fechaVencimiento;
+    final resolvedFolio = _folioController.text.trim().isEmpty
+        ? quote.folio
+        : _folioController.text.trim();
+
+    return Cotizacion(
+      id: quote.id,
+      folio: resolvedFolio,
+      clienteId: _selectedClientId?.trim().isNotEmpty == true
+          ? _selectedClientId!.trim()
+          : quote.clienteId,
+      fechaEmision: fechaEmision,
+      fechaVencimiento: fechaVencimiento,
+      impuestoPorcentaje: _headerTaxPercent,
+      retIsr: _retIsr,
+      subtotal: _subtotalAmount,
+      descuentoTotal: _discountAmount(_subtotalAmount),
+      impuestoTotal: _taxTotalAmount,
+      total: _totalAmount,
+      notas: serializeRichTextController(_notasController),
+      notasPrivadas: serializeRichTextController(_notasPrivadasController),
+      terminos: serializeRichTextController(_terminosController),
+      piePagina: serializeRichTextController(_piePaginaController),
+      estatus: quote.estatus,
+      usuarioId: quote.usuarioId,
+      empresaId: quote.empresaId,
+      createdAt: quote.createdAt,
+      updatedAt: quote.updatedAt,
+      pagadoTotal: quote.pagadoTotal,
+      saldoTotal: quote.saldoTotal,
     );
   }
 
-  Future<void> _downloadPdfFromDialog() async {
-    final quote = widget.quote;
-    if (quote == null) return;
-    setState(() => _processingDialogAction = true);
+  _QuotePreviewPayload? _buildDocumentPreviewPayload() {
+    final quote = _buildDocumentPreviewQuote();
+    if (quote == null) return null;
+
+    final clientes =
+        ref.read(clientesControllerProvider).valueOrNull ?? const <Cliente>[];
+    Cliente? cliente;
+    final selectedClientId = _selectedClientId?.trim() ?? '';
+    if (selectedClientId.isNotEmpty) {
+      for (final item in clientes) {
+        if (item.id == selectedClientId) {
+          cliente = item;
+          break;
+        }
+      }
+    }
+
+    final now = DateTime.now();
+    final meaningfulLines = _lineas.where(_hasMeaningfulLineData).toList();
+    final detalles = List<DetalleCotizacion>.generate(meaningfulLines.length, (
+      index,
+    ) {
+      final item = meaningfulLines[index];
+      final precio = parseNumericText(item.costoUnitarioController.text) ?? 0;
+      final cantidad = parseNumericText(item.cantidadController.text) ?? 0;
+      final impuesto = parseNumericText(item.impuestoController.text) ?? 0;
+      return DetalleCotizacion(
+        id: '${quote.id}_preview_line_$index',
+        cotizacionId: quote.id,
+        productoServicioId: item.productoServicioId ?? '',
+        concepto: item.conceptoController.text.trim(),
+        descripcion: item.descripcionController.text.trim(),
+        precioUnitario: precio,
+        unidad: item.unidadController.text.trim(),
+        descuento: 0,
+        cantidad: cantidad,
+        impuestoPorcentaje: impuesto,
+        importe: precio * cantidad,
+        orden: index,
+        createdAt: now,
+        updatedAt: now,
+      );
+    });
+
+    return _QuotePreviewPayload(
+      quote: quote,
+      cliente: cliente,
+      detalles: detalles,
+    );
+  }
+
+  Future<void> _previewFromDialog() async {
+    final payload = _buildDocumentPreviewPayload();
+    if (payload == null) return;
+    setState(() => _processingDialogActionKey = 'preview');
     try {
-      final bytes = await CotizacionPdfService.generate(quote);
-      await Printing.sharePdf(bytes: bytes, filename: '${quote.folio}.pdf');
+      final previewFuture = CotizacionPdfService.prewarmPreview(
+        payload.quote,
+        clienteOverride: payload.cliente,
+        detallesOverride: payload.detalles,
+      );
+      unawaited(
+        CotizacionPdfService.prewarmFull(
+          payload.quote,
+          clienteOverride: payload.cliente,
+          detallesOverride: payload.detalles,
+        ),
+      );
+      await showDialog<void>(
+        context: context,
+        builder: (_) {
+          return Dialog(
+            insetPadding: EdgeInsets.all(24),
+            child: SizedBox(
+              width: 1000,
+              height: 760,
+              child: _QuotePdfPreviewDialog(
+                quote: payload.quote,
+                initialFuture: previewFuture,
+                clienteOverride: payload.cliente,
+                detallesOverride: payload.detalles,
+              ),
+            ),
+          );
+        },
+      );
+    } finally {
+      if (mounted) setState(() => _processingDialogActionKey = null);
+    }
+  }
+
+  Future<void> _downloadPdfFromDialog() async {
+    final payload = _buildDocumentPreviewPayload();
+    if (payload == null) return;
+    setState(() => _processingDialogActionKey = 'pdf');
+    try {
+      final bytes = await CotizacionPdfService.prewarmFull(
+        payload.quote,
+        clienteOverride: payload.cliente,
+        detallesOverride: payload.detalles,
+      );
+      await Printing.sharePdf(
+        bytes: bytes,
+        filename: '${payload.quote.folio}.pdf',
+      );
       if (!mounted) return;
-      ToastHelper.showSuccess(context, 'PDF generado para ${quote.folio}.');
+      ToastHelper.showSuccess(
+        context,
+        'PDF generado para ${payload.quote.folio}.',
+      );
     } catch (error) {
       if (!mounted) return;
       ToastHelper.showError(
@@ -2549,19 +3404,20 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
         buildActionErrorMessage(error, 'No se pudo generar el PDF.'),
       );
     } finally {
-      if (mounted) setState(() => _processingDialogAction = false);
+      if (mounted) setState(() => _processingDialogActionKey = null);
     }
   }
 
   Future<void> _markApprovedFromDialog() async {
     final quote = widget.quote;
-    if (quote == null) return;
-    setState(() => _processingDialogAction = true);
+    if (quote == null || quote.estatus == QuoteStatus.aprobada) return;
+    setState(() => _processingDialogActionKey = 'approved');
     try {
       await ref
           .read(cotizacionesRepositoryProvider)
           .updateStatus(quote.id, QuoteStatus.aprobada);
       ref.invalidate(cotizacionesControllerProvider);
+      ref.invalidate(ingresosControllerProvider);
       if (!mounted) return;
       ToastHelper.showSuccess(context, 'Cotización marcada como aprobada.');
       Navigator.of(context).pop();
@@ -2575,7 +3431,92 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
         ),
       );
     } finally {
-      if (mounted) setState(() => _processingDialogAction = false);
+      if (mounted) setState(() => _processingDialogActionKey = null);
+    }
+  }
+
+  Future<void> _unmarkApprovedFromDialog() async {
+    final quote = widget.quote;
+    if (quote == null || quote.estatus != QuoteStatus.aprobada) return;
+    setState(() => _processingDialogActionKey = 'unapproved');
+    try {
+      await ref
+          .read(cotizacionesRepositoryProvider)
+          .updateStatus(quote.id, QuoteStatus.enviada);
+      ref.invalidate(cotizacionesControllerProvider);
+      ref.invalidate(ingresosControllerProvider);
+      if (!mounted) return;
+      ToastHelper.showSuccess(context, 'Cotización desmarcada como aprobada.');
+      Navigator.of(context).pop();
+    } catch (error) {
+      if (!mounted) return;
+      ToastHelper.showError(
+        context,
+        buildActionErrorMessage(
+          error,
+          'No se pudo desmarcar como aprobada la cotización.',
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _processingDialogActionKey = null);
+    }
+  }
+
+  Future<void> _markPaidFromDialog() async {
+    final quote = widget.quote;
+    if (quote == null || quote.isPaid) return;
+    setState(() => _processingDialogActionKey = 'paid');
+    try {
+      await ref.read(cotizacionesRepositoryProvider).markPaid(quote.id);
+      await _ensureIngresoForQuotePayment(
+        ref,
+        quote.copyWith(
+          estatus: QuoteStatus.pagada,
+          pagadoTotal: quote.total,
+          saldoTotal: 0,
+        ),
+      );
+      ref.invalidate(cotizacionesControllerProvider);
+      ref.invalidate(ingresosControllerProvider);
+      if (!mounted) return;
+      ToastHelper.showSuccess(context, 'Cotización marcada como pagada.');
+      Navigator.of(context).pop();
+    } catch (error) {
+      if (!mounted) return;
+      ToastHelper.showError(
+        context,
+        buildActionErrorMessage(
+          error,
+          'No se pudo marcar como pagada la cotización.',
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _processingDialogActionKey = null);
+    }
+  }
+
+  Future<void> _markUnpaidFromDialog() async {
+    final quote = widget.quote;
+    if (quote == null || !quote.isPaid) return;
+    setState(() => _processingDialogActionKey = 'unpaid');
+    try {
+      await ref.read(cotizacionesRepositoryProvider).markUnpaid(quote.id);
+      ref.invalidate(cotizacionesControllerProvider);
+      ref.invalidate(ingresosControllerProvider);
+      if (!mounted) return;
+      ToastHelper.showSuccess(context, 'Cotización desmarcada como pagada.');
+      Navigator.of(context).pop();
+    } catch (error) {
+      if (!mounted) return;
+      ToastHelper.showError(
+        context,
+        buildActionErrorMessage(
+          error,
+          'No se pudo desmarcar como pagada la cotización.',
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _processingDialogActionKey = null);
     }
   }
 
@@ -2585,12 +3526,16 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
     final confirmed = await showDeleteConfirmation(
       context,
       entityLabel: 'cotización',
+      dependencyEntityType: 'cotizacion',
+      dependencyIds: [quote.id],
       onConfirmAsync: () async {
         await ref.read(cotizacionesRepositoryProvider).delete(quote.id);
       },
     );
     if (!confirmed || !mounted) return;
     ref.invalidate(cotizacionesControllerProvider);
+    ref.invalidate(ingresosControllerProvider);
+    ref.invalidate(recordatoriosControllerProvider);
     ToastHelper.showSuccess(context, 'Cotización eliminada.');
     Navigator.of(context).pop();
   }
@@ -2699,9 +3644,32 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
     return raw.clamp(0, subtotal).toDouble();
   }
 
-  double get _taxTotalAmount => _lineas
+  double get _lineTaxTotalAmount => _lineas
       .where(_hasMeaningfulLineData)
       .fold<double>(0, (sum, draft) => sum + _lineTax(draft));
+
+  double get _selectedSubtotalTaxPercent {
+    final selectedId = _selectedTaxRateId?.trim() ?? '';
+    if (selectedId.isEmpty) return 0;
+    if (selectedId.isNotEmpty) {
+      final empresa = ref.read(empresaPerfilControllerProvider).valueOrNull;
+      final rates = empresa?.impuestos.tasas ?? const <EmpresaTasaImpuesto>[];
+      for (final rate in rates) {
+        if (rate.id == selectedId) return rate.porcentaje;
+      }
+    }
+    return _loadedSubtotalTaxPercent.clamp(0, double.infinity).toDouble();
+  }
+
+  double get _subtotalTaxAmount {
+    final rate = _selectedSubtotalTaxPercent;
+    if (rate <= 0) return 0;
+    return (_retIsrBaseAmount * rate / 100)
+        .clamp(0, double.infinity)
+        .toDouble();
+  }
+
+  double get _taxTotalAmount => _lineTaxTotalAmount + _subtotalTaxAmount;
 
   double get _retIsrBaseAmount =>
       (_subtotalAmount - _discountAmount(_subtotalAmount))
@@ -2716,10 +3684,7 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
   }
 
   double get _totalAmount =>
-      (_subtotalAmount -
-              _discountAmount(_subtotalAmount) +
-              _taxTotalAmount -
-              _retIsrAmount)
+      (_retIsrBaseAmount + _taxTotalAmount - _retIsrAmount)
           .clamp(0, double.infinity)
           .toDouble();
 
@@ -2727,27 +3692,26 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
       .clamp(0, double.infinity)
       .toDouble();
 
-  double get _headerTaxPercent {
-    for (final draft in _lineas.where(_hasMeaningfulLineData)) {
-      final value = parseNumericText(draft.impuestoController.text) ?? 0;
-      if (value > 0) return value;
+  double get _headerTaxPercent => _selectedSubtotalTaxPercent;
+
+  String? _resolveNearestTaxRateIdForPercent(double percent) {
+    final empresa = ref.read(empresaPerfilControllerProvider).valueOrNull;
+    final rates = empresa?.impuestos.tasas ?? const <EmpresaTasaImpuesto>[];
+    if (rates.isEmpty) return null;
+    EmpresaTasaImpuesto nearest = rates.first;
+    var minDiff = (nearest.porcentaje - percent).abs();
+    for (final rate in rates.skip(1)) {
+      final diff = (rate.porcentaje - percent).abs();
+      if (diff < minDiff) {
+        nearest = rate;
+        minDiff = diff;
+      }
     }
-    return 0;
+    return nearest.id;
   }
 
   String _defaultTaxText() {
-    if (_selectedTaxRateId != null && _selectedTaxRateId!.trim().isNotEmpty) {
-      final empresa = ref.read(empresaPerfilControllerProvider).valueOrNull;
-      final selected =
-          (empresa?.impuestos.tasas ?? const <EmpresaTasaImpuesto>[]).where(
-            (rate) => rate.id == _selectedTaxRateId,
-          );
-      if (selected.isNotEmpty) {
-        return _formatEditableNumber(selected.first.porcentaje);
-      }
-    }
-    final value = _headerTaxPercent > 0 ? _headerTaxPercent : 0.0;
-    return _formatEditableNumber(value);
+    return '0';
   }
 
   String _formatDate(DateTime value) {
@@ -2792,7 +3756,11 @@ class _QuoteSection extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Padding(
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.background,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
+            ),
             padding: EdgeInsets.fromLTRB(16, 14, 16, 14),
             child: Row(
               children: [
@@ -2872,7 +3840,9 @@ class _QuoteFieldRow extends StatelessWidget {
               keyboardType: keyboardType,
               inputFormatters: inputFormatters,
               decoration: InputDecoration(
-                hintText: hintText == null ? null : trText(hintText!),
+                hintText: hintText != null
+                    ? trText(hintText!)
+                    : (suffixText == currentCurrencyCode() ? '0.00' : null),
                 helperText: helperText == null ? null : trText(helperText!),
                 suffixText: suffixText == null ? null : trText(suffixText!),
               ),
@@ -3063,9 +4033,13 @@ class _QuoteLineRow extends StatelessWidget {
                 NumericTextInputFormatter(
                   useGrouping: true,
                   maxDecimalDigits: 2,
+                  moneyInputBehavior: true,
                 ),
               ],
-              decoration: InputDecoration(suffixText: currentCurrencyCode()),
+              decoration: InputDecoration(
+                hintText: '0.00',
+                suffixText: currentCurrencyCode(),
+              ),
             ),
           ),
           SizedBox(width: 8),
@@ -3099,6 +4073,7 @@ class _QuoteLineRow extends StatelessWidget {
               inputFormatters: const [
                 NumericTextInputFormatter(maxDecimalDigits: 2),
               ],
+              decoration: InputDecoration(suffixText: '%'),
             ),
           ),
           SizedBox(width: 8),
@@ -3113,6 +4088,7 @@ class _QuoteLineRow extends StatelessWidget {
                 NumericTextInputFormatter(
                   useGrouping: true,
                   maxDecimalDigits: 2,
+                  moneyInputBehavior: true,
                 ),
               ],
             ),

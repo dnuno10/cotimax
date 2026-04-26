@@ -2,10 +2,12 @@ import 'dart:math' as math;
 
 import 'package:cotimax/core/constants/app_colors.dart';
 import 'package:cotimax/core/localization/app_localization.dart';
+import 'package:cotimax/core/routing/route_paths.dart';
 import 'package:cotimax/features/clientes/application/clientes_controller.dart';
 import 'package:cotimax/features/cotizaciones/application/cotizaciones_controller.dart';
 import 'package:cotimax/features/gastos/application/gastos_controller.dart';
 import 'package:cotimax/features/ingresos/application/ingresos_controller.dart';
+import 'package:cotimax/features/planes/application/plan_access.dart';
 import 'package:cotimax/features/productos/application/productos_controller.dart';
 import 'package:cotimax/shared/enums/app_enums.dart';
 import 'package:cotimax/shared/models/domain_models.dart';
@@ -13,6 +15,7 @@ import 'package:cotimax/shared/widgets/cotimax_widgets.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 class AnaliticaPage extends ConsumerStatefulWidget {
@@ -24,9 +27,39 @@ class AnaliticaPage extends ConsumerStatefulWidget {
 
 class _AnaliticaPageState extends ConsumerState<AnaliticaPage> {
   _ProjectionRangeOption _selectedProjection = projectionRangeOptions.last;
+  bool _handledPlanBlock = false;
 
   @override
   Widget build(BuildContext context) {
+    final activePlan = ref.watch(activePlanAccessProvider).valueOrNull;
+    final analyticsLocked =
+        activePlan != null && !activePlan.plan.incluyeAnalitica;
+    if (analyticsLocked && !_handledPlanBlock) {
+      _handledPlanBlock = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!mounted) return;
+        await showAnalyticsUpgradeDialog(context);
+        if (!mounted) return;
+        context.go(RoutePaths.dashboard);
+      });
+    }
+    if (analyticsLocked) {
+      return SectionCard(
+        title: 'Analítica bloqueada por plan',
+        child: Row(
+          children: [
+            Icon(Icons.workspace_premium_rounded, color: AppColors.accent),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Necesitas el plan Pro o Empresa para acceder a Analítica.',
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     final ingresos =
         ref.watch(ingresosControllerProvider).valueOrNull ?? const <Ingreso>[];
     final gastos =
@@ -1785,9 +1818,7 @@ Map<DateTime, double> _approvedQuoteUtilityByMonth({
   required Map<String, ProductoServicio> productos,
 }) {
   final approved = {
-    for (final item in cotizaciones.where(
-      (item) => item.estatus == QuoteStatus.aprobada,
-    ))
+    for (final item in cotizaciones.where((item) => item.estatus.isClosedWon))
       item.id: item,
   };
   final map = <DateTime, double>{};
@@ -1821,8 +1852,7 @@ List<_AnalyticsSectionItem> _approvedQuoteItemsForMonth({
   final approved = cotizaciones
       .where(
         (item) =>
-            item.estatus == QuoteStatus.aprobada &&
-            _sameMonth(item.fechaEmision, monthKey),
+            item.estatus.isClosedWon && _sameMonth(item.fechaEmision, monthKey),
       )
       .toList();
   final items = <_AnalyticsSectionItem>[];
@@ -1855,9 +1885,7 @@ Map<DateTime, double> _approvedQuoteUtilityByWeek({
   required Map<String, ProductoServicio> productos,
 }) {
   final approved = {
-    for (final item in cotizaciones.where(
-      (item) => item.estatus == QuoteStatus.aprobada,
-    ))
+    for (final item in cotizaciones.where((item) => item.estatus.isClosedWon))
       item.id: item,
   };
   final map = <DateTime, double>{};

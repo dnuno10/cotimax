@@ -1,125 +1,333 @@
+import 'dart:async';
+
 import 'package:cotimax/core/localization/app_localization.dart';
+import 'package:cotimax/core/constants/app_colors.dart';
+import 'package:cotimax/core/routing/route_paths.dart';
 import 'package:cotimax/features/planes/application/planes_controller.dart';
+import 'package:cotimax/features/planes/application/stripe_checkout_service.dart';
+import 'package:cotimax/features/planes/presentation/plan_cards.dart';
 import 'package:cotimax/shared/models/domain_models.dart';
 import 'package:cotimax/shared/widgets/cotimax_widgets.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-class PlanesPage extends ConsumerWidget {
-   PlanesPage({super.key});
+const _supportEmail = 'support@cotimax.com';
+
+Future<void> _contactSupportByEmail(BuildContext context) async {
+  final emailUri = Uri(
+    scheme: 'mailto',
+    path: _supportEmail,
+    queryParameters: {'subject': 'Cotimax Enterprise > 50 miembros'},
+  );
+  final opened = await launchUrl(emailUri);
+  if (!opened && context.mounted) {
+    ToastHelper.show(
+      context,
+      'No se pudo abrir tu cliente de correo. Escribe a $_supportEmail.',
+    );
+  }
+}
+
+class PlanesPage extends ConsumerStatefulWidget {
+  PlanesPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<PlanesPage> createState() => _PlanesPageState();
+}
+
+class _PlanesPageState extends ConsumerState<PlanesPage> {
+  bool _handledCheckoutRoute = false;
+
+  Future<void> _startPlanCheckout({
+    required Plan plan,
+    required Suscripcion? suscripcion,
+  }) async {
+    try {
+      int? seats;
+      if (plan.id == 'empresa') {
+        final min = plan.usuariosMinimos > 0 ? plan.usuariosMinimos : 2;
+        final max = plan.usuariosMaximos > 0 ? plan.usuariosMaximos : 50;
+        final initial = (suscripcion?.usuariosActivos ?? min).clamp(min, max);
+        seats = await _promptSeatCount(context, initial: initial, min: min, max: max);
+        if (!mounted || seats == null) return;
+      }
+
+      final response = await ref
+          .read(stripeCheckoutServiceProvider)
+          .createCheckout(plan: plan, seats: seats);
+
+      final checkoutUrl = Uri.tryParse(response.url);
+      if (checkoutUrl == null) {
+        throw 'URL de checkout inválida.';
+      }
+
+      final opened = await launchUrl(
+        checkoutUrl,
+        mode: kIsWeb ? LaunchMode.platformDefault : LaunchMode.externalApplication,
+      );
+      if (!opened && mounted) {
+        ToastHelper.show(context, 'No se pudo abrir el checkout.');
+      }
+    } catch (error) {
+      if (!mounted) return;
+      ToastHelper.showError(
+        context,
+        buildActionErrorMessage(error, 'No se pudo iniciar el checkout.'),
+      );
+    }
+  }
+
+  Future<int?> _promptSeatCount(
+    BuildContext context, {
+    required int initial,
+    required int min,
+    required int max,
+  }) async {
+    final controller = TextEditingController(text: '$initial');
+    return showDialog<int>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(trText('Asientos del plan Empresa')),
+          content: SizedBox(
+            width: 420,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  tr(
+                    'Selecciona cuántos asientos necesitas (mínimo $min, máximo $max).',
+                    'Select how many seats you need (min $min, max $max).',
+                  ),
+                ),
+                SizedBox(height: 12),
+                TextField(
+                  controller: controller,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: trText('Asientos'),
+                    hintText: '$min-$max',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(trText('Cancelar')),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final value = int.tryParse(controller.text.trim());
+                if (value == null || value < min || value > max) {
+                  ToastHelper.show(
+                    dialogContext,
+                    'Ingresa un número entre $min y $max.',
+                  );
+                  return;
+                }
+                Navigator.of(dialogContext).pop(value);
+              },
+              child: Text(trText('Continuar')),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _handleCheckoutReturn() async {
+    if (_handledCheckoutRoute) return;
+    _handledCheckoutRoute = true;
+
+    final started = DateTime.now();
+    final initial = ref.read(suscripcionControllerProvider).valueOrNull;
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        unawaited(() async {
+          while (DateTime.now().difference(started).inSeconds < 35) {
+            ref.invalidate(suscripcionControllerProvider);
+            final current = await ref.read(suscripcionControllerProvider.future).catchError((_) => null);
+            if (current != null &&
+                (initial == null ||
+                    current.planId != initial.planId ||
+                    current.updatedAt.isAfter(initial.updatedAt))) {
+              break;
+            }
+            await Future.delayed(const Duration(seconds: 2));
+          }
+          if (mounted) Navigator.of(dialogContext).pop();
+        }());
+
+        return AlertDialog(
+          title: Text(trText('Procesando tu compra')),
+          content: Row(
+            children: [
+              SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  trText('Actualizando tu suscripción...'),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (!mounted) return;
+    ref.invalidate(suscripcionControllerProvider);
+    ToastHelper.showSuccess(context, trText('Suscripción actualizada.'));
+    if (mounted) {
+      context.go(RoutePaths.planes);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final planes = ref.watch(planesControllerProvider);
-    final suscripcion = ref.watch(suscripcionControllerProvider);
+    final suscripcionAsync = ref.watch(suscripcionControllerProvider);
+    final activePlanId = suscripcionAsync.valueOrNull?.planId;
+
+    final checkoutStatus =
+        GoRouterState.of(context).uri.queryParameters['checkout'];
+    if (checkoutStatus == 'success' || checkoutStatus == 'portal') {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        unawaited(_handleCheckoutReturn());
+      });
+    } else {
+      _handledCheckoutRoute = false;
+    }
 
     return ListView(
       children: [
-         PageHeader(
+        PageHeader(
           title: 'Planes / Suscripcion',
-          subtitle: 'Pricing interno, comparativa y control de limites.',
+          subtitle:
+              'Compara planes, revisa límites y elige la opción ideal para tu equipo.',
         ),
-         SizedBox(height: 12),
-        suscripcion.when(
+        SizedBox(height: 12),
+        suscripcionAsync.when(
           data: (sub) => SectionCard(
             title: 'Plan actual',
             child: Row(
               children: [
                 PlanBadge(planName: sub.planId.toUpperCase()),
-                 SizedBox(width: 8),
+                SizedBox(width: 10),
                 Text(
-                  '${trText('Estatus')}: ${trText(sub.estado)} | ${tr('Usuarios activos', 'Active users')}: ${sub.usuariosActivos}',
+                  '${trText('Estatus')}: ${trText(sub.estado)} · ${tr('Usuarios activos', 'Active users')}: ${sub.usuariosActivos}',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ],
             ),
           ),
           loading: LoadingSkeleton.new,
-          error: (_, __) =>  SizedBox.shrink(),
+          error: (_, __) => SizedBox.shrink(),
         ),
-         SizedBox(height: 12),
+        SizedBox(height: 12),
         planes.when(
           loading: LoadingSkeleton.new,
           error: (_, __) => ErrorStateWidget(
             message: 'No se pudieron cargar planes.',
             onRetry: () => ref.invalidate(planesControllerProvider),
           ),
-          data: (items) => Row(
+          data: (items) => LayoutBuilder(
+            builder: (context, constraints) {
+              final compact = constraints.maxWidth < 1120;
+              final suscripcion = suscripcionAsync.valueOrNull;
+
+              Widget buildCard(Plan plan) {
+                final canBuy = plan.id == 'pro' || plan.id == 'empresa';
+                final isActive = activePlanId == plan.id;
+                return PlanFeatureCard(
+                  plan: plan,
+                  isActive: isActive,
+                  onChangePlan: (!canBuy || isActive)
+                      ? null
+                      : () => unawaited(
+                            _startPlanCheckout(
+                              plan: plan,
+                              suscripcion: suscripcion,
+                            ),
+                          ),
+                );
+              }
+
+              if (compact) {
+                return Column(
+                  children: [
+                    for (final plan in items) ...[
+                      buildCard(plan),
+                      SizedBox(height: 12),
+                    ],
+                  ],
+                );
+              }
+
+              return IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (var index = 0; index < items.length; index++) ...[
+                      Expanded(child: buildCard(items[index])),
+                      if (index < items.length - 1) SizedBox(width: 12),
+                    ],
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+        SizedBox(height: 12),
+        SectionCard(
+          title: '¿Tu equipo supera los 50 miembros?',
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: items
-                .map(
-                  (plan) => Expanded(
-                    child: Padding(
-                      padding:  EdgeInsets.only(right: 12),
-                      child: SectionCard(
-                        title: plan.nombre,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _planPriceLabel(plan),
-                              style:  TextStyle(
-                                fontWeight: FontWeight.w800,
-                                fontSize: 22,
-                              ),
-                            ),
-                             SizedBox(height: 8),
-                            Text(plan.descripcion),
-                             SizedBox(height: 10),
-                            Text(
-                              '${trText('Clientes')}: ${plan.limiteClientes <= 0 ? tr('Ilimitados', 'Unlimited') : plan.limiteClientes}',
-                            ),
-                            Text(
-                              '${trText('Productos')}: ${plan.limiteProductos <= 0 ? tr('Ilimitados', 'Unlimited') : plan.limiteProductos}',
-                            ),
-                            Text(
-                              '${tr('Cotizaciones mes', 'Monthly quotes')}: ${plan.limiteCotizacionesMensuales <= 0 ? tr('Ilimitadas', 'Unlimited') : plan.limiteCotizacionesMensuales}',
-                            ),
-                            Text(
-                              '${trText('Usuarios')}: ${_userLimitLabel(plan)}',
-                            ),
-                             SizedBox(height: 12),
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton(
-                                onPressed: () {},
-                                child: Text(trText('Cambiar plan')),
-                              ),
-                            ),
-                          ],
-                        ),
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.support_agent_rounded, color: AppColors.primary),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Si tu equipo es de más de 50 miembros, escríbenos directamente a support@cotimax.com y te ayudamos con un plan Enterprise a medida.',
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w600,
+                        height: 1.5,
                       ),
                     ),
                   ),
-                )
-                .toList(),
+                ],
+              ),
+              SizedBox(height: 10),
+              TextButton.icon(
+                onPressed: () => _contactSupportByEmail(context),
+                icon: Icon(Icons.email_rounded, size: 18),
+                label: Text('Escribir a $_supportEmail'),
+              ),
+            ],
           ),
-        ),
-         SizedBox(height: 12),
-        SectionCard(
-          title: 'Notas de roadmap',
-          child: Text(trText('Reportes por usuario: proximamente.')),
         ),
       ],
     );
   }
-}
-
-String _planPriceLabel(Plan plan) {
-  if (plan.billingMode == 'per_user_monthly') {
-    return '${formatMoney(plan.precioPorUsuario, decimalDigits: 0)} / ${tr('usuario', 'user')} / ${tr('mes', 'month')}';
-  }
-  if (plan.precioMensual <= 0) {
-    return trText('Gratis');
-  }
-  return '${formatMoney(plan.precioMensual, decimalDigits: 0)} / ${tr('mes', 'month')}';
-}
-
-String _userLimitLabel(Plan plan) {
-  if (plan.usuariosMinimos > 0 && plan.usuariosMaximos > 0) {
-    return '${plan.usuariosMinimos}-${plan.usuariosMaximos}';
-  }
-  if (plan.limiteUsuarios <= 0) {
-    return 'Ilimitados';
-  }
-  return '${plan.limiteUsuarios}';
 }

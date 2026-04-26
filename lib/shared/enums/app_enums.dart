@@ -17,7 +17,7 @@ extension ProductTypeLabel on ProductType {
   String get key => enumKey(this);
 }
 
-enum QuoteStatus { borrador, enviada, aprobada, rechazada }
+enum QuoteStatus { borrador, enviada, aprobada, pagada, rechazada }
 
 enum PaymentMethod { transferencia, efectivo, tarjeta, deposito, otro }
 
@@ -41,6 +41,9 @@ enum UserRole { admin, usuario }
 
 extension QuoteStatusValue on QuoteStatus {
   String get key => enumKey(this);
+
+  bool get isClosedWon =>
+      this == QuoteStatus.aprobada || this == QuoteStatus.pagada;
 }
 
 extension PaymentMethodValue on PaymentMethod {

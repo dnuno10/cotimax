@@ -14,6 +14,7 @@ import 'package:cotimax/features/materiales/presentation/materiales_page.dart';
 import 'package:cotimax/features/planes/presentation/planes_page.dart';
 import 'package:cotimax/features/productos/presentation/productos_page.dart';
 import 'package:cotimax/features/proveedores/presentation/proveedores_page.dart';
+import 'package:cotimax/features/recordatorios/presentation/recordatorios_page.dart';
 import 'package:cotimax/features/usuarios/presentation/usuarios_page.dart';
 import 'package:cotimax/features/workspace/application/workspace_controller.dart';
 import 'package:cotimax/features/workspace/presentation/workspace_setup_page.dart';
@@ -50,6 +51,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     }
     if (location.startsWith(RoutePaths.gastos)) {
       return tr('Gastos', 'Expenses');
+    }
+    if (location.startsWith(RoutePaths.recordatorios)) {
+      return tr('Recordatorios', 'Reminders');
     }
     if (location.startsWith(RoutePaths.analitica)) {
       return tr('Analítica', 'Analytics');
@@ -103,14 +107,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
-      GoRoute(path: RoutePaths.login, builder: (_, __) =>  LoginPage()),
-      GoRoute(
-        path: RoutePaths.recover,
-        builder: (_, __) =>  RecoverPage(),
-      ),
+      GoRoute(path: RoutePaths.login, builder: (_, __) => LoginPage()),
+      GoRoute(path: RoutePaths.recover, builder: (_, __) => RecoverPage()),
       GoRoute(
         path: RoutePaths.workspaceSetup,
-        builder: (_, __) =>  WorkspaceSetupPage(),
+        builder: (_, __) => WorkspaceSetupPage(),
       ),
       ShellRoute(
         builder: (_, state, child) => AppShell(
@@ -121,52 +122,50 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(
             path: RoutePaths.dashboard,
-            builder: (_, __) =>  DashboardPage(),
+            builder: (_, __) => DashboardPage(),
           ),
           GoRoute(
             path: RoutePaths.clientes,
-            builder: (_, __) =>  ClientesPage(),
+            builder: (_, __) => ClientesPage(),
           ),
           GoRoute(
             path: RoutePaths.proveedores,
-            builder: (_, __) =>  ProveedoresPage(),
+            builder: (_, __) => ProveedoresPage(),
           ),
           GoRoute(
             path: RoutePaths.productos,
-            builder: (_, __) =>  ProductosPage(),
+            builder: (_, __) => ProductosPage(),
           ),
           GoRoute(
             path: RoutePaths.materiales,
-            builder: (_, __) =>  MaterialesPage(),
+            builder: (_, __) => MaterialesPage(),
           ),
           GoRoute(
             path: RoutePaths.cotizaciones,
-            builder: (_, __) =>  CotizacionesPage(),
+            builder: (_, __) => CotizacionesPage(),
           ),
           GoRoute(
             path: RoutePaths.ingresos,
-            builder: (_, __) =>  IngresosPage(),
+            builder: (_, __) => IngresosPage(),
           ),
+          GoRoute(path: RoutePaths.gastos, builder: (_, __) => GastosPage()),
           GoRoute(
-            path: RoutePaths.gastos,
-            builder: (_, __) =>  GastosPage(),
+            path: RoutePaths.recordatorios,
+            builder: (_, __) => RecordatoriosPage(),
           ),
           GoRoute(
             path: RoutePaths.analitica,
-            builder: (_, __) =>  AnaliticaPage(),
+            builder: (_, __) => AnaliticaPage(),
           ),
           GoRoute(
             path: RoutePaths.configuracion,
-            builder: (_, __) =>  ConfiguracionPage(),
+            builder: (_, __) => ConfiguracionPage(),
           ),
           GoRoute(
             path: RoutePaths.usuarios,
-            builder: (_, __) =>  UsuariosPage(),
+            builder: (_, __) => UsuariosPage(),
           ),
-          GoRoute(
-            path: RoutePaths.planes,
-            builder: (_, __) =>  PlanesPage(),
-          ),
+          GoRoute(path: RoutePaths.planes, builder: (_, __) => PlanesPage()),
         ],
       ),
     ],

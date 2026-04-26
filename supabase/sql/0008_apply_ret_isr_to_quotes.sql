@@ -117,17 +117,17 @@ begin
   )
   select
     v_id,
-    public.app_parse_uuid(v_linea ->> 'producto_servicio_id'),
-    coalesce(v_linea ->> 'concepto', ''),
-    coalesce(v_linea ->> 'descripcion', ''),
-    coalesce((v_linea ->> 'precio_unitario')::numeric, 0),
-    coalesce(v_linea ->> 'unidad', ''),
-    coalesce((v_linea ->> 'descuento')::numeric, 0),
-    coalesce((v_linea ->> 'cantidad')::numeric, 0),
-    coalesce((v_linea ->> 'impuesto_porcentaje')::numeric, 0),
-    coalesce((v_linea ->> 'importe')::numeric, 0),
-    coalesce((v_linea ->> 'orden')::int, 0)
-  from jsonb_array_elements(coalesce(p_lineas, '[]'::jsonb)) v_linea;
+    public.app_parse_uuid(line_item.value ->> 'producto_servicio_id'),
+    coalesce(line_item.value ->> 'concepto', ''),
+    coalesce(line_item.value ->> 'descripcion', ''),
+    coalesce((line_item.value ->> 'precio_unitario')::numeric, 0),
+    coalesce(line_item.value ->> 'unidad', ''),
+    coalesce((line_item.value ->> 'descuento')::numeric, 0),
+    coalesce((line_item.value ->> 'cantidad')::numeric, 0),
+    coalesce((line_item.value ->> 'impuesto_porcentaje')::numeric, 0),
+    coalesce((line_item.value ->> 'importe')::numeric, 0),
+    coalesce((line_item.value ->> 'orden')::int, 0)
+  from jsonb_array_elements(coalesce(p_lineas, '[]'::jsonb)) as line_item(value);
 
   return v_id;
 end;

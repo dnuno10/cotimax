@@ -2,6 +2,10 @@ import 'package:cotimax/core/constants/app_colors.dart';
 import 'package:cotimax/core/localization/app_localization.dart';
 import 'package:cotimax/core/routing/route_paths.dart';
 import 'package:cotimax/features/clientes/application/clientes_controller.dart';
+import 'package:cotimax/features/cotizaciones/application/cotizaciones_controller.dart';
+import 'package:cotimax/features/ingresos/application/ingresos_controller.dart';
+import 'package:cotimax/features/planes/application/plan_access.dart';
+import 'package:cotimax/features/recordatorios/application/recordatorios_controller.dart';
 import 'package:cotimax/shared/models/domain_models.dart';
 import 'package:cotimax/shared/widgets/cotimax_widgets.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -322,7 +326,15 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
           ),
           data: (clientes) {
             if (clientes.isEmpty) {
-              return SectionCard(child: InlineEmptyMessage());
+              return EmptyStateWidget(
+                title: 'Todavía no hay clientes',
+                subtitle: 'Registra tu primer cliente para comenzar.',
+                action: ElevatedButton.icon(
+                  onPressed: () => _openForm(context, null),
+                  icon: Icon(Icons.add),
+                  label: Text(trText('Nuevo cliente')),
+                ),
+              );
             }
 
             final allSelected = _selectedClienteIds.length == clientes.length;
@@ -447,7 +459,27 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
     );
   }
 
-  void _openForm(BuildContext context, Cliente? cliente) {
+  Future<void> _openForm(BuildContext context, Cliente? cliente) async {
+    if (cliente == null) {
+      final planAccess = await ref.read(activePlanAccessProvider.future);
+      final clientes =
+          ref.read(clientesControllerProvider).valueOrNull ??
+          await ref.read(clientesControllerProvider.future);
+      if (!mounted) return;
+      if (hasReachedPlanLimit(
+        limit: planAccess.plan.limiteClientes,
+        used: clientes?.length ?? 0,
+      )) {
+        await showPlanUpgradeDialog(
+          context,
+          title: 'Límite del plan Starter',
+          message:
+              'Tu plan Starter permite hasta 5 clientes. Actualiza a Pro para registrar más clientes.',
+        );
+        return;
+      }
+    }
+
     showDialog<void>(
       context: context,
       builder: (_) => ModalBase(
@@ -479,10 +511,15 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
     final confirmed = await showDeleteConfirmation(
       context,
       entityLabel: 'cliente',
+      dependencyEntityType: 'cliente',
+      dependencyIds: [cliente.id],
       onConfirmAsync: () async {
         try {
           await ref.read(clientesRepositoryProvider).delete(cliente.id);
           ref.invalidate(clientesControllerProvider);
+          ref.invalidate(cotizacionesControllerProvider);
+          ref.invalidate(ingresosControllerProvider);
+          ref.invalidate(recordatoriosControllerProvider);
           if (!mounted) return;
           ToastHelper.showSuccess(context, 'Cliente eliminado.');
         } catch (error) {
@@ -509,6 +546,8 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
       message: count == 1
           ? '¿Estás seguro que quieres eliminar este cliente?'
           : '¿Estás seguro que quieres eliminar los $count clientes seleccionados?',
+      dependencyEntityType: 'cliente',
+      dependencyIds: _selectedClienteIds.toList(),
       onConfirmAsync: () async {
         try {
           final ids = _selectedClienteIds.toList();
@@ -516,6 +555,9 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
             await ref.read(clientesRepositoryProvider).delete(id);
           }
           ref.invalidate(clientesControllerProvider);
+          ref.invalidate(cotizacionesControllerProvider);
+          ref.invalidate(ingresosControllerProvider);
+          ref.invalidate(recordatoriosControllerProvider);
           if (!mounted) return;
           setState(() => _selectedClienteIds.clear());
           ToastHelper.showSuccess(
@@ -785,6 +827,22 @@ class _ClienteFormState extends ConsumerState<_ClienteForm> {
 
     final clientesExistentes =
         ref.read(clientesControllerProvider).valueOrNull ?? const <Cliente>[];
+    if (widget.cliente == null) {
+      final planAccess = await ref.read(activePlanAccessProvider.future);
+      if (hasReachedPlanLimit(
+        limit: planAccess.plan.limiteClientes,
+        used: clientesExistentes.length,
+      )) {
+        if (!mounted) return;
+        await showPlanUpgradeDialog(
+          context,
+          title: 'Límite del plan Starter',
+          message:
+              'Tu plan Starter permite hasta 5 clientes. Actualiza a Pro para registrar más clientes.',
+        );
+        return;
+      }
+    }
     final numeroIngresado = _numeroController.text.trim();
     final numeroDefinitivo = numeroIngresado.isNotEmpty
         ? numeroIngresado
@@ -929,6 +987,7 @@ class _ClientCreateTab extends StatelessWidget {
         final left = _ClientSection(
           title: 'Detalles de la empresa',
           icon: FontAwesomeIcons.building,
+          headerBackgroundColor: AppColors.background,
           child: Column(
             children: [
               _ClientFieldRow(
@@ -982,6 +1041,7 @@ class _ClientCreateTab extends StatelessWidget {
             _ClientSection(
               title: 'Contactos',
               icon: FontAwesomeIcons.addressBook,
+              headerBackgroundColor: AppColors.background,
               child: Column(
                 children: [
                   _ClientFieldRow(
@@ -1007,6 +1067,7 @@ class _ClientCreateTab extends StatelessWidget {
             _ClientSection(
               title: 'Dirección de envío',
               icon: FontAwesomeIcons.locationDot,
+              headerBackgroundColor: AppColors.background,
               child: Column(
                 children: [
                   _ClientFieldRow(
@@ -1081,6 +1142,7 @@ class _ClientConfigTabState extends State<_ClientConfigTab> {
     final configSection = _ClientSection(
       title: 'Configuración',
       icon: FontAwesomeIcons.sliders,
+      headerBackgroundColor: AppColors.background,
       child: Column(
         children: [
           _ClientDropdownRow(
@@ -1139,6 +1201,7 @@ class _ClientConfigTabState extends State<_ClientConfigTab> {
     final classifySection = _ClientSection(
       title: 'Clasificar',
       icon: FontAwesomeIcons.tags,
+      headerBackgroundColor: AppColors.background,
       child: Column(
         children: [
           _ClientDropdownRow(
@@ -1189,6 +1252,7 @@ class _ClientConfigTabState extends State<_ClientConfigTab> {
             _ClientSection(
               title: 'Notas internas',
               icon: FontAwesomeIcons.noteSticky,
+              headerBackgroundColor: AppColors.background,
               child: Column(
                 children: [
                   _ClientFieldRow(
@@ -1249,11 +1313,13 @@ class _ClientSection extends StatelessWidget {
     required this.title,
     required this.icon,
     required this.child,
+    this.headerBackgroundColor,
   });
 
   final String title;
   final IconData icon;
   final Widget child;
+  final Color? headerBackgroundColor;
 
   @override
   Widget build(BuildContext context) {
@@ -1265,7 +1331,11 @@ class _ClientSection extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Padding(
+          Container(
+            decoration: BoxDecoration(
+              color: headerBackgroundColor,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
+            ),
             padding: EdgeInsets.fromLTRB(16, 14, 16, 14),
             child: Row(
               children: [

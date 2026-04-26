@@ -65,7 +65,6 @@ class ProductoUpsertPayload {
     required this.cantidadPredeterminada,
     required this.cantidadMaxima,
     required this.categoriaNombre,
-    required this.categoriaImpuestoNombre,
     required this.tasaImpuestoNombre,
     required this.unidadMedida,
     required this.sku,
@@ -86,7 +85,6 @@ class ProductoUpsertPayload {
   final double? cantidadPredeterminada;
   final double? cantidadMaxima;
   final String categoriaNombre;
-  final String categoriaImpuestoNombre;
   final String tasaImpuestoNombre;
   final String unidadMedida;
   final String sku;
@@ -108,7 +106,6 @@ class ProductoUpsertPayload {
       'p_cantidad_predeterminada': cantidadPredeterminada,
       'p_cantidad_maxima': cantidadMaxima,
       'p_categoria_nombre': categoriaNombre,
-      'p_categoria_impuesto_nombre': categoriaImpuestoNombre,
       'p_tasa_impuesto_nombre': tasaImpuestoNombre,
       'p_unidad_medida': unidadMedida,
       'p_sku': sku,

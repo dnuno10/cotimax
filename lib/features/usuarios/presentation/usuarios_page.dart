@@ -8,9 +8,27 @@ import 'package:cotimax/shared/widgets/cotimax_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+const _supportEmail = 'support@cotimax.com';
+
+Future<void> _contactSupportByEmail(BuildContext context) async {
+  final emailUri = Uri(
+    scheme: 'mailto',
+    path: _supportEmail,
+    queryParameters: {'subject': 'Cotimax Enterprise > 50 miembros'},
+  );
+  final opened = await launchUrl(emailUri);
+  if (!opened && context.mounted) {
+    ToastHelper.show(
+      context,
+      'No se pudo abrir tu cliente de correo. Escribe a $_supportEmail.',
+    );
+  }
+}
 
 class UsuariosPage extends ConsumerWidget {
-   UsuariosPage({super.key});
+  UsuariosPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -19,15 +37,15 @@ class UsuariosPage extends ConsumerWidget {
 
     return ListView(
       children: [
-         PageHeader(
+        PageHeader(
           title: 'Usuarios',
           subtitle: 'Administracion de usuarios, roles y empresas asignadas.',
         ),
-         SizedBox(height: 12),
+        SizedBox(height: 12),
         plan.when(
           data: (sub) {
             if (sub.planId == 'starter' || sub.planId == 'pro') {
-              return  SectionCard(
+              return SectionCard(
                 title: 'Bloqueo por plan',
                 child: Row(
                   children: [
@@ -42,53 +60,141 @@ class UsuariosPage extends ConsumerWidget {
                 ),
               );
             }
-            final invitation = ref.watch(companyInvitationCodeProvider);
-            return invitation.when(
-              loading: () =>  SizedBox.shrink(),
-              error: (_, __) =>  SizedBox.shrink(),
-              data: (code) => SectionCard(
-                title: tr('Código de invitación', 'Invitation code'),
-                child: Row(
+
+            if (sub.usuariosActivos >= 50) {
+              return SectionCard(
+                title: tr(
+                  'Equipo al límite del plan',
+                  'Team plan limit reached',
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                     Icon(Icons.key_outlined),
-                     SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        code.codigo,
-                        style:  TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.8,
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.support_agent_rounded,
+                          color: AppColors.warning,
+                        ),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            tr(
+                              'Tu equipo llegó al límite de 50 miembros en el plan Empresa. Si necesitas más de 50 miembros, escríbenos a support@cotimax.com.',
+                              'Your team reached the 50-member Enterprise limit. If you need more than 50 members, email us at support@cotimax.com.',
+                            ),
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.w600,
+                              height: 1.5,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 10),
+                    TextButton.icon(
+                      onPressed: () => _contactSupportByEmail(context),
+                      icon: Icon(Icons.email_rounded, size: 18),
+                      label: Text(
+                        tr(
+                          'Escribir a support@cotimax.com',
+                          'Email support@cotimax.com',
                         ),
                       ),
                     ),
-                    OutlinedButton.icon(
-                      onPressed: () async {
-                        await Clipboard.setData(
-                          ClipboardData(text: code.codigo),
-                        );
-                        if (!context.mounted) return;
-                        ToastHelper.showSuccess(
-                          context,
-                          tr(
-                            'Código de invitación copiado.',
-                            'Invitation code copied.',
+                  ],
+                ),
+              );
+            }
+
+            final invitation = ref.watch(companyInvitationCodeProvider);
+            return invitation.when(
+              loading: () => SizedBox.shrink(),
+              error: (_, __) => SectionCard(
+                title: tr('Invitaciones de equipo', 'Team invitations'),
+                child: Text(
+                  tr(
+                    'No se pudo generar el código de invitación en este momento.',
+                    'Could not generate the invitation code right now.',
+                  ),
+                ),
+              ),
+              data: (code) => SectionCard(
+                title: tr(
+                  'Invitaciones de equipo (2 a 50)',
+                  'Team invites (2 to 50)',
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.key_outlined),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            code.codigo,
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.8,
+                            ),
                           ),
-                        );
-                      },
-                      icon:  Icon(Icons.copy_rounded, size: 16),
-                      label: Text(tr('Copiar', 'Copy')),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: () async {
+                            await Clipboard.setData(
+                              ClipboardData(text: code.codigo),
+                            );
+                            if (!context.mounted) return;
+                            ToastHelper.showSuccess(
+                              context,
+                              tr(
+                                'Código de invitación copiado.',
+                                'Invitation code copied.',
+                              ),
+                            );
+                          },
+                          icon: Icon(Icons.copy_rounded, size: 16),
+                          label: Text(tr('Copiar', 'Copy')),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      tr(
+                        'Si tu equipo necesita más de 50 miembros, escríbenos a support@cotimax.com.',
+                        'If your team needs more than 50 members, email us at support@cotimax.com.',
+                      ),
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w600,
+                        height: 1.45,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    TextButton.icon(
+                      onPressed: () => _contactSupportByEmail(context),
+                      icon: Icon(Icons.email_rounded, size: 18),
+                      label: Text(
+                        tr(
+                          'Escribir a support@cotimax.com',
+                          'Email support@cotimax.com',
+                        ),
+                      ),
                     ),
                   ],
                 ),
               ),
             );
           },
-          loading: () =>  SizedBox.shrink(),
-          error: (_, __) =>  SizedBox.shrink(),
+          loading: () => SizedBox.shrink(),
+          error: (_, __) => SizedBox.shrink(),
         ),
-         SizedBox(height: 12),
+        SizedBox(height: 12),
         usuarios.when(
           loading: LoadingSkeleton.new,
           error: (_, __) => ErrorStateWidget(

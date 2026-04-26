@@ -89,6 +89,7 @@ create table if not exists public.planes (
   descripcion text not null default '',
   limite_clientes integer not null default 0,
   limite_productos integer not null default 0,
+  limite_materiales integer not null default 0,
   limite_cotizaciones_mensuales integer not null default 0,
   limite_usuarios integer not null default 0,
   limite_empresas integer not null default 0,
@@ -96,6 +97,7 @@ create table if not exists public.planes (
   usuarios_maximos integer not null default 0,
   incluye_ingresos_gastos boolean not null default false,
   incluye_dashboard boolean not null default false,
+  incluye_analitica boolean not null default false,
   incluye_personalizacion_pdf boolean not null default false,
   incluye_notas_privadas boolean not null default false,
   incluye_estados_cotizacion boolean not null default false,
@@ -406,7 +408,6 @@ create table if not exists public.productos_servicios (
   cantidad_maxima numeric(14,4),
   categoria_producto_id uuid references public.categorias_producto(id) on delete set null,
   categoria_nombre_snapshot text not null default '',
-  categoria_impuesto_nombre text not null default '',
   tasa_impuesto_nombre text not null default '',
   unidad_medida text not null default '',
   sku text not null default '',
@@ -466,7 +467,7 @@ create table if not exists public.cotizaciones (
   notas_privadas text not null default '',
   terminos text not null default '',
   pie_pagina text not null default '',
-  estatus text not null default 'borrador' check (estatus in ('borrador', 'enviada', 'aprobada', 'rechazada')),
+  estatus text not null default 'borrador' check (estatus in ('borrador', 'enviada', 'aprobada', 'pagada', 'rechazada')),
   moneda_codigo text not null default 'MXN',
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now()),
@@ -497,7 +498,6 @@ create table if not exists public.ingresos_recurrentes (
   cliente_id uuid references public.clientes(id) on delete set null,
   cliente_nombre_snapshot text not null default '',
   cotizacion_id uuid references public.cotizaciones(id) on delete set null,
-  cotizacion_folio_snapshot text not null default '',
   icon_key text not null default 'wallet',
   monto numeric(14,2) not null default 0,
   metodo_pago text not null default 'transferencia',
@@ -523,7 +523,6 @@ create table if not exists public.ingresos (
   cliente_id uuid references public.clientes(id) on delete set null,
   cliente_nombre_snapshot text not null default '',
   cotizacion_id uuid references public.cotizaciones(id) on delete set null,
-  cotizacion_folio_snapshot text not null default '',
   ingreso_recurrente_id uuid references public.ingresos_recurrentes(id) on delete set null,
   icon_key text not null default 'wallet',
   monto numeric(14,2) not null default 0,
@@ -1202,14 +1201,14 @@ on conflict (key) do nothing;
 
 insert into public.planes (
   id, nombre, precio_mensual, billing_mode, precio_por_usuario, descripcion,
-  limite_clientes, limite_productos, limite_cotizaciones_mensuales,
+  limite_clientes, limite_productos, limite_materiales, limite_cotizaciones_mensuales,
   limite_usuarios, limite_empresas, usuarios_minimos, usuarios_maximos,
-  incluye_ingresos_gastos, incluye_dashboard, incluye_personalizacion_pdf,
+  incluye_ingresos_gastos, incluye_dashboard, incluye_analitica, incluye_personalizacion_pdf,
   incluye_notas_privadas, incluye_estados_cotizacion, incluye_marca_agua, activo
 ) values
-('starter', 'Starter', 0, 'flat_monthly', 0, '20 clientes, 20 productos/servicios, 10 cotizaciones por mes, 1 usuario y 1 empresa.', 20, 20, 10, 1, 1, 0, 0, false, false, false, false, false, true, true),
-('pro', 'Pro', 149, 'flat_monthly', 0, 'Clientes, productos y cotizaciones ilimitadas, 1 usuario, 1 empresa, ingresos y gastos.', -1, -1, -1, 1, 1, 0, 0, true, true, true, true, true, false, true),
-('empresa', 'Empresa', 0, 'per_user_monthly', 99, 'Plan multiusuario de 2 a 50 usuarios, multiempresa hasta 5 empresas y soporte prioritario.', -1, -1, -1, 50, 5, 2, 50, true, true, true, true, true, false, true)
+('starter', 'Starter', 0, 'flat_monthly', 0, '5 clientes, 5 productos/servicios, 5 materiales, 10 cotizaciones por mes con marca de agua de Cotimax, ingresos, gastos y recordatorios ilimitados, 1 usuario.', 5, 5, 5, 10, 1, 1, 0, 0, true, true, false, false, false, false, true, true),
+('pro', 'Pro', 249, 'flat_monthly', 0, 'Clientes, productos, materiales, cotizaciones, ingresos, gastos y recordatorios ilimitados, 1 usuario.', -1, -1, -1, -1, 1, 1, 0, 0, true, true, true, true, true, true, false, true),
+('empresa', 'Empresa', 0, 'per_user_monthly', 199, 'Clientes, productos, materiales, cotizaciones, ingresos, gastos y recordatorios ilimitados, de 2 a 50 usuarios.', -1, -1, -1, -1, 50, 5, 2, 50, true, true, true, true, true, true, false, true)
 on conflict (id) do update set
   nombre = excluded.nombre,
   precio_mensual = excluded.precio_mensual,
@@ -1218,6 +1217,7 @@ on conflict (id) do update set
   descripcion = excluded.descripcion,
   limite_clientes = excluded.limite_clientes,
   limite_productos = excluded.limite_productos,
+  limite_materiales = excluded.limite_materiales,
   limite_cotizaciones_mensuales = excluded.limite_cotizaciones_mensuales,
   limite_usuarios = excluded.limite_usuarios,
   limite_empresas = excluded.limite_empresas,
@@ -1225,6 +1225,7 @@ on conflict (id) do update set
   usuarios_maximos = excluded.usuarios_maximos,
   incluye_ingresos_gastos = excluded.incluye_ingresos_gastos,
   incluye_dashboard = excluded.incluye_dashboard,
+  incluye_analitica = excluded.incluye_analitica,
   incluye_personalizacion_pdf = excluded.incluye_personalizacion_pdf,
   incluye_notas_privadas = excluded.incluye_notas_privadas,
   incluye_estados_cotizacion = excluded.incluye_estados_cotizacion,
@@ -1483,6 +1484,196 @@ begin
 end;
 $$;
 
+create or replace function public.list_delete_dependencies(
+  p_entity_type text,
+  p_ids uuid[]
+)
+returns table (
+  dependency_key text,
+  dependency_label text,
+  dependency_count bigint
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if coalesce(array_length(p_ids, 1), 0) = 0 then
+    return;
+  end if;
+
+  if p_entity_type = 'cotizacion' then
+    return query
+    with target_ids as (
+      select c.id
+      from public.cotizaciones c
+      where c.id = any(p_ids)
+        and public.app_can_access_empresa(c.empresa_id)
+    )
+    select * from (
+      select
+        'recordatorios'::text,
+        'recordatorios relacionados'::text,
+        count(*)::bigint as dependency_count
+      from public.recordatorios r
+      where r.deleted_at is null
+        and r.cotizacion_id in (select id from target_ids)
+      union all
+      select
+        'ingresos'::text,
+        'ingresos relacionados'::text,
+        count(*)::bigint as dependency_count
+      from public.ingresos i
+      where i.deleted_at is null
+        and i.cotizacion_id in (select id from target_ids)
+      union all
+      select
+        'ingresos_recurrentes'::text,
+        'ingresos recurrentes relacionados'::text,
+        count(*)::bigint as dependency_count
+      from public.ingresos_recurrentes ir
+      where ir.cotizacion_id in (select id from target_ids)
+    ) dependency_rows
+    where dependency_rows.dependency_count > 0;
+    return;
+  end if;
+
+  if p_entity_type = 'cliente' then
+    return query
+    with target_ids as (
+      select c.id
+      from public.clientes c
+      where c.id = any(p_ids)
+        and public.app_can_access_empresa(c.empresa_id)
+    )
+    select * from (
+      select
+        'cotizaciones'::text,
+        'cotizaciones relacionadas'::text,
+        count(*)::bigint as dependency_count
+      from public.cotizaciones c
+      where c.deleted_at is null
+        and c.cliente_id in (select id from target_ids)
+      union all
+      select
+        'ingresos'::text,
+        'ingresos relacionados'::text,
+        count(*)::bigint as dependency_count
+      from public.ingresos i
+      where i.deleted_at is null
+        and i.cliente_id in (select id from target_ids)
+      union all
+      select
+        'ingresos_recurrentes'::text,
+        'ingresos recurrentes relacionados'::text,
+        count(*)::bigint as dependency_count
+      from public.ingresos_recurrentes ir
+      where ir.cliente_id in (select id from target_ids)
+      union all
+      select
+        'recordatorios'::text,
+        'recordatorios relacionados'::text,
+        count(*)::bigint as dependency_count
+      from public.recordatorios r
+      where r.deleted_at is null
+        and r.cliente_id in (select id from target_ids)
+    ) dependency_rows
+    where dependency_rows.dependency_count > 0;
+    return;
+  end if;
+
+  if p_entity_type = 'proveedor' then
+    return query
+    with target_ids as (
+      select p.id
+      from public.proveedores p
+      where p.id = any(p_ids)
+        and public.app_can_access_empresa(p.empresa_id)
+    )
+    select * from (
+      select
+        'gastos'::text,
+        'gastos relacionados'::text,
+        count(*)::bigint as dependency_count
+      from public.gastos g
+      where g.deleted_at is null
+        and g.proveedor_id in (select id from target_ids)
+      union all
+      select
+        'materiales'::text,
+        'materiales relacionados'::text,
+        count(*)::bigint as dependency_count
+      from public.materiales_insumos m
+      where m.deleted_at is null
+        and m.proveedor_id in (select id from target_ids)
+    ) dependency_rows
+    where dependency_rows.dependency_count > 0;
+    return;
+  end if;
+
+  if p_entity_type = 'producto' then
+    return query
+    with target_ids as (
+      select p.id
+      from public.productos_servicios p
+      where p.id = any(p_ids)
+        and public.app_can_access_empresa(p.empresa_id)
+    )
+    select * from (
+      select
+        'cotizacion_detalles'::text,
+        'lineas de cotizacion relacionadas'::text,
+        count(*)::bigint as dependency_count
+      from public.cotizacion_detalles cd
+      where cd.producto_servicio_id in (select id from target_ids)
+    ) dependency_rows
+    where dependency_rows.dependency_count > 0;
+    return;
+  end if;
+
+  if p_entity_type = 'material' then
+    return query
+    with target_ids as (
+      select m.id
+      from public.materiales_insumos m
+      where m.id = any(p_ids)
+        and public.app_can_access_empresa(m.empresa_id)
+    )
+    select * from (
+      select
+        'producto_componentes'::text,
+        'componentes de producto relacionados'::text,
+        count(*)::bigint as dependency_count
+      from public.producto_componentes pc
+      where pc.material_id in (select id from target_ids)
+    ) dependency_rows
+    where dependency_rows.dependency_count > 0;
+    return;
+  end if;
+
+  if p_entity_type = 'gasto' then
+    return query
+    with target_ids as (
+      select g.id
+      from public.gastos g
+      where g.id = any(p_ids)
+        and public.app_can_access_empresa(g.empresa_id)
+    )
+    select * from (
+      select
+        'ingresos'::text,
+        'ingresos relacionados'::text,
+        count(*)::bigint as dependency_count
+      from public.ingresos i
+      where i.deleted_at is null
+        and i.gasto_fuente_id in (select id from target_ids)
+    ) dependency_rows
+    where dependency_rows.dependency_count > 0;
+    return;
+  end if;
+end;
+$$;
+
 create or replace function public.delete_cliente(p_id uuid)
 returns void
 language plpgsql
@@ -1491,10 +1682,50 @@ set search_path = public
 as $$
 declare
   v_empresa_id uuid;
+  v_cliente_label text;
 begin
-  select empresa_id into v_empresa_id from public.clientes where id = p_id;
+  select
+    c.empresa_id,
+    coalesce(nullif(c.nombre, ''), nullif(c.empresa, ''), 'Cliente eliminado')
+  into v_empresa_id, v_cliente_label
+  from public.clientes c
+  where c.id = p_id;
+
+  if v_empresa_id is null then
+    return;
+  end if;
+
   perform public.app_require_company_access(v_empresa_id);
-  update public.clientes set deleted_at = timezone('utc', now()) where id = p_id;
+
+  update public.cotizaciones
+  set cliente_id = null,
+      cliente_nombre_snapshot = coalesce(nullif(cliente_nombre_snapshot, ''), v_cliente_label),
+      updated_at = timezone('utc', now())
+  where cliente_id = p_id;
+
+  update public.ingresos
+  set cliente_id = null,
+      cliente_nombre_snapshot = coalesce(nullif(cliente_nombre_snapshot, ''), v_cliente_label),
+      updated_at = timezone('utc', now())
+  where cliente_id = p_id;
+
+  update public.ingresos_recurrentes
+  set cliente_id = null,
+      cliente_nombre_snapshot = coalesce(nullif(cliente_nombre_snapshot, ''), v_cliente_label),
+      updated_at = timezone('utc', now())
+  where cliente_id = p_id;
+
+  update public.recordatorios
+  set cliente_id = null,
+      cliente_nombre_snapshot = coalesce(nullif(cliente_nombre_snapshot, ''), v_cliente_label),
+      updated_at = timezone('utc', now())
+  where cliente_id = p_id;
+
+  delete from public.cliente_contactos where cliente_id = p_id;
+  delete from public.cliente_direcciones where cliente_id = p_id;
+  delete from public.cliente_configuracion where cliente_id = p_id;
+  delete from public.cliente_clasificacion where cliente_id = p_id;
+  delete from public.clientes where id = p_id;
 end;
 $$;
 
@@ -1587,10 +1818,36 @@ set search_path = public
 as $$
 declare
   v_empresa_id uuid;
+  v_proveedor_label text;
 begin
-  select empresa_id into v_empresa_id from public.proveedores where id = p_id;
+  select
+    p.empresa_id,
+    coalesce(nullif(p.nombre, ''), nullif(p.empresa, ''), 'Proveedor eliminado')
+  into v_empresa_id, v_proveedor_label
+  from public.proveedores p
+  where p.id = p_id;
+
+  if v_empresa_id is null then
+    return;
+  end if;
+
   perform public.app_require_company_access(v_empresa_id);
-  update public.proveedores set deleted_at = timezone('utc', now()) where id = p_id;
+
+  update public.gastos
+  set proveedor_id = null,
+      proveedor_nombre = coalesce(nullif(proveedor_nombre, ''), v_proveedor_label),
+      updated_at = timezone('utc', now())
+  where proveedor_id = p_id;
+
+  update public.materiales_insumos
+  set proveedor_id = null,
+      proveedor_nombre = coalesce(nullif(proveedor_nombre, ''), v_proveedor_label),
+      updated_at = timezone('utc', now())
+  where proveedor_id = p_id;
+
+  delete from public.proveedor_contactos where proveedor_id = p_id;
+  delete from public.proveedor_direcciones where proveedor_id = p_id;
+  delete from public.proveedores where id = p_id;
 end;
 $$;
 
@@ -1657,20 +1914,26 @@ declare
   v_id uuid := coalesce(public.app_parse_uuid(p_payload ->> 'id'), gen_random_uuid());
   v_proveedor_id uuid := public.app_parse_uuid(p_payload ->> 'proveedor_id');
   v_producto_ids uuid[] := '{}'::uuid[];
+  v_sync_producto_ids boolean := coalesce(
+    nullif(p_payload ->> 'sync_producto_ids', '')::boolean,
+    false
+  );
 begin
   perform public.app_require_company_access(v_empresa_id);
 
-  select coalesce(array_agg(producto_id), '{}'::uuid[])
-  into v_producto_ids
-  from (
-    select distinct public.app_parse_uuid(value) as producto_id
-    from jsonb_array_elements_text(coalesce(p_payload -> 'producto_ids', '[]'::jsonb))
-  ) selected_ids
-  join public.productos_servicios p
-    on p.id = selected_ids.producto_id
-   and p.empresa_id = v_empresa_id
-   and p.deleted_at is null
-  where selected_ids.producto_id is not null;
+  if v_sync_producto_ids then
+    select coalesce(array_agg(producto_id), '{}'::uuid[])
+    into v_producto_ids
+    from (
+      select distinct public.app_parse_uuid(value) as producto_id
+      from jsonb_array_elements_text(coalesce(p_payload -> 'producto_ids', '[]'::jsonb))
+    ) selected_ids
+    join public.productos_servicios p
+      on p.id = selected_ids.producto_id
+     and p.empresa_id = v_empresa_id
+     and p.deleted_at is null
+    where selected_ids.producto_id is not null;
+  end if;
 
   insert into public.materiales_insumos (
     id, empresa_id, nombre, descripcion, tipo_nombre, unidad_medida,
@@ -1702,41 +1965,43 @@ begin
     sku = excluded.sku,
     activo = excluded.activo;
 
-  delete from public.producto_componentes pc
-  using public.productos_servicios p
-  where p.id = pc.producto_id
-    and p.empresa_id = v_empresa_id
-    and p.deleted_at is null
-    and pc.material_id = v_id
-    and not (pc.producto_id = any(v_producto_ids));
+  if v_sync_producto_ids then
+    delete from public.producto_componentes pc
+    using public.productos_servicios p
+    where p.id = pc.producto_id
+      and p.empresa_id = v_empresa_id
+      and p.deleted_at is null
+      and pc.material_id = v_id
+      and not (pc.producto_id = any(v_producto_ids));
 
-  insert into public.producto_componentes (
-    producto_id, tipo, material_id, nombre_libre, cantidad, unidad_consumo,
-    costo_unitario_snapshot, orden
-  )
-  select
-    p.id,
-    'Material',
-    v_id,
-    '',
-    1,
-    coalesce(p_payload ->> 'unidad_medida', ''),
-    coalesce((p_payload ->> 'costo_unitario')::numeric, 0),
-    coalesce((
-      select max(existing.orden) + 1
-      from public.producto_componentes existing
-      where existing.producto_id = p.id
-    ), 0)
-  from public.productos_servicios p
-  where p.id = any(v_producto_ids)
-    and p.empresa_id = v_empresa_id
-    and p.deleted_at is null
-    and not exists (
-      select 1
-      from public.producto_componentes existing
-      where existing.producto_id = p.id
-        and existing.material_id = v_id
-    );
+    insert into public.producto_componentes (
+      producto_id, tipo, material_id, nombre_libre, cantidad, unidad_consumo,
+      costo_unitario_snapshot, orden
+    )
+    select
+      p.id,
+      'Material',
+      v_id,
+      '',
+      1,
+      coalesce(p_payload ->> 'unidad_medida', ''),
+      coalesce((p_payload ->> 'costo_unitario')::numeric, 0),
+      coalesce((
+        select max(existing.orden) + 1
+        from public.producto_componentes existing
+        where existing.producto_id = p.id
+      ), 0)
+    from public.productos_servicios p
+    where p.id = any(v_producto_ids)
+      and p.empresa_id = v_empresa_id
+      and p.deleted_at is null
+      and not exists (
+        select 1
+        from public.producto_componentes existing
+        where existing.producto_id = p.id
+          and existing.material_id = v_id
+      );
+  end if;
 
   return v_id;
 end;
@@ -1750,10 +2015,30 @@ set search_path = public
 as $$
 declare
   v_empresa_id uuid;
+  v_producto_label text;
 begin
-  select empresa_id into v_empresa_id from public.productos_servicios where id = p_id;
+  select
+    p.empresa_id,
+    coalesce(nullif(p.nombre, ''), 'Producto eliminado')
+  into v_empresa_id, v_producto_label
+  from public.productos_servicios p
+  where p.id = p_id;
+
+  if v_empresa_id is null then
+    return;
+  end if;
+
   perform public.app_require_company_access(v_empresa_id);
-  update public.productos_servicios set deleted_at = timezone('utc', now()) where id = p_id;
+
+  update public.cotizacion_detalles
+  set producto_servicio_id = null,
+      concepto = coalesce(nullif(concepto, ''), v_producto_label),
+      updated_at = timezone('utc', now())
+  where producto_servicio_id = p_id;
+
+  delete from public.producto_precios_rango where producto_id = p_id;
+  delete from public.producto_componentes where producto_id = p_id;
+  delete from public.productos_servicios where id = p_id;
 end;
 $$;
 
@@ -1765,10 +2050,28 @@ set search_path = public
 as $$
 declare
   v_empresa_id uuid;
+  v_material_label text;
 begin
-  select empresa_id into v_empresa_id from public.materiales_insumos where id = p_id;
+  select
+    m.empresa_id,
+    coalesce(nullif(m.nombre, ''), 'Material eliminado')
+  into v_empresa_id, v_material_label
+  from public.materiales_insumos m
+  where m.id = p_id;
+
+  if v_empresa_id is null then
+    return;
+  end if;
+
   perform public.app_require_company_access(v_empresa_id);
-  update public.materiales_insumos set deleted_at = timezone('utc', now()) where id = p_id;
+
+  update public.producto_componentes
+  set material_id = null,
+      nombre_libre = coalesce(nullif(nombre_libre, ''), v_material_label),
+      updated_at = timezone('utc', now())
+  where material_id = p_id;
+
+  delete from public.materiales_insumos where id = p_id;
 end;
 $$;
 
@@ -1821,7 +2124,6 @@ create or replace function public.upsert_producto(
   p_cantidad_predeterminada numeric default null,
   p_cantidad_maxima numeric default null,
   p_categoria_nombre text default '',
-  p_categoria_impuesto_nombre text default '',
   p_tasa_impuesto_nombre text default '',
   p_unidad_medida text default '',
   p_sku text default '',
@@ -1863,15 +2165,14 @@ begin
     id, empresa_id, tipo, nombre, descripcion, precio_base, costo_base,
     auto_calcular_costo_base, modo_precio, cantidad_predeterminada,
     cantidad_maxima, categoria_producto_id, categoria_nombre_snapshot,
-    categoria_impuesto_nombre, tasa_impuesto_nombre, unidad_medida, sku,
-    imagen_url, activo
+    tasa_impuesto_nombre, unidad_medida, sku, imagen_url, activo
   )
   values (
     v_id, v_empresa_id, p_tipo, p_nombre, p_descripcion, p_precio_base,
     p_costo_base, p_auto_calcular_costo_base, p_modo_precio,
     p_cantidad_predeterminada, p_cantidad_maxima, v_categoria_id,
-    p_categoria_nombre, p_categoria_impuesto_nombre, p_tasa_impuesto_nombre,
-    p_unidad_medida, p_sku, p_imagen_url, p_activo
+    p_categoria_nombre, p_tasa_impuesto_nombre, p_unidad_medida, p_sku,
+    p_imagen_url, p_activo
   )
   on conflict (id) do update set
     tipo = excluded.tipo,
@@ -1885,7 +2186,6 @@ begin
     cantidad_maxima = excluded.cantidad_maxima,
     categoria_producto_id = excluded.categoria_producto_id,
     categoria_nombre_snapshot = excluded.categoria_nombre_snapshot,
-    categoria_impuesto_nombre = excluded.categoria_impuesto_nombre,
     tasa_impuesto_nombre = excluded.tasa_impuesto_nombre,
     unidad_medida = excluded.unidad_medida,
     sku = excluded.sku,
@@ -1939,9 +2239,34 @@ as $$
 declare
   v_empresa_id uuid;
 begin
-  select empresa_id into v_empresa_id from public.cotizaciones where id = p_id;
+  select c.empresa_id
+  into v_empresa_id
+  from public.cotizaciones c
+  where c.id = p_id;
+
+  if v_empresa_id is null then
+    return;
+  end if;
+
   perform public.app_require_company_access(v_empresa_id);
-  update public.cotizaciones set deleted_at = timezone('utc', now()) where id = p_id;
+
+  update public.ingresos
+  set cotizacion_id = null,
+      updated_at = timezone('utc', now())
+  where cotizacion_id = p_id;
+
+  update public.ingresos_recurrentes
+  set cotizacion_id = null,
+      updated_at = timezone('utc', now())
+  where cotizacion_id = p_id;
+
+  update public.recordatorios
+  set cotizacion_id = null,
+      updated_at = timezone('utc', now())
+  where cotizacion_id = p_id;
+
+  delete from public.cotizacion_detalles where cotizacion_id = p_id;
+  delete from public.cotizaciones where id = p_id;
 end;
 $$;
 
@@ -1958,6 +2283,8 @@ returns table (
   descuento_total numeric,
   impuesto_total numeric,
   total numeric,
+  pagado_total numeric,
+  saldo_total numeric,
   notas text,
   notas_privadas text,
   terminos text,
@@ -1975,7 +2302,8 @@ as $$
   select
     c.id, c.folio, coalesce(c.cliente_id::text, c.cliente_nombre_snapshot) as cliente_id,
     c.fecha_emision, c.fecha_vencimiento, c.impuesto_porcentaje, c.ret_isr,
-    c.subtotal, c.descuento_total, c.impuesto_total, c.total, c.notas,
+    c.subtotal, c.descuento_total, c.impuesto_total, c.total, c.pagado_total,
+    c.saldo_total, c.notas,
     c.notas_privadas, c.terminos, c.pie_pagina, c.estatus, c.usuario_id,
     c.empresa_id, c.created_at, c.updated_at
   from public.cotizaciones c
@@ -2012,11 +2340,85 @@ as $$
 declare
   v_empresa_id uuid;
 begin
-  select empresa_id into v_empresa_id from public.cotizaciones where id = p_id;
+  select empresa_id into v_empresa_id
+  from public.cotizaciones
+  where id = p_id;
+
+  if v_empresa_id is null then
+    raise exception 'Cotización no encontrada';
+  end if;
+
   perform public.app_require_company_access(v_empresa_id);
   update public.cotizaciones
-  set estatus = p_status
+  set estatus = p_status,
+      updated_at = timezone('utc', now())
   where id = p_id;
+
+  if coalesce(p_status, '') <> 'pagada' then
+    delete from public.ingresos
+    where empresa_id = v_empresa_id
+      and cotizacion_id = p_id;
+  end if;
+end;
+$$;
+
+create or replace function public.mark_cotizacion_pagada(p_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_empresa_id uuid;
+begin
+  select empresa_id into v_empresa_id
+  from public.cotizaciones
+  where id = p_id;
+
+  if v_empresa_id is null then
+    raise exception 'Cotización no encontrada';
+  end if;
+
+  perform public.app_require_company_access(v_empresa_id);
+
+  update public.cotizaciones
+  set pagado_total = total,
+      saldo_total = 0,
+      estatus = 'pagada',
+      updated_at = timezone('utc', now())
+  where id = p_id;
+end;
+$$;
+
+create or replace function public.desmarcar_cotizacion_pagada(p_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_empresa_id uuid;
+begin
+  select empresa_id into v_empresa_id
+  from public.cotizaciones
+  where id = p_id;
+
+  if v_empresa_id is null then
+    raise exception 'Cotización no encontrada';
+  end if;
+
+  perform public.app_require_company_access(v_empresa_id);
+
+  update public.cotizaciones
+  set pagado_total = 0,
+      saldo_total = total,
+      estatus = 'aprobada',
+      updated_at = timezone('utc', now())
+  where id = p_id;
+
+  delete from public.ingresos
+  where empresa_id = v_empresa_id
+    and cotizacion_id = p_id;
 end;
 $$;
 
@@ -2125,16 +2527,21 @@ begin
     notas_privadas = excluded.notas_privadas,
     terminos = excluded.terminos,
     pie_pagina = excluded.pie_pagina,
-    estatus = excluded.estatus;
+    estatus = excluded.estatus,
+    updated_at = timezone('utc', now());
 
-   from public.cotizacion_detalles where cotizacion_id = v_id;
-  for v_linea in select * from jsonb_array_elements(coalesce(p_lineas, '[]'::jsonb))
+  delete from public.cotizacion_detalles
+  where cotizacion_id = v_id;
+
+  for v_linea in
+    select *
+    from jsonb_array_elements(coalesce(p_lineas, '[]'::jsonb))
   loop
     insert into public.cotizacion_detalles (
       cotizacion_id, producto_servicio_id, concepto, descripcion,
       precio_unitario, unidad, descuento, cantidad, impuesto_porcentaje,
       importe, orden
-    )delete
+    )
     values (
       v_id,
       public.app_parse_uuid(v_linea ->> 'producto_servicio_id'),
@@ -2179,7 +2586,7 @@ as $$
   select
     i.id,
     coalesce(i.cliente_id::text, i.cliente_nombre_snapshot) as cliente_id,
-    coalesce(i.cotizacion_id::text, i.cotizacion_folio_snapshot) as cotizacion_id,
+    coalesce(i.cotizacion_id::text, '') as cotizacion_id,
     i.monto, i.metodo_pago, i.fecha, i.referencia, i.notas,
     (i.ingreso_recurrente_id is not null) as recurrente,
     coalesce(ir.frecuencia, 'ninguna') as recurrencia,
@@ -2212,7 +2619,6 @@ declare
   v_cliente_uuid uuid := public.app_parse_uuid(p_payload ->> 'cliente_id');
   v_cotizacion_uuid uuid := public.app_parse_uuid(p_payload ->> 'cotizacion_id');
   v_cliente_snapshot text := '';
-  v_cotizacion_snapshot text := '';
   v_recurrente boolean := coalesce((p_payload ->> 'recurrente')::boolean, false);
   v_recurrente_id uuid;
   v_day int;
@@ -2221,9 +2627,6 @@ begin
 
   if v_cliente_uuid is null then
     v_cliente_snapshot := coalesce(p_payload ->> 'cliente_id', '');
-  end if;
-  if v_cotizacion_uuid is null then
-    v_cotizacion_snapshot := coalesce(p_payload ->> 'cotizacion_id', '');
   end if;
 
   if v_recurrente then
@@ -2237,12 +2640,12 @@ begin
 
     insert into public.ingresos_recurrentes (
       id, empresa_id, cliente_id, cliente_nombre_snapshot, cotizacion_id,
-      cotizacion_folio_snapshot, icon_key, monto, metodo_pago, frecuencia,
+      icon_key, monto, metodo_pago, frecuencia,
       fecha_inicio, proxima_fecha, activo, notas
     )
     values (
       v_recurrente_id, v_empresa_id, v_cliente_uuid, v_cliente_snapshot,
-      v_cotizacion_uuid, v_cotizacion_snapshot,
+      v_cotizacion_uuid,
       coalesce(p_payload ->> 'icon_key', 'wallet'),
       coalesce((p_payload ->> 'monto')::numeric, 0),
       coalesce(p_payload ->> 'metodo_pago', 'transferencia'),
@@ -2264,7 +2667,6 @@ begin
       cliente_id = excluded.cliente_id,
       cliente_nombre_snapshot = excluded.cliente_nombre_snapshot,
       cotizacion_id = excluded.cotizacion_id,
-      cotizacion_folio_snapshot = excluded.cotizacion_folio_snapshot,
       icon_key = excluded.icon_key,
       monto = excluded.monto,
       metodo_pago = excluded.metodo_pago,
@@ -2289,12 +2691,12 @@ begin
 
   insert into public.ingresos (
     id, empresa_id, cliente_id, cliente_nombre_snapshot, cotizacion_id,
-    cotizacion_folio_snapshot, ingreso_recurrente_id, icon_key, monto,
+    ingreso_recurrente_id, icon_key, monto,
     metodo_pago, fecha, referencia, notas
   )
   values (
     v_id, v_empresa_id, v_cliente_uuid, v_cliente_snapshot, v_cotizacion_uuid,
-    v_cotizacion_snapshot, v_recurrente_id, coalesce(p_payload ->> 'icon_key', 'wallet'),
+    v_recurrente_id, coalesce(p_payload ->> 'icon_key', 'wallet'),
     coalesce((p_payload ->> 'monto')::numeric, 0),
     coalesce(p_payload ->> 'metodo_pago', 'transferencia'),
     coalesce((p_payload ->> 'fecha')::date, current_date),
@@ -2305,7 +2707,6 @@ begin
     cliente_id = excluded.cliente_id,
     cliente_nombre_snapshot = excluded.cliente_nombre_snapshot,
     cotizacion_id = excluded.cotizacion_id,
-    cotizacion_folio_snapshot = excluded.cotizacion_folio_snapshot,
     ingreso_recurrente_id = excluded.ingreso_recurrente_id,
     icon_key = excluded.icon_key,
     monto = excluded.monto,
@@ -2327,9 +2728,14 @@ as $$
 declare
   v_empresa_id uuid;
 begin
-  select empresa_id into v_empresa_id from public.ingresos where id = p_id;
+  select i.empresa_id into v_empresa_id from public.ingresos i where i.id = p_id;
+
+  if v_empresa_id is null then
+    return;
+  end if;
+
   perform public.app_require_company_access(v_empresa_id);
-  update public.ingresos set deleted_at = timezone('utc', now()) where id = p_id;
+  delete from public.ingresos where id = p_id;
 end;
 $$;
 
@@ -2521,10 +2927,31 @@ set search_path = public
 as $$
 declare
   v_empresa_id uuid;
+  v_gasto_label text;
 begin
-  select empresa_id into v_empresa_id from public.gastos where id = p_id;
+  select
+    g.empresa_id,
+    coalesce(nullif(g.descripcion, ''), nullif(g.referencia, ''), 'Gasto eliminado')
+  into v_empresa_id, v_gasto_label
+  from public.gastos g
+  where g.id = p_id;
+
+  if v_empresa_id is null then
+    return;
+  end if;
+
   perform public.app_require_company_access(v_empresa_id);
-  update public.gastos set deleted_at = timezone('utc', now()) where id = p_id;
+
+  update public.ingresos
+  set gasto_fuente_id = null,
+      gasto_fuente_nombre_snapshot = coalesce(
+        nullif(gasto_fuente_nombre_snapshot, ''),
+        v_gasto_label
+      ),
+      updated_at = timezone('utc', now())
+  where gasto_fuente_id = p_id;
+
+  delete from public.gastos where id = p_id;
 end;
 $$;
 
@@ -2797,6 +3224,7 @@ $$;
 grant execute on function public.list_clientes(text) to authenticated;
 grant execute on function public.upsert_cliente(jsonb) to authenticated;
 grant execute on function public.toggle_cliente_activo(uuid) to authenticated;
+grant execute on function public.list_delete_dependencies(text, uuid[]) to authenticated;
 grant execute on function public.delete_cliente(uuid) to authenticated;
 grant execute on function public.list_proveedores(text) to authenticated;
 grant execute on function public.upsert_proveedor(jsonb) to authenticated;
@@ -2806,11 +3234,13 @@ grant execute on function public.list_materiales(text) to authenticated;
 grant execute on function public.upsert_material(jsonb) to authenticated;
 grant execute on function public.delete_material(uuid) to authenticated;
 grant execute on function public.list_productos(text) to authenticated;
-grant execute on function public.upsert_producto(uuid, text, text, text, numeric, numeric, boolean, text, numeric, numeric, text, text, text, text, text, text, boolean, jsonb, jsonb) to authenticated;
+grant execute on function public.upsert_producto(uuid, text, text, text, numeric, numeric, boolean, text, numeric, numeric, text, text, text, text, text, boolean, jsonb, jsonb) to authenticated;
 grant execute on function public.delete_producto(uuid) to authenticated;
 grant execute on function public.list_cotizaciones(text) to authenticated;
 grant execute on function public.list_cotizacion_detalles(uuid) to authenticated;
 grant execute on function public.update_cotizacion_status(uuid, text) to authenticated;
+grant execute on function public.mark_cotizacion_pagada(uuid) to authenticated;
+grant execute on function public.desmarcar_cotizacion_pagada(uuid) to authenticated;
 grant execute on function public.upsert_cotizacion(uuid, text, timestamptz, timestamptz, numeric, text, text, text, numeric, numeric, boolean, text, text, text, text, text, jsonb) to authenticated;
 grant execute on function public.delete_cotizacion(uuid) to authenticated;
 grant execute on function public.list_ingresos() to authenticated;

@@ -6,10 +6,14 @@ import 'package:cotimax/core/localization/app_localization.dart';
 import 'package:cotimax/core/platform/logo_picker.dart';
 import 'package:cotimax/features/configuracion/application/configuracion_controller.dart';
 import 'package:cotimax/features/clientes/application/clientes_controller.dart';
+import 'package:cotimax/features/materiales/application/materiales_controller.dart';
 import 'package:cotimax/features/planes/application/planes_controller.dart';
+import 'package:cotimax/features/planes/application/stripe_checkout_service.dart';
+import 'package:cotimax/features/planes/presentation/plan_cards.dart';
 import 'package:cotimax/features/cotizaciones/application/cotizacion_pdf_service.dart';
 import 'package:cotimax/features/cotizaciones/application/cotizaciones_controller.dart';
 import 'package:cotimax/features/productos/application/productos_controller.dart';
+import 'package:cotimax/shared/enums/app_enums.dart';
 import 'package:cotimax/shared/models/domain_models.dart';
 import 'package:cotimax/shared/widgets/cotimax_rich_text_editor.dart';
 import 'package:cotimax/shared/widgets/cotimax_widgets.dart';
@@ -20,6 +24,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:printing/printing.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+const _supportEmail = 'support@cotimax.com';
+
+Future<void> _contactSupportByEmail(BuildContext context) async {
+  final emailUri = Uri(
+    scheme: 'mailto',
+    path: _supportEmail,
+    queryParameters: {'subject': 'Cotimax Enterprise > 50 miembros'},
+  );
+  final opened = await launchUrl(emailUri);
+  if (!opened && context.mounted) {
+    ToastHelper.show(
+      context,
+      'No se pudo abrir tu cliente de correo. Escribe a $_supportEmail.',
+    );
+  }
+}
 
 List<({String value, String label})> localizationCurrencyOptions = [
   (value: 'MXN', label: 'MXN - Peso mexicano'),
@@ -158,6 +180,7 @@ class _ConfiguracionPageState extends ConsumerState<ConfiguracionPage> {
   late final TextEditingController _neutralColorController;
   bool _isSavingDesign = false;
   String? _designSeedVersion;
+  Timer? _designPreviewInputDebounce;
 
   static const _mainTabs = [
     'Gestión de cuenta',
@@ -185,10 +208,14 @@ class _ConfiguracionPageState extends ConsumerState<ConfiguracionPage> {
     _secondaryColorController = TextEditingController(text: 'F8B142');
     _backgroundColorController = TextEditingController(text: 'F7F9FC');
     _neutralColorController = TextEditingController(text: '1F2937');
+    _logoSizeController.addListener(_handleDesignDraftInputChanged);
+    unawaited(CotizacionPdfService.prewarmDefaultAssets());
   }
 
   @override
   void dispose() {
+    _designPreviewInputDebounce?.cancel();
+    _logoSizeController.removeListener(_handleDesignDraftInputChanged);
     _logoSizeController.dispose();
     _primaryColorController.dispose();
     _secondaryColorController.dispose();
@@ -217,6 +244,7 @@ class _ConfiguracionPageState extends ConsumerState<ConfiguracionPage> {
     _showPaidStamp = empresa.quoteShowPaidStamp;
     _showShippingAddress = empresa.quoteShowShippingAddress;
     _showPageNumber = empresa.quoteShowPageNumber;
+    CotizacionPdfService.prewarmFonts(_primaryFont);
     _primaryColorController.text = empresa.colorPrimario.replaceAll('#', '');
     _secondaryColorController.text = empresa.colorSecundario.replaceAll(
       '#',
@@ -224,6 +252,14 @@ class _ConfiguracionPageState extends ConsumerState<ConfiguracionPage> {
     );
     _backgroundColorController.text = empresa.colorFondo.replaceAll('#', '');
     _neutralColorController.text = empresa.colorNeutro.replaceAll('#', '');
+  }
+
+  void _handleDesignDraftInputChanged() {
+    _designPreviewInputDebounce?.cancel();
+    _designPreviewInputDebounce = Timer(const Duration(milliseconds: 180), () {
+      if (!mounted || _mainTabIndex != 3) return;
+      setState(() {});
+    });
   }
 
   Future<void> _saveQuoteDesign(
@@ -276,13 +312,51 @@ class _ConfiguracionPageState extends ConsumerState<ConfiguracionPage> {
     }
   }
 
+  Future<void> _refreshQuoteDesignPreview() async {
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  void _resetQuoteDesignDraft() {
+    if (_isSavingDesign) return;
+    setState(() {
+      _quoteDesign = 'corporativo';
+      _pageOrientation = 'Retrato';
+      _pageSize = 'A4';
+      _fontSize = '18';
+      _logoSizeMode = 'Porcentaje';
+      _primaryFont = 'Arimo';
+      _secondaryFont = 'Arimo';
+      _emptyColumnsMode = 'Espectaculo';
+      _showPaidStamp = false;
+      _showShippingAddress = false;
+      _showPageNumber = false;
+      assignControllerText(_logoSizeController, '24');
+      assignControllerText(_primaryColorController, '000000');
+      assignControllerText(_secondaryColorController, 'F8B142');
+      assignControllerText(_backgroundColorController, 'F7F9FC');
+      assignControllerText(_neutralColorController, '1F2937');
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final uri = GoRouterState.of(context).uri;
     final mainTabParam = uri.queryParameters['main'];
     final companyTabParam = uri.queryParameters['company'];
-    if (mainTabParam == 'empresa' && _mainTabIndex != 1) {
-      _mainTabIndex = 1;
+    if (mainTabParam != null) {
+      final normalizedMain = mainTabParam.trim().toLowerCase();
+      final desiredTab = switch (normalizedMain) {
+        'cuenta' || 'account' || 'gestion' || 'gestion_de_cuenta' => 0,
+        'empresa' || 'company' => 1,
+        'localizacion' || 'localización' || 'locale' => 2,
+        'diseno' || 'diseño' || 'design' || 'cotizacion' => 3,
+        'impuestos' || 'tax' || 'taxes' => 4,
+        _ => null,
+      };
+      if (desiredTab != null && desiredTab != _mainTabIndex) {
+        _mainTabIndex = desiredTab;
+      }
     }
     if (companyTabParam == 'defaults' && _companyTabIndex != 2) {
       _companyTabIndex = 2;
@@ -398,9 +472,6 @@ class _ConfiguracionPageState extends ConsumerState<ConfiguracionPage> {
                         neutralColorController: _neutralColorController,
                         primaryFont: _primaryFont,
                         secondaryFont: _secondaryFont,
-                        emptyColumnsMode: _emptyColumnsMode,
-                        showPaidStamp: _showPaidStamp,
-                        showShippingAddress: _showShippingAddress,
                         showPageNumber: _showPageNumber,
                         onTabChanged: (index) =>
                             setState(() => _invoiceTabIndex = index),
@@ -424,17 +495,11 @@ class _ConfiguracionPageState extends ConsumerState<ConfiguracionPage> {
                             setState(() => _primaryFont = value),
                         onSecondaryFontChanged: (value) =>
                             setState(() => _secondaryFont = value),
-                        onEmptyColumnsModeChanged: (value) =>
-                            setState(() => _emptyColumnsMode = value),
-                        onShowPaidStampChanged: (value) =>
-                            setState(() => _showPaidStamp = value),
-                        onShowShippingAddressChanged: (value) =>
-                            setState(() => _showShippingAddress = value),
                         onShowPageNumberChanged: (value) =>
                             setState(() => _showPageNumber = value),
                         isSaving: _isSavingDesign,
-                        onColorApplied: () =>
-                            _saveQuoteDesign(empresa, showToast: false),
+                        onColorApplied: _refreshQuoteDesignPreview,
+                        onReset: _resetQuoteDesignDraft,
                         onSave: () => _saveQuoteDesign(empresa),
                       ),
                     if (_mainTabIndex == 4)
@@ -573,6 +638,7 @@ class _AccountManagementSection extends ConsumerWidget {
               SizedBox(height: 18),
               if (tabIndex == 0)
                 _PlanAndBillingPanel(
+                  ref: ref,
                   empresa: empresa,
                   plan: currentPlan,
                   suscripcion: suscripcion,
@@ -687,12 +753,14 @@ class _AppearanceAccountPanelState
 
 class _PlanAndBillingPanel extends StatelessWidget {
   _PlanAndBillingPanel({
+    required this.ref,
     required this.empresa,
     required this.plan,
     required this.suscripcion,
     required this.allPlans,
   });
 
+  final WidgetRef ref;
   final EmpresaPerfil empresa;
   final Plan plan;
   final Suscripcion suscripcion;
@@ -701,63 +769,119 @@ class _PlanAndBillingPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final upgradePlans = allPlans.where((item) => item.id != plan.id).toList();
+    VoidCallback? buildChangePlanCallback(Plan targetPlan) {
+      if (targetPlan.id != 'pro' && targetPlan.id != 'empresa') return null;
+      return () {
+        unawaited(() async {
+          try {
+            int? seats;
+            if (targetPlan.id == 'empresa') {
+              final min = targetPlan.usuariosMinimos > 0
+                  ? targetPlan.usuariosMinimos
+                  : 2;
+              final max = targetPlan.usuariosMaximos > 0
+                  ? targetPlan.usuariosMaximos
+                  : 50;
+              final initial = suscripcion.usuariosActivos.clamp(min, max);
+              final controller = TextEditingController(text: '$initial');
+              seats = await showDialog<int>(
+                context: context,
+                builder: (dialogContext) {
+                  return AlertDialog(
+                    title: Text(trText('Asientos del plan Empresa')),
+                    content: SizedBox(
+                      width: 420,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            tr(
+                              'Selecciona cuántos asientos necesitas (mínimo $min, máximo $max).',
+                              'Select how many seats you need (min $min, max $max).',
+                            ),
+                          ),
+                          SizedBox(height: 12),
+                          TextField(
+                            controller: controller,
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                              labelText: trText('Asientos'),
+                              hintText: '$min-$max',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(dialogContext).pop(),
+                        child: Text(trText('Cancelar')),
+                      ),
+                      ElevatedButton(
+                        onPressed: () {
+                          final value = int.tryParse(controller.text.trim());
+                          if (value == null || value < min || value > max) {
+                            ToastHelper.show(
+                              dialogContext,
+                              'Ingresa un número entre $min y $max.',
+                            );
+                            return;
+                          }
+                          Navigator.of(dialogContext).pop(value);
+                        },
+                        child: Text(trText('Continuar')),
+                      ),
+                    ],
+                  );
+                },
+              );
+              if (seats == null) return;
+            }
+
+            final response = await ref
+                .read(stripeCheckoutServiceProvider)
+                .createCheckout(plan: targetPlan, seats: seats);
+
+            final checkoutUrl = Uri.tryParse(response.url);
+            if (checkoutUrl == null) {
+              throw 'URL de checkout inválida.';
+            }
+            final opened = await launchUrl(
+              checkoutUrl,
+              mode: LaunchMode.platformDefault,
+            );
+            if (!opened && context.mounted) {
+              ToastHelper.show(context, 'No se pudo abrir el checkout.');
+            }
+          } catch (error) {
+            if (!context.mounted) return;
+            ToastHelper.showError(
+              context,
+              buildActionErrorMessage(error, 'No se pudo iniciar el checkout.'),
+            );
+          }
+        }());
+      };
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _ConfigSectionTitle(title: 'Tu plan'),
         SizedBox(height: 12),
-        Container(
-          padding: EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: AppColors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.border),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      trText(plan.nombre),
-                      style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      trText(plan.descripcion),
-                      style: TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    SizedBox(height: 10),
-                    Text(
-                      '${trText('Renueva')} ${DateFormat('dd MMM yyyy', currentIntlLocale()).format(suscripcion.fechaFin)}',
-                      style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Text(
-                _planPriceLabel(plan),
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ],
+        PlanFeatureCard(
+          plan: plan,
+          isActive: true,
+          showEnterpriseContactHint: false,
+        ),
+        SizedBox(height: 10),
+        Text(
+          '${trText('Renueva')} ${DateFormat('dd MMM yyyy', currentIntlLocale()).format(suscripcion.fechaFin)}',
+          style: TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
           ),
         ),
         SizedBox(height: 16),
@@ -771,28 +895,6 @@ class _PlanAndBillingPanel extends StatelessWidget {
           child: LayoutBuilder(
             builder: (context, constraints) {
               final stacked = constraints.maxWidth < 920;
-              final content = [
-                for (final item in upgradePlans)
-                  Expanded(child: _PlanUpgradeColumn(plan: item)),
-                Padding(
-                  padding: EdgeInsets.only(left: 10),
-                  child: FilledButton(
-                    onPressed: () => ToastHelper.show(
-                      context,
-                      'Gestión de actualización disponible pronto.',
-                    ),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.textPrimary,
-                      foregroundColor: AppColors.white,
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 18,
-                        vertical: 16,
-                      ),
-                    ),
-                    child: Text(trText('Plan de actualización')),
-                  ),
-                ),
-              ];
 
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -810,39 +912,106 @@ class _PlanAndBillingPanel extends StatelessWidget {
                   SizedBox(height: 12),
                   stacked
                       ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             for (
                               var index = 0;
                               index < upgradePlans.length;
                               index++
                             ) ...[
-                              _PlanUpgradeColumn(plan: upgradePlans[index]),
+                              PlanFeatureCard(
+                                plan: upgradePlans[index],
+                                isActive: false,
+                                onChangePlan: buildChangePlanCallback(
+                                  upgradePlans[index],
+                                ),
+                                showEnterpriseContactHint: false,
+                              ),
                               SizedBox(height: 12),
                             ],
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: FilledButton(
-                                onPressed: () => ToastHelper.show(
-                                  context,
-                                  'Gestión de actualización disponible pronto.',
-                                ),
-                                style: FilledButton.styleFrom(
-                                  backgroundColor: AppColors.textPrimary,
-                                  foregroundColor: AppColors.white,
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: 18,
-                                    vertical: 16,
-                                  ),
-                                ),
-                                child: Text(trText('Plan de actualización')),
-                              ),
-                            ),
                           ],
                         )
-                      : Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: content,
+                      : IntrinsicHeight(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              for (
+                                var index = 0;
+                                index < upgradePlans.length;
+                                index++
+                              ) ...[
+                                Expanded(
+                                  child: PlanFeatureCard(
+                                    plan: upgradePlans[index],
+                                    isActive: false,
+                                    onChangePlan: buildChangePlanCallback(
+                                      upgradePlans[index],
+                                    ),
+                                    showEnterpriseContactHint: false,
+                                  ),
+                                ),
+                                if (index < upgradePlans.length - 1)
+                                  SizedBox(width: 12),
+                              ],
+                            ],
+                          ),
                         ),
+                  SizedBox(height: 12),
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.support_agent_rounded,
+                          color: AppColors.primary,
+                          size: 18,
+                        ),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                trText(
+                                  'Si tu equipo es de más de 50 miembros, escríbenos directamente al correo support@cotimax.com.',
+                                ),
+                                style: TextStyle(
+                                  color: AppColors.textPrimary,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  height: 1.4,
+                                ),
+                              ),
+                              SizedBox(height: 8),
+                              FilledButton.icon(
+                                onPressed: () =>
+                                    _contactSupportByEmail(context),
+                                icon: Icon(Icons.email_rounded, size: 16),
+                                label: Text('Escribir a $_supportEmail'),
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  foregroundColor: AppColors.white,
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 10,
+                                  ),
+                                  minimumSize: Size(0, 36),
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               );
             },
@@ -915,6 +1084,9 @@ class _GeneralAccountPanel extends ConsumerWidget {
     final productos =
         ref.watch(productosControllerProvider).valueOrNull ??
         const <ProductoServicio>[];
+    final materiales =
+        ref.watch(materialesControllerProvider).valueOrNull ??
+        const <MaterialInsumo>[];
     final cotizaciones =
         ref.watch(cotizacionesControllerProvider).valueOrNull ??
         const <Cotizacion>[];
@@ -1064,6 +1236,14 @@ class _GeneralAccountPanel extends ConsumerWidget {
               ),
               SizedBox(height: 14),
               _CapacityUsageCard(
+                icon: Icons.precision_manufacturing_rounded,
+                label: 'Materiales',
+                used: materiales.length,
+                limit: plan.limiteMateriales,
+                accent: AppColors.warning,
+              ),
+              SizedBox(height: 14),
+              _CapacityUsageCard(
                 icon: Icons.request_quote_rounded,
                 label: 'Cotizaciones mensuales',
                 used: monthlyQuotesUsed,
@@ -1100,8 +1280,13 @@ class _EnabledModulesPanel extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Padding(
+          Container(
+            width: double.infinity,
             padding: EdgeInsets.fromLTRB(18, 18, 18, 12),
+            decoration: BoxDecoration(
+              color: AppColors.background,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+            ),
             child: Align(
               alignment: Alignment.centerLeft,
               child: _ConfigSectionTitle(
@@ -1110,6 +1295,7 @@ class _EnabledModulesPanel extends StatelessWidget {
               ),
             ),
           ),
+          Container(height: 1, color: AppColors.border),
           for (var index = 0; index < entries.length; index++)
             Container(
               padding: EdgeInsets.symmetric(horizontal: 18, vertical: 16),
@@ -1150,24 +1336,28 @@ class _DangerZonePanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        _DangerActionCard(
-          icon: Icons.auto_delete_outlined,
-          label: 'Purgar Datos',
-          onTap: () =>
-              ToastHelper.show(context, 'Purgar datos disponible pronto.'),
-        ),
-        SizedBox(height: 12),
-        _DangerActionCard(
-          icon: Icons.delete_outline_rounded,
-          label: 'Eliminar cuenta',
-          onTap: () => ToastHelper.show(
-            context,
-            'Eliminación de cuenta disponible pronto.',
+    return _FormShellCard(
+      title: 'Zona peligrosa',
+      icon: Icons.warning_amber_rounded,
+      child: Column(
+        children: [
+          _DangerActionCard(
+            icon: Icons.auto_delete_outlined,
+            label: 'Purgar Datos',
+            onTap: () =>
+                ToastHelper.show(context, 'Purgar datos disponible pronto.'),
           ),
-        ),
-      ],
+          SizedBox(height: 12),
+          _DangerActionCard(
+            icon: Icons.delete_outline_rounded,
+            label: 'Eliminar cuenta',
+            onTap: () => ToastHelper.show(
+              context,
+              'Eliminación de cuenta disponible pronto.',
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1757,9 +1947,6 @@ class _InvoiceDesignSection extends ConsumerWidget {
     required this.neutralColorController,
     required this.primaryFont,
     required this.secondaryFont,
-    required this.emptyColumnsMode,
-    required this.showPaidStamp,
-    required this.showShippingAddress,
     required this.showPageNumber,
     required this.onTabChanged,
     required this.onInvoiceDesignChanged,
@@ -1772,12 +1959,10 @@ class _InvoiceDesignSection extends ConsumerWidget {
     required this.onLogoSizeModeChanged,
     required this.onPrimaryFontChanged,
     required this.onSecondaryFontChanged,
-    required this.onEmptyColumnsModeChanged,
-    required this.onShowPaidStampChanged,
-    required this.onShowShippingAddressChanged,
     required this.onShowPageNumberChanged,
     required this.isSaving,
     required this.onColorApplied,
+    required this.onReset,
     required this.onSave,
   });
 
@@ -1799,9 +1984,6 @@ class _InvoiceDesignSection extends ConsumerWidget {
   final TextEditingController neutralColorController;
   final String primaryFont;
   final String secondaryFont;
-  final String emptyColumnsMode;
-  final bool showPaidStamp;
-  final bool showShippingAddress;
   final bool showPageNumber;
   final ValueChanged<int> onTabChanged;
   final ValueChanged<String> onInvoiceDesignChanged;
@@ -1814,25 +1996,17 @@ class _InvoiceDesignSection extends ConsumerWidget {
   final ValueChanged<String> onLogoSizeModeChanged;
   final ValueChanged<String> onPrimaryFontChanged;
   final ValueChanged<String> onSecondaryFontChanged;
-  final ValueChanged<String> onEmptyColumnsModeChanged;
-  final ValueChanged<bool> onShowPaidStampChanged;
-  final ValueChanged<bool> onShowShippingAddressChanged;
   final ValueChanged<bool> onShowPageNumberChanged;
   final bool isSaving;
   final Future<void> Function() onColorApplied;
+  final VoidCallback onReset;
   final VoidCallback onSave;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final cotizaciones =
-        ref.watch(cotizacionesControllerProvider).valueOrNull ??
-        const <Cotizacion>[];
-    Cotizacion? previewQuote;
-    if (cotizaciones.isNotEmpty) {
-      final ordered = [...cotizaciones]
-        ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
-      previewQuote = ordered.first;
-    }
+    final previewQuote = _buildFakePreviewQuote();
+    final previewCliente = _buildFakePreviewCliente();
+    final previewDetalles = _buildFakePreviewDetalles();
     final previewEmpresa = empresa.copyWith(
       colorPrimario:
           '#${primaryColorController.text.replaceAll('#', '').trim()}',
@@ -1851,9 +2025,6 @@ class _InvoiceDesignSection extends ConsumerWidget {
       quoteLogoSizeValue: double.tryParse(logoSizeController.text.trim()) ?? 24,
       quotePrimaryFont: primaryFont,
       quoteSecondaryFont: secondaryFont,
-      quoteEmptyColumnsMode: emptyColumnsMode,
-      quoteShowPaidStamp: showPaidStamp,
-      quoteShowShippingAddress: showShippingAddress,
       quoteEmbedAttachments: false,
       quoteShowPageNumber: showPageNumber,
     );
@@ -1905,9 +2076,6 @@ class _InvoiceDesignSection extends ConsumerWidget {
               neutralColorController: neutralColorController,
               primaryFont: primaryFont,
               secondaryFont: secondaryFont,
-              emptyColumnsMode: emptyColumnsMode,
-              showPaidStamp: showPaidStamp,
-              showShippingAddress: showShippingAddress,
               showPageNumber: showPageNumber,
               onInvoiceDesignChanged: onInvoiceDesignChanged,
               onQuoteDesignChanged: onQuoteDesignChanged,
@@ -1919,35 +2087,40 @@ class _InvoiceDesignSection extends ConsumerWidget {
               onLogoSizeModeChanged: onLogoSizeModeChanged,
               onPrimaryFontChanged: onPrimaryFontChanged,
               onSecondaryFontChanged: onSecondaryFontChanged,
-              onEmptyColumnsModeChanged: onEmptyColumnsModeChanged,
-              onShowPaidStampChanged: onShowPaidStampChanged,
-              onShowShippingAddressChanged: onShowShippingAddressChanged,
               onShowPageNumberChanged: onShowPageNumberChanged,
               isSaving: isSaving,
               onColorApplied: onColorApplied,
+              onReset: onReset,
               onSave: onSave,
             );
             final preview = _InvoicePreviewPanel(
               quote: previewQuote,
+              cliente: previewCliente,
+              detalles: previewDetalles,
               empresa: previewEmpresa,
             );
 
             if (stacked) {
+              final previewHeight = constraints.maxWidth < 640 ? 520.0 : 640.0;
               return Column(
                 children: [
                   controls,
                   SizedBox(height: 14),
-                  SizedBox(height: 820, child: preview),
+                  SizedBox(height: previewHeight, child: preview),
                 ],
               );
             }
 
+            final controlsWidth = constraints.maxWidth >= 1400 ? 560.0 : 500.0;
+            final previewHeight = constraints.maxWidth >= 1400 ? 900.0 : 780.0;
             return Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(width: 520, child: controls),
+                SizedBox(width: controlsWidth, child: controls),
                 SizedBox(width: 16),
-                Expanded(child: SizedBox(height: 980, child: preview)),
+                Expanded(
+                  child: SizedBox(height: previewHeight, child: preview),
+                ),
               ],
             );
           },
@@ -1955,6 +2128,117 @@ class _InvoiceDesignSection extends ConsumerWidget {
       ],
     );
   }
+}
+
+Cotizacion _buildFakePreviewQuote() {
+  final now = DateTime(2026, 4, 1, 10, 30);
+  return Cotizacion(
+    id: 'preview-quote',
+    folio: 'COT-2099',
+    clienteId: 'preview-client',
+    fechaEmision: now,
+    fechaVencimiento: now.add(const Duration(days: 14)),
+    impuestoPorcentaje: 16,
+    retIsr: false,
+    subtotal: 18850,
+    descuentoTotal: 1250,
+    impuestoTotal: 2816,
+    total: 20416,
+    notas:
+        'Esta es una cotización de muestra para vista previa de diseño.\nIncluye instalación, calibración y capacitación inicial.',
+    notasPrivadas:
+        'Texto de ejemplo interno para validar distribución visual en previsualización.',
+    terminos:
+        '1. Vigencia: 14 días naturales.\n2. Anticipo: 50% para iniciar.\n3. Entrega estimada: 7 a 10 días hábiles.\n4. Garantía: 12 meses contra defectos de fabricación.',
+    piePagina:
+        'Documento de demostración. Los datos de cliente y conceptos son ficticios para validar el diseño de cotización.',
+    estatus: QuoteStatus.enviada,
+    usuarioId: 'preview-user',
+    empresaId: 'preview-company',
+    createdAt: now,
+    updatedAt: now,
+  );
+}
+
+Cliente _buildFakePreviewCliente() {
+  final now = DateTime.now();
+  return Cliente(
+    id: 'preview-client',
+    numero: 'CL-0001',
+    idNumber: 'ORD-88124',
+    nombre: 'Constructora Horizonte',
+    empresa: 'Constructora Horizonte S.A. de C.V.',
+    rfc: 'HOR010203AB1',
+    contacto: 'Ing. Mariana López',
+    telefono: '+52 664 120 8844',
+    correo: 'compras@horizonte-demo.mx',
+    direccion:
+        'Av. Del Progreso 1450, Parque Industrial del Norte, Tijuana, BC 22420',
+    calle: '',
+    apartamentoSuite: '',
+    ciudad: '',
+    estadoProvincia: '',
+    codigoPostal: '',
+    pais: '',
+    notas: '',
+    activo: true,
+    createdAt: now,
+    updatedAt: now,
+  );
+}
+
+List<DetalleCotizacion> _buildFakePreviewDetalles() {
+  final now = DateTime.now();
+  return <DetalleCotizacion>[
+    DetalleCotizacion(
+      id: 'preview-line-1',
+      cotizacionId: 'preview-quote',
+      productoServicioId: 'preview-prod-1',
+      concepto: 'Panel LED Industrial 120W',
+      descripcion: 'Luminaria de alto rendimiento con driver regulable.',
+      precioUnitario: 2800,
+      unidad: 'pieza',
+      descuento: 0,
+      cantidad: 2,
+      impuestoPorcentaje: 16,
+      importe: 5600,
+      orden: 1,
+      createdAt: now,
+      updatedAt: now,
+    ),
+    DetalleCotizacion(
+      id: 'preview-line-2',
+      cotizacionId: 'preview-quote',
+      productoServicioId: 'preview-prod-2',
+      concepto: 'Cableado y canalización',
+      descripcion: 'Tendido de línea y protección para zona de trabajo.',
+      precioUnitario: 1450,
+      unidad: 'servicio',
+      descuento: 0,
+      cantidad: 3,
+      impuestoPorcentaje: 16,
+      importe: 4350,
+      orden: 2,
+      createdAt: now,
+      updatedAt: now,
+    ),
+    DetalleCotizacion(
+      id: 'preview-line-3',
+      cotizacionId: 'preview-quote',
+      productoServicioId: 'preview-prod-3',
+      concepto: 'Mano de obra especializada',
+      descripcion: 'Instalación, pruebas y puesta en marcha del sistema.',
+      precioUnitario: 8900,
+      unidad: 'servicio',
+      descuento: 0,
+      cantidad: 1,
+      impuestoPorcentaje: 16,
+      importe: 8900,
+      orden: 3,
+      createdAt: now,
+      updatedAt: now,
+    ),
+  ];
 }
 
 class _InvoiceControlsPanel extends StatelessWidget {
@@ -1975,9 +2259,6 @@ class _InvoiceControlsPanel extends StatelessWidget {
     required this.neutralColorController,
     required this.primaryFont,
     required this.secondaryFont,
-    required this.emptyColumnsMode,
-    required this.showPaidStamp,
-    required this.showShippingAddress,
     required this.showPageNumber,
     required this.onInvoiceDesignChanged,
     required this.onQuoteDesignChanged,
@@ -1989,12 +2270,10 @@ class _InvoiceControlsPanel extends StatelessWidget {
     required this.onLogoSizeModeChanged,
     required this.onPrimaryFontChanged,
     required this.onSecondaryFontChanged,
-    required this.onEmptyColumnsModeChanged,
-    required this.onShowPaidStampChanged,
-    required this.onShowShippingAddressChanged,
     required this.onShowPageNumberChanged,
     required this.isSaving,
     required this.onColorApplied,
+    required this.onReset,
     required this.onSave,
   });
 
@@ -2014,9 +2293,6 @@ class _InvoiceControlsPanel extends StatelessWidget {
   final TextEditingController neutralColorController;
   final String primaryFont;
   final String secondaryFont;
-  final String emptyColumnsMode;
-  final bool showPaidStamp;
-  final bool showShippingAddress;
   final bool showPageNumber;
   final ValueChanged<String> onInvoiceDesignChanged;
   final ValueChanged<String> onQuoteDesignChanged;
@@ -2028,12 +2304,10 @@ class _InvoiceControlsPanel extends StatelessWidget {
   final ValueChanged<String> onLogoSizeModeChanged;
   final ValueChanged<String> onPrimaryFontChanged;
   final ValueChanged<String> onSecondaryFontChanged;
-  final ValueChanged<String> onEmptyColumnsModeChanged;
-  final ValueChanged<bool> onShowPaidStampChanged;
-  final ValueChanged<bool> onShowShippingAddressChanged;
   final ValueChanged<bool> onShowPageNumberChanged;
   final bool isSaving;
   final Future<void> Function() onColorApplied;
+  final VoidCallback onReset;
   final VoidCallback onSave;
 
   @override
@@ -2047,11 +2321,6 @@ class _InvoiceControlsPanel extends StatelessWidget {
               label: 'Mostrar resumen para cliente',
               value: true,
               enabled: true,
-            ),
-            _DesignToggleRow(
-              label: 'Mostrar dirección de envío',
-              value: showShippingAddress,
-              onChanged: onShowShippingAddressChanged,
             ),
           ],
         ),
@@ -2162,30 +2431,42 @@ class _InvoiceControlsPanel extends StatelessWidget {
           ),
           _DesignDivider(),
           _DesignToggleRow(
-            label: 'Mostrar sello pagado',
-            value: showPaidStamp,
-            onChanged: onShowPaidStampChanged,
-          ),
-          _DesignToggleRow(
-            label: 'Mostrar dirección de envío',
-            value: showShippingAddress,
-            onChanged: onShowShippingAddressChanged,
-          ),
-          _DesignRadioRow(
-            label: 'Columnas vacías',
-            value: emptyColumnsMode,
-            options: const ['Ocultar', 'Espectaculo'],
-            onChanged: onEmptyColumnsModeChanged,
-          ),
-          _DesignToggleRow(
             label: 'Numeración de páginas',
             value: showPageNumber,
             onChanged: onShowPageNumberChanged,
           ),
-          _SettingsActionBar(
-            label: 'Guardar diseño de cotización',
-            isSaving: isSaving,
-            onPressed: onSave,
+          Padding(
+            padding: EdgeInsets.only(top: 6),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: isSaving ? null : onReset,
+                    icon: Icon(Icons.restart_alt_rounded, size: 18),
+                    label: Text(trText('Restablecer estilos')),
+                  ),
+                  FilledButton(
+                    onPressed: isSaving ? null : onSave,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.textPrimary,
+                      foregroundColor: AppColors.white,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 16,
+                      ),
+                    ),
+                    child: Text(
+                      isSaving
+                          ? trText('Guardando...')
+                          : trText('Guardar diseño de cotización'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
@@ -2194,20 +2475,36 @@ class _InvoiceControlsPanel extends StatelessWidget {
 }
 
 class _InvoicePreviewPanel extends StatefulWidget {
-  _InvoicePreviewPanel({required this.empresa, required this.quote});
+  _InvoicePreviewPanel({
+    required this.empresa,
+    required this.quote,
+    required this.cliente,
+    required this.detalles,
+  });
 
   final EmpresaPerfil empresa;
-  final Cotizacion? quote;
+  final Cotizacion quote;
+  final Cliente cliente;
+  final List<DetalleCotizacion> detalles;
 
   @override
   State<_InvoicePreviewPanel> createState() => _InvoicePreviewPanelState();
 }
 
 class _InvoicePreviewPanelState extends State<_InvoicePreviewPanel> {
+  static const Duration _previewDebounceDuration = Duration(milliseconds: 260);
+  static const Duration _designSwitchDebounceDuration = Duration(
+    milliseconds: 90,
+  );
   Future<Uint8List>? _pdfFuture;
+  Uint8List? _lastRenderedPdfBytes;
   String? _previewSignature;
   Timer? _previewDebounce;
   bool _isDesignSwitching = false;
+  bool _isGeneratingPreview = false;
+  String? _queuedPreviewSignature;
+  Cotizacion? _queuedPreviewQuote;
+  bool _queuedDesignSwitched = false;
 
   @override
   void initState() {
@@ -2220,7 +2517,7 @@ class _InvoicePreviewPanelState extends State<_InvoicePreviewPanel> {
     super.didUpdateWidget(oldWidget);
     final designChanged =
         oldWidget.empresa.themeSeleccionado != widget.empresa.themeSeleccionado;
-    _refreshPreview(force: designChanged, designSwitched: designChanged);
+    _refreshPreview(designSwitched: designChanged);
   }
 
   @override
@@ -2231,16 +2528,6 @@ class _InvoicePreviewPanelState extends State<_InvoicePreviewPanel> {
 
   void _refreshPreview({bool force = false, bool designSwitched = false}) {
     final quote = widget.quote;
-    if (quote == null) {
-      if (force || _pdfFuture != null || _previewSignature != null) {
-        setState(() {
-          _pdfFuture = null;
-          _previewSignature = null;
-          _isDesignSwitching = false;
-        });
-      }
-      return;
-    }
 
     final signature = [
       quote.id,
@@ -2252,28 +2539,38 @@ class _InvoicePreviewPanelState extends State<_InvoicePreviewPanel> {
       widget.empresa.quoteLogoSizeValue,
       widget.empresa.quotePrimaryFont,
       widget.empresa.quoteSecondaryFont,
-      widget.empresa.quoteShowPaidStamp,
-      widget.empresa.quoteShowShippingAddress,
       widget.empresa.quoteEmbedAttachments,
       widget.empresa.quoteShowPageNumber,
       widget.empresa.colorPrimario,
       widget.empresa.colorSecundario,
       widget.empresa.colorFondo,
       widget.empresa.colorNeutro,
+      quote.pagadoTotal.toStringAsFixed(2),
+      quote.saldoTotal.toStringAsFixed(2),
+      widget.cliente.nombre,
+      widget.cliente.direccion,
+      widget.detalles.length,
+      widget.detalles
+          .fold<double>(0, (sum, item) => sum + item.importe)
+          .toStringAsFixed(2),
     ].join('|');
 
     if (!force && signature == _previewSignature) return;
 
-    if (!force) {
-      _previewDebounce?.cancel();
-      _previewDebounce = Timer(const Duration(milliseconds: 120), () {
-        if (!mounted) return;
-        _applyPreview(signature, quote, designSwitched: designSwitched);
-      });
-      return;
+    if (designSwitched && mounted && !_isDesignSwitching) {
+      setState(() => _isDesignSwitching = true);
     }
 
-    _applyPreview(signature, quote, designSwitched: designSwitched);
+    _previewDebounce?.cancel();
+    final debounceDuration = force
+        ? const Duration(milliseconds: 16)
+        : (designSwitched
+              ? _designSwitchDebounceDuration
+              : _previewDebounceDuration);
+    _previewDebounce = Timer(debounceDuration, () {
+      if (!mounted) return;
+      _applyPreview(signature, quote, designSwitched: designSwitched);
+    });
   }
 
   void _applyPreview(
@@ -2281,11 +2578,22 @@ class _InvoicePreviewPanelState extends State<_InvoicePreviewPanel> {
     Cotizacion quote, {
     bool designSwitched = false,
   }) {
+    if (_isGeneratingPreview) {
+      _queuedPreviewSignature = signature;
+      _queuedPreviewQuote = quote;
+      _queuedDesignSwitched = designSwitched;
+      return;
+    }
+
+    _isGeneratingPreview = true;
     final future =
         CotizacionPdfService.generate(
           quote,
           useCache: true,
+          fastPreview: true,
           empresaOverride: widget.empresa,
+          clienteOverride: widget.cliente,
+          detallesOverride: widget.detalles,
         ).timeout(
           const Duration(seconds: 25),
           onTimeout: () => throw TimeoutException(
@@ -2300,41 +2608,42 @@ class _InvoicePreviewPanelState extends State<_InvoicePreviewPanel> {
     });
 
     future.whenComplete(() {
-      if (!mounted || _previewSignature != signature || !_isDesignSwitching) {
+      _isGeneratingPreview = false;
+      if (!mounted) return;
+
+      final queuedSignature = _queuedPreviewSignature;
+      final queuedQuote = _queuedPreviewQuote;
+      final queuedDesignSwitched = _queuedDesignSwitched;
+      _queuedPreviewSignature = null;
+      _queuedPreviewQuote = null;
+      _queuedDesignSwitched = false;
+
+      if (queuedSignature != null && queuedQuote != null) {
+        _applyPreview(
+          queuedSignature,
+          queuedQuote,
+          designSwitched: queuedDesignSwitched,
+        );
         return;
       }
-      setState(() => _isDesignSwitching = false);
+
+      if (_previewSignature == signature && _isDesignSwitching) {
+        setState(() => _isDesignSwitching = false);
+      }
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    if (widget.quote == null) {
-      return Container(
-        padding: EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: AppColors.background,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: AppColors.border),
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          trText(
-            'Crea al menos una cotización para ver una vista previa real del PDF.',
-          ),
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: AppColors.textMuted,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      );
-    }
-
     final future = _pdfFuture;
     if (future == null) {
-      return SizedBox.shrink();
+      return Center(
+        child: SizedBox(
+          width: 36,
+          height: 36,
+          child: CircularProgressIndicator(strokeWidth: 3),
+        ),
+      );
     }
 
     return Container(
@@ -2347,25 +2656,18 @@ class _InvoicePreviewPanelState extends State<_InvoicePreviewPanel> {
       child: FutureBuilder<Uint8List>(
         future: future,
         builder: (context, snapshot) {
-          if (_isDesignSwitching) {
-            return Center(
-              child: SizedBox(
-                width: 36,
-                height: 36,
-                child: CircularProgressIndicator(strokeWidth: 3),
-              ),
-            );
+          final hasFreshData = snapshot.hasData;
+          if (hasFreshData) {
+            _lastRenderedPdfBytes = snapshot.data!;
           }
-          if (snapshot.connectionState != ConnectionState.done) {
-            return Center(
-              child: SizedBox(
-                width: 36,
-                height: 36,
-                child: CircularProgressIndicator(strokeWidth: 3),
-              ),
-            );
-          }
-          if (snapshot.hasError || !snapshot.hasData) {
+          final previewBytes = hasFreshData
+              ? snapshot.data!
+              : _lastRenderedPdfBytes;
+          final isLoading =
+              _isDesignSwitching ||
+              snapshot.connectionState != ConnectionState.done;
+
+          if (snapshot.hasError && previewBytes == null) {
             return ErrorStateWidget(
               message: buildActionErrorMessage(
                 snapshot.error ?? 'No se pudo generar el PDF.',
@@ -2374,15 +2676,90 @@ class _InvoicePreviewPanelState extends State<_InvoicePreviewPanel> {
               onRetry: () => _refreshPreview(force: true),
             );
           }
-          final pdfBytes = snapshot.data!;
-          return PdfPreview(
-            build: (_) async => pdfBytes,
-            canChangePageFormat: false,
-            canChangeOrientation: false,
-            allowSharing: false,
-            allowPrinting: false,
-            maxPageWidth: 420,
-            pdfFileName: '${widget.quote!.folio}.pdf',
+          if (previewBytes == null) {
+            return Center(
+              child: SizedBox(
+                width: 36,
+                height: 36,
+                child: CircularProgressIndicator(strokeWidth: 3),
+              ),
+            );
+          }
+          final previewDpi = MediaQuery.of(context).devicePixelRatio >= 2
+              ? 112.0
+              : 96.0;
+          return Stack(
+            children: [
+              PdfPreview.builder(
+                build: (_) async => previewBytes,
+                pages: const [0],
+                dpi: previewDpi,
+                pagesBuilder: (context, pages) {
+                  return ListView(
+                    padding: EdgeInsets.fromLTRB(8, 6, 8, 12),
+                    children: [
+                      for (final page in pages)
+                        Center(
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(maxWidth: 780),
+                            child: Container(
+                              margin: EdgeInsets.only(bottom: 12),
+                              decoration: BoxDecoration(
+                                color: AppColors.white,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: AppColors.border),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Color(0x22000000),
+                                    blurRadius: 8,
+                                    offset: Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: AspectRatio(
+                                aspectRatio: page.aspectRatio,
+                                child: Image(
+                                  image: page.image,
+                                  fit: BoxFit.contain,
+                                  filterQuality: FilterQuality.medium,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+                canChangePageFormat: false,
+                canChangeOrientation: false,
+                allowSharing: false,
+                allowPrinting: false,
+                useActions: false,
+                maxPageWidth: 800,
+                padding: EdgeInsets.zero,
+                pdfFileName: '${widget.quote.folio}.pdf',
+              ),
+              if (isLoading)
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: AppColors.white.withValues(alpha: 0.92),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Padding(
+                      padding: EdgeInsets.all(10),
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2.4),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           );
         },
       ),
@@ -2808,78 +3185,6 @@ class _ConfigSectionTitle extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _PlanUpgradeColumn extends StatelessWidget {
-  _PlanUpgradeColumn({required this.plan});
-
-  final Plan plan;
-
-  @override
-  Widget build(BuildContext context) {
-    final items = <String>[
-      if (!plan.incluyeMarcaAgua) 'Remove Invoice Ninja logo',
-      if (plan.limiteClientes < 0) 'Unlimited Clients',
-      if (plan.incluyePersonalizacionPdf) 'Advanced Customization',
-      if (plan.id == 'empresa') 'Additional Account Users',
-      if (plan.id == 'empresa') 'Attach Files to Emails (pdf, jpg, xls..)',
-      if (plan.id == 'empresa') 'Custom URL “invoice.company.com”',
-      if (plan.id == 'empresa') 'Auto-sync Bank Transactions',
-      if (plan.id == 'pro') 'REST API Access',
-    ];
-
-    return Container(
-      padding: EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            plan.nombre,
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          SizedBox(height: 10),
-          ...items.map(
-            (item) => Padding(
-              padding: EdgeInsets.only(bottom: 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: EdgeInsets.only(top: 3),
-                    child: Icon(
-                      Icons.check_rounded,
-                      size: 16,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      trText(item),
-                      style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w600,
-                        height: 1.4,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -3315,7 +3620,11 @@ class _FormShellCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.background,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+            ),
             padding: EdgeInsets.fromLTRB(18, 18, 18, 14),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
@@ -3653,6 +3962,7 @@ class _DesignSelectRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final resolvedValue = options.contains(value) ? value : options.first;
     return Padding(
       padding: EdgeInsets.only(bottom: 16),
       child: Row(
@@ -3671,7 +3981,8 @@ class _DesignSelectRow extends StatelessWidget {
           ),
           Expanded(
             child: DropdownButtonFormField<String>(
-              initialValue: value,
+              key: ValueKey('$label|$resolvedValue'),
+              initialValue: resolvedValue,
               isExpanded: true,
               menuMaxHeight: 320,
               borderRadius: cotimaxMenuBorderRadius,
@@ -3720,6 +4031,9 @@ class _DesignDoubleInputRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final resolvedLeftValue = leftOptions.contains(leftValue)
+        ? leftValue
+        : leftOptions.first;
     return Padding(
       padding: EdgeInsets.only(bottom: 16),
       child: Row(
@@ -3742,7 +4056,8 @@ class _DesignDoubleInputRow extends StatelessWidget {
                 SizedBox(
                   width: 190,
                   child: DropdownButtonFormField<String>(
-                    initialValue: leftValue,
+                    key: ValueKey('$label|$resolvedLeftValue'),
+                    initialValue: resolvedLeftValue,
                     isExpanded: true,
                     menuMaxHeight: 320,
                     borderRadius: cotimaxMenuBorderRadius,
@@ -4045,77 +4360,6 @@ class _DesignToggleRow extends StatelessWidget {
             onChanged: interactive
                 ? (newValue) => onChanged?.call(newValue)
                 : null,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _DesignRadioRow extends StatelessWidget {
-  _DesignRadioRow({
-    required this.label,
-    required this.value,
-    required this.options,
-    required this.onChanged,
-  });
-
-  final String label;
-  final String value;
-  final List<String> options;
-  final ValueChanged<String> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: 16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 190,
-            child: Text(
-              trText(label),
-              style: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Wrap(
-              spacing: 18,
-              runSpacing: 10,
-              children: options
-                  .map(
-                    (option) => InkWell(
-                      onTap: () => onChanged(option),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            option == value
-                                ? Icons.radio_button_checked
-                                : Icons.radio_button_unchecked,
-                            color: option == value
-                                ? AppColors.textPrimary
-                                : AppColors.border,
-                          ),
-                          SizedBox(width: 8),
-                          Text(
-                            trText(option),
-                            style: TextStyle(
-                              color: AppColors.textPrimary,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                  .toList(),
-            ),
           ),
         ],
       ),
