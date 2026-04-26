@@ -898,6 +898,13 @@ class WorkspaceStatus {
   final String? empresaId;
 }
 
+class EmpresaCatalogItem {
+  EmpresaCatalogItem({required this.id, required this.nombreComercial});
+
+  final String id;
+  final String nombreComercial;
+}
+
 class CompanyInvitationCode {
   CompanyInvitationCode({required this.empresaId, required this.codigo});
 

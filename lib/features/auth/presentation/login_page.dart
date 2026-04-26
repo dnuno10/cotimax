@@ -40,6 +40,27 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   Widget build(BuildContext context) {
     final auth = ref.watch(authControllerProvider);
     final otpSent = auth.otpEmail != null;
+    String? safeRedirectTo() {
+      final raw =
+          GoRouterState.of(context).uri.queryParameters['redirect']?.trim() ??
+              '';
+      if (raw.isEmpty) return null;
+      var value = raw;
+      if (value.startsWith('/#/')) value = value.substring(2);
+      if (value.startsWith('#/')) value = value.substring(1);
+      final uri = Uri.tryParse(value);
+      if (uri == null) return null;
+      if (uri.scheme.isNotEmpty || uri.host.isNotEmpty) return null;
+      final path = (uri.fragment.startsWith('/') && uri.path == '/')
+          ? uri.fragment
+          : uri.path;
+      if (!path.startsWith('/')) return null;
+      if (path == RoutePaths.login || path == RoutePaths.recover) return null;
+      return Uri(
+        path: path,
+        queryParameters: uri.queryParameters.isEmpty ? null : uri.queryParameters,
+      ).toString();
+    }
 
     ref.listen(authControllerProvider, (previous, next) {
       if (next.error != null && next.error != previous?.error) {
@@ -52,7 +73,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       }
       if (next.isAuthenticated) {
         ToastHelper.showSuccess(context, 'Sesión iniciada correctamente.');
-        context.go(RoutePaths.workspaceSetup);
+        final redirect = safeRedirectTo();
+        context.go(redirect ?? RoutePaths.workspaceSetup);
       }
     });
 

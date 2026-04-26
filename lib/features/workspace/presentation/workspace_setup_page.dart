@@ -24,6 +24,26 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
   bool _isSubmitting = false;
   String _logoDataUrl = '';
 
+  String? _safeRedirectTo() {
+    final raw = GoRouterState.of(context).uri.queryParameters['redirect']?.trim() ?? '';
+    if (raw.isEmpty) return null;
+    var value = raw;
+    if (value.startsWith('/#/')) value = value.substring(2);
+    if (value.startsWith('#/')) value = value.substring(1);
+    final uri = Uri.tryParse(value);
+    if (uri == null) return null;
+    if (uri.scheme.isNotEmpty || uri.host.isNotEmpty) return null;
+    final path = (uri.fragment.startsWith('/') && uri.path == '/')
+        ? uri.fragment
+        : uri.path;
+    if (!path.startsWith('/')) return null;
+    if (path == RoutePaths.login || path == RoutePaths.recover) return null;
+    return Uri(
+      path: path,
+      queryParameters: uri.queryParameters.isEmpty ? null : uri.queryParameters,
+    ).toString();
+  }
+
   @override
   void dispose() {
     _companyNameController.dispose();
@@ -53,6 +73,7 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
 
     setState(() => _isSubmitting = true);
     try {
+      final redirectTo = _safeRedirectTo();
       await ref
           .read(workspaceRepositoryProvider)
           .createInitialCompany(
@@ -62,7 +83,11 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
       await _refreshWorkspace();
       if (!mounted) return;
       ToastHelper.showSuccess(context, 'Empresa creada correctamente.');
-      context.go(RoutePaths.dashboard);
+      if (redirectTo != null && redirectTo.isNotEmpty) {
+        context.go(redirectTo);
+      } else {
+        context.go(RoutePaths.dashboard);
+      }
     } catch (error) {
       if (!mounted) return;
       ToastHelper.showError(
@@ -85,11 +110,16 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
 
     setState(() => _isSubmitting = true);
     try {
+      final redirectTo = _safeRedirectTo();
       await ref.read(workspaceRepositoryProvider).joinByInvitationCode(code);
       await _refreshWorkspace();
       if (!mounted) return;
       ToastHelper.showSuccess(context, 'Te uniste al equipo correctamente.');
-      context.go(RoutePaths.dashboard);
+      if (redirectTo != null && redirectTo.isNotEmpty) {
+        context.go(redirectTo);
+      } else {
+        context.go(RoutePaths.dashboard);
+      }
     } catch (error) {
       if (!mounted) return;
       ToastHelper.showError(
@@ -111,13 +141,6 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
     final statusAsync = ref.watch(workspaceStatusProvider);
     final isCreateMode = _tabIndex == 0;
     final shellRadius = BorderRadius.circular(AppSpacing.radius + 4);
-
-    ref.listen(workspaceStatusProvider, (previous, next) {
-      final status = next.valueOrNull;
-      if (status != null && status.hasCompany && mounted) {
-        context.go(RoutePaths.dashboard);
-      }
-    });
 
     return PopScope(
       canPop: false,

@@ -2,13 +2,13 @@ import 'dart:async';
 
 import 'package:cotimax/core/localization/app_localization.dart';
 import 'package:cotimax/core/constants/app_colors.dart';
+import 'package:cotimax/core/platform/url_navigator.dart';
 import 'package:cotimax/core/routing/route_paths.dart';
 import 'package:cotimax/features/planes/application/planes_controller.dart';
 import 'package:cotimax/features/planes/application/stripe_checkout_service.dart';
 import 'package:cotimax/features/planes/presentation/plan_cards.dart';
 import 'package:cotimax/shared/models/domain_models.dart';
 import 'package:cotimax/shared/widgets/cotimax_widgets.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -41,6 +41,31 @@ class PlanesPage extends ConsumerStatefulWidget {
 class _PlanesPageState extends ConsumerState<PlanesPage> {
   bool _handledCheckoutRoute = false;
 
+  Future<void> _openStripePortal({
+    required Plan plan,
+    required String action, // portal | cancel
+  }) async {
+    try {
+      final response = await ref
+          .read(stripeCheckoutServiceProvider)
+          .createCheckout(plan: plan, action: action);
+      final url = Uri.tryParse(response.url);
+      if (url == null) {
+        throw 'URL inválida.';
+      }
+      final opened = await navigateToUrl(url.toString());
+      if (!opened && mounted) {
+        ToastHelper.show(context, 'No se pudo abrir Stripe.');
+      }
+    } catch (error) {
+      if (!mounted) return;
+      ToastHelper.showError(
+        context,
+        buildActionErrorMessage(error, 'No se pudo abrir Stripe.'),
+      );
+    }
+  }
+
   Future<void> _startPlanCheckout({
     required Plan plan,
     required Suscripcion? suscripcion,
@@ -64,10 +89,7 @@ class _PlanesPageState extends ConsumerState<PlanesPage> {
         throw 'URL de checkout inválida.';
       }
 
-      final opened = await launchUrl(
-        checkoutUrl,
-        mode: kIsWeb ? LaunchMode.platformDefault : LaunchMode.externalApplication,
-      );
+      final opened = await navigateToUrl(checkoutUrl.toString());
       if (!opened && mounted) {
         ToastHelper.show(context, 'No se pudo abrir el checkout.');
       }
@@ -201,6 +223,15 @@ class _PlanesPageState extends ConsumerState<PlanesPage> {
     final planes = ref.watch(planesControllerProvider);
     final suscripcionAsync = ref.watch(suscripcionControllerProvider);
     final activePlanId = suscripcionAsync.valueOrNull?.planId;
+    final planesItems = planes.valueOrNull ?? const <Plan>[];
+    Plan? activePlan;
+    for (final item in planesItems) {
+      if (item.id == activePlanId) {
+        activePlan = item;
+        break;
+      }
+    }
+    final canManageStripe = activePlanId == 'pro' || activePlanId == 'empresa';
 
     final checkoutStatus =
         GoRouterState.of(context).uri.queryParameters['checkout'];
@@ -224,17 +255,80 @@ class _PlanesPageState extends ConsumerState<PlanesPage> {
         suscripcionAsync.when(
           data: (sub) => SectionCard(
             title: 'Plan actual',
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                PlanBadge(planName: sub.planId.toUpperCase()),
-                SizedBox(width: 10),
-                Text(
-                  '${trText('Estatus')}: ${trText(sub.estado)} · ${tr('Usuarios activos', 'Active users')}: ${sub.usuariosActivos}',
-                  style: TextStyle(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w700,
-                  ),
+                Row(
+                  children: [
+                    PlanBadge(planName: sub.planId.toUpperCase()),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        '${trText('Estatus')}: ${trText(sub.estado)} · ${tr('Usuarios activos', 'Active users')}: ${sub.usuariosActivos}',
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
+                if (canManageStripe && activePlan != null) ...[
+                  SizedBox(height: 12),
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [
+                      FilledButton.icon(
+                        onPressed: () => unawaited(
+                          _openStripePortal(plan: activePlan!, action: 'portal'),
+                        ),
+                        icon: Icon(Icons.manage_accounts_rounded, size: 16),
+                        label: Text(trText('Administrar suscripción')),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          unawaited(() async {
+                            final confirm = await showDialog<bool>(
+                              context: context,
+                              builder: (dialogContext) {
+                                return AlertDialog(
+                                  title: Text(trText('Cancelar plan')),
+                                  content: Text(
+                                    trText(
+                                      'Serás redirigido a Stripe para cancelar tu suscripción. ¿Continuar?',
+                                    ),
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(dialogContext)
+                                          .pop(false),
+                                      child: Text(trText('Volver')),
+                                    ),
+                                    FilledButton(
+                                      onPressed: () => Navigator.of(dialogContext)
+                                          .pop(true),
+                                      child: Text(trText('Continuar')),
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+                            if (!mounted) return;
+                            if (confirm == true) {
+                              await _openStripePortal(
+                                plan: activePlan!,
+                                action: 'cancel',
+                              );
+                            }
+                          }());
+                        },
+                        icon: Icon(Icons.cancel_rounded, size: 16),
+                        label: Text(trText('Cancelar plan')),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),

@@ -47,6 +47,50 @@ function mapEstadoFromStripeStatus(status: string) {
   }
 }
 
+async function enforceSubscriptionQuantityLimits(
+  stripe: Stripe,
+  adminClient: ReturnType<typeof createClient>,
+  planId: string,
+  subscription: Stripe.Subscription,
+) {
+  const item = subscription.items.data[0];
+  if (!item) return { desiredSeats: 1 };
+
+  const { data: plan } = await adminClient
+    .from("planes")
+    .select("id, billing_mode, usuarios_minimos, usuarios_maximos")
+    .eq("id", planId)
+    .limit(1)
+    .maybeSingle();
+
+  const billingMode = String((plan as any)?.billing_mode ?? "").trim();
+  const minUsers = Number((plan as any)?.usuarios_minimos ?? 0) || 0;
+  const maxUsers = Number((plan as any)?.usuarios_maximos ?? 0) || 0;
+
+  const currentSeats = Number(item.quantity ?? 1) || 1;
+
+  let desiredSeats = 1;
+  if (billingMode === "per_user_monthly") {
+    const min = Math.max(2, minUsers || 2);
+    const max = Math.max(min, Math.min(50, maxUsers || 50));
+    desiredSeats = Math.min(max, Math.max(min, currentSeats));
+  }
+
+  if (currentSeats !== desiredSeats) {
+    try {
+      await stripe.subscriptions.update(subscription.id, {
+        proration_behavior: "create_prorations",
+        items: [{ id: item.id, quantity: desiredSeats }],
+      } as any);
+    } catch {
+      // If Stripe update fails, still reflect original quantity.
+      desiredSeats = currentSeats;
+    }
+  }
+
+  return { desiredSeats };
+}
+
 async function upsertWebhookEvent(
   adminClient: ReturnType<typeof createClient>,
   eventId: string,
@@ -157,7 +201,13 @@ Deno.serve(async (req) => {
         return json({ ok: true, skipped: true, reason: "plan_not_mapped" });
       }
 
-      const seats = Number(item?.quantity ?? 1) || 1;
+      const enforcement = await enforceSubscriptionQuantityLimits(
+        stripe,
+        adminClient,
+        planId,
+        sub,
+      );
+      const seats = enforcement.desiredSeats;
       const estado = mapEstadoFromStripeStatus(String(sub.status ?? ""));
       const fechaInicio = toIsoFromUnixSeconds(sub.current_period_start);
       const fechaFin = toIsoFromUnixSeconds(sub.current_period_end) ?? new Date().toISOString();

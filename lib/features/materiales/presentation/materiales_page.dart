@@ -345,9 +345,15 @@ class _MaterialesPageState extends ConsumerState<MaterialesPage> {
                         DataCell(
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Text(material.nombre),
+                              Text(
+                                material.nombre,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                softWrap: false,
+                              ),
                               Text(
                                 material.sku,
                                 style: TextStyle(
@@ -355,6 +361,9 @@ class _MaterialesPageState extends ConsumerState<MaterialesPage> {
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                softWrap: false,
                               ),
                             ],
                           ),

@@ -20,12 +20,14 @@ class StripeCheckoutService {
   Future<StripeCheckoutResult> createCheckout({
     required Plan plan,
     int? seats,
+    String action = 'checkout', // checkout | portal | cancel
   }) async {
     final origin = _originOrEmpty();
     final appBaseUrl = StripeConfig.appBaseUrl.trim();
     final response = await _client.functions.invoke(
       'stripe-checkout',
       body: {
+        'action': action,
         'plan_id': plan.id,
         if (seats != null) 'seats': seats,
         if (origin.isNotEmpty) 'origin': origin,

@@ -18,14 +18,55 @@ import 'package:cotimax/features/recordatorios/presentation/recordatorios_page.d
 import 'package:cotimax/features/usuarios/presentation/usuarios_page.dart';
 import 'package:cotimax/features/workspace/application/workspace_controller.dart';
 import 'package:cotimax/features/workspace/presentation/workspace_setup_page.dart';
+import 'package:cotimax/shared/models/domain_models.dart';
 import 'package:cotimax/shared/widgets/cotimax_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+final _routerRefreshProvider = Provider<_RouterRefreshNotifier>((ref) {
+  final notifier = _RouterRefreshNotifier(ref);
+  ref.onDispose(notifier.dispose);
+  return notifier;
+});
+
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final auth = ref.watch(authControllerProvider);
-  final workspaceStatus = ref.watch(workspaceStatusProvider);
+  final refreshNotifier = ref.read(_routerRefreshProvider);
+
+  String normalizeRedirectLike(String raw) {
+    var value = raw.trim();
+    if (value.isEmpty) return '';
+    if (value.startsWith('/#/')) {
+      value = value.substring(2);
+    } else if (value.startsWith('#/')) {
+      value = value.substring(1);
+    }
+    return value;
+  }
+
+  String? sanitizeRedirectParam(String? raw) {
+    final value = normalizeRedirectLike(raw ?? '');
+    if (value.isEmpty) return null;
+    final uri = Uri.tryParse(value);
+    if (uri == null) return null;
+    if (uri.scheme.isNotEmpty || uri.host.isNotEmpty) return null;
+    final candidate = (uri.fragment.startsWith('/') && uri.path == '/')
+        ? uri.fragment
+        : uri.path;
+    if (!candidate.startsWith('/')) return null;
+    if (candidate == RoutePaths.login || candidate == RoutePaths.recover) {
+      return null;
+    }
+    final normalized = Uri(
+      path: candidate,
+      queryParameters: uri.queryParameters.isEmpty ? null : uri.queryParameters,
+    ).toString();
+    return normalized;
+  }
+
+  String withRedirect(String path, String redirectTo) {
+    return Uri(path: path, queryParameters: {'redirect': redirectTo}).toString();
+  }
 
   String pageTitle(String location) {
     if (location.startsWith(RoutePaths.dashboard)) {
@@ -72,35 +113,49 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
   return GoRouter(
     initialLocation: RoutePaths.login,
+    refreshListenable: refreshNotifier,
     redirect: (context, state) {
+      final auth = ref.read(authControllerProvider);
+      final workspaceStatus = ref.read(workspaceStatusProvider);
       final path = state.uri.path;
       final isAuthRoute =
           path == RoutePaths.login || path == RoutePaths.recover;
       final isWorkspaceSetupRoute = path == RoutePaths.workspaceSetup;
+      final redirectTo = sanitizeRedirectParam(state.uri.queryParameters['redirect']);
+      final effectiveTarget = sanitizeRedirectParam(state.uri.toString()) ??
+          sanitizeRedirectParam(state.matchedLocation) ??
+          state.uri.path;
 
       if (!auth.isAuthenticated && !isAuthRoute && !isWorkspaceSetupRoute) {
-        return RoutePaths.login;
+        return withRedirect(RoutePaths.login, effectiveTarget);
       }
 
       if (!auth.isAuthenticated && isWorkspaceSetupRoute) {
-        return RoutePaths.login;
+        return withRedirect(RoutePaths.login, redirectTo ?? RoutePaths.dashboard);
       }
 
       if (auth.isAuthenticated && isAuthRoute) {
-        return RoutePaths.workspaceSetup;
+        final hasCompany = workspaceStatus.valueOrNull?.hasCompany == true;
+        if (!hasCompany) {
+          return redirectTo == null
+              ? RoutePaths.workspaceSetup
+              : withRedirect(RoutePaths.workspaceSetup, redirectTo);
+        }
+        return redirectTo ?? RoutePaths.dashboard;
       }
 
       if (auth.isAuthenticated && !isWorkspaceSetupRoute) {
         final hasCompany = workspaceStatus.valueOrNull?.hasCompany == true;
         if (!hasCompany) {
-          return RoutePaths.workspaceSetup;
+          final intended = redirectTo ?? sanitizeRedirectParam(state.uri.toString()) ?? RoutePaths.dashboard;
+          return withRedirect(RoutePaths.workspaceSetup, intended);
         }
       }
 
       if (auth.isAuthenticated && isWorkspaceSetupRoute) {
         final hasCompany = workspaceStatus.valueOrNull?.hasCompany == true;
         if (hasCompany) {
-          return RoutePaths.dashboard;
+          return redirectTo ?? RoutePaths.dashboard;
         }
       }
 
@@ -174,3 +229,27 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     ),
   );
 });
+
+class _RouterRefreshNotifier extends ChangeNotifier {
+  _RouterRefreshNotifier(this._ref) {
+    _authSub = _ref.listen<AuthState>(
+      authControllerProvider,
+      (_, __) => notifyListeners(),
+    );
+    _workspaceSub = _ref.listen<AsyncValue<WorkspaceStatus>>(
+      workspaceStatusProvider,
+      (_, __) => notifyListeners(),
+    );
+  }
+
+  final Ref _ref;
+  late final ProviderSubscription<AuthState> _authSub;
+  late final ProviderSubscription<AsyncValue<WorkspaceStatus>> _workspaceSub;
+
+  @override
+  void dispose() {
+    _authSub.close();
+    _workspaceSub.close();
+    super.dispose();
+  }
+}

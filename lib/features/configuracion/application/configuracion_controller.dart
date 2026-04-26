@@ -20,3 +20,8 @@ final usuarioActualControllerProvider = FutureProvider<UsuarioActual>((
 ) async {
   return ref.watch(configuracionRepositoryProvider).getUsuarioActual();
 });
+
+final empresasCatalogoControllerProvider =
+    FutureProvider<List<EmpresaCatalogItem>>((ref) async {
+  return ref.watch(configuracionRepositoryProvider).getEmpresasCatalog();
+});

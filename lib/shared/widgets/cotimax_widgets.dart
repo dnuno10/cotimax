@@ -5,7 +5,10 @@ import 'package:cotimax/core/constants/app_spacing.dart';
 import 'package:cotimax/core/localization/app_localization.dart';
 import 'package:cotimax/core/routing/route_paths.dart';
 import 'package:cotimax/core/utils/delete_dependencies.dart';
+import 'package:cotimax/features/auth/application/auth_controller.dart';
+import 'package:cotimax/features/configuracion/application/configuracion_controller.dart';
 import 'package:cotimax/features/planes/application/plan_access.dart';
+import 'package:cotimax/features/workspace/application/workspace_controller.dart';
 import 'package:cotimax/shared/enums/app_enums.dart';
 import 'package:cotimax/shared/models/domain_models.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -77,6 +80,29 @@ const creatablePaths = <String>{
 };
 
 String formatMxn(num value) => formatMoney(value);
+
+String userRoleLabel(UserRole role) {
+  return switch (role) {
+    UserRole.admin => tr('Administrador', 'Admin'),
+    UserRole.usuario => tr('Usuario', 'User'),
+  };
+}
+
+String initialsFromName(String name) {
+  final parts = name
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((part) => part.trim().isNotEmpty)
+      .toList(growable: false);
+  if (parts.isEmpty) return 'U';
+  if (parts.length == 1) {
+    final single = parts.first;
+    final trimmed = single.trim();
+    if (trimmed.isEmpty) return 'U';
+    return trimmed.substring(0, trimmed.length >= 2 ? 2 : 1).toUpperCase();
+  }
+  return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+}
 
 const _microInteractionDuration = Duration(milliseconds: 180);
 const _microInteractionCurve = Curves.easeOutCubic;
@@ -593,7 +619,7 @@ class _AppShellState extends State<AppShell> {
   }
 }
 
-class SidebarNavigation extends StatelessWidget {
+class SidebarNavigation extends ConsumerWidget {
   SidebarNavigation({
     required this.activePath,
     this.collapsed = false,
@@ -608,8 +634,29 @@ class SidebarNavigation extends StatelessWidget {
   final VoidCallback? onToggleCollapsed;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final compact = mobile ? false : collapsed;
+    final usuarioActualAsync = ref.watch(usuarioActualControllerProvider);
+
+    Future<void> logout() async {
+      try {
+        await ref.read(authControllerProvider.notifier).signOut();
+      } catch (error) {
+        if (context.mounted) {
+          ToastHelper.showError(
+            context,
+            buildActionErrorMessage(error, 'No se pudo cerrar la sesión.'),
+          );
+        }
+      } finally {
+        ref.invalidate(workspaceStatusProvider);
+        ref.invalidate(usuarioActualControllerProvider);
+        ref.invalidate(empresaPerfilControllerProvider);
+        if (context.mounted) {
+          context.go(RoutePaths.login);
+        }
+      }
+    }
 
     return AnimatedContainer(
       duration: Duration(milliseconds: 220),
@@ -752,7 +799,7 @@ class SidebarNavigation extends StatelessWidget {
               compact
                   ? Center(
                       child: IconButton(
-                        onPressed: () => context.go(RoutePaths.login),
+                        onPressed: () => unawaited(logout()),
                         icon: FaIcon(
                           FontAwesomeIcons.arrowRightFromBracket,
                           size: 14,
@@ -761,50 +808,144 @@ class SidebarNavigation extends StatelessWidget {
                     )
                   : Row(
                       children: [
-                        Container(
-                          height: 34,
-                          width: 34,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            'DN',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w800,
+                        usuarioActualAsync.when(
+                          loading: () => Expanded(
+                            child: Row(
+                              children: [
+                                Container(
+                                  height: 34,
+                                  width: 34,
+                                  alignment: Alignment.center,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary.withValues(
+                                      alpha: 0.12,
+                                    ),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    '…',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: AppColors.primary,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    trText('Cargando...'),
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: AppColors.textPrimary,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ),
-                        SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Daniel Nuno',
-                                style: TextStyle(
-                                  color: AppColors.textPrimary,
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 12,
+                          error: (_, __) => Expanded(
+                            child: Row(
+                              children: [
+                                Container(
+                                  height: 34,
+                                  width: 34,
+                                  alignment: Alignment.center,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary.withValues(
+                                      alpha: 0.12,
+                                    ),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    'U',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: AppColors.primary,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
                                 ),
-                              ),
-                              SizedBox(height: 2),
-                              Text(
-                                trText('Administrador'),
-                                style: TextStyle(
-                                  color: AppColors.textSecondary,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 11,
+                                SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    trText('Cuenta'),
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: AppColors.textPrimary,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 12,
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
+                          data: (usuario) {
+                            final displayName = usuario.nombre.trim().isNotEmpty
+                                ? usuario.nombre.trim()
+                                : (usuario.correo.trim().isNotEmpty
+                                    ? usuario.correo.trim()
+                                    : trText('Cuenta'));
+                            return Expanded(
+                              child: Row(
+                                children: [
+                                  Container(
+                                    height: 34,
+                                    width: 34,
+                                    alignment: Alignment.center,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primary.withValues(
+                                        alpha: 0.12,
+                                      ),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Text(
+                                      initialsFromName(displayName),
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: AppColors.primary,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          displayName,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            color: AppColors.textPrimary,
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                        SizedBox(height: 2),
+                                        Text(
+                                          userRoleLabel(usuario.rol),
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            color: AppColors.textSecondary,
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 11,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
                         ),
                         IconButton(
-                          onPressed: () => context.go(RoutePaths.login),
+                          onPressed: () => unawaited(logout()),
                           icon: FaIcon(
                             FontAwesomeIcons.arrowRightFromBracket,
                             size: 14,

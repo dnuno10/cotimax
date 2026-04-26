@@ -31,6 +31,8 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
   late DateTimeRange _selectedRange;
   bool _isRefreshing = true;
   int _contentVersion = 0;
+  bool _didUserPickRange = false;
+  bool _didAutoAdjustRange = false;
 
   @override
   void initState() {
@@ -161,6 +163,25 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
     final incomeConcentration = _buildIncomeConcentrationSummary(
       ingresos: ingresos,
       clientes: clientesMap,
+    );
+
+    final activityBounds = _findActivityBounds(
+      ingresos: ingresosCatalogo,
+      gastos: gastosCatalogo,
+      cotizaciones: cotizacionesCatalogo,
+    );
+    final hasDataOutsideRange =
+        activityBounds != null &&
+        (!_inDateRange(activityBounds.start, _selectedRange) ||
+            !_inDateRange(activityBounds.end, _selectedRange));
+
+    _maybeAutoAdjustRange(
+      ingresosCatalogo: ingresosCatalogo,
+      gastosCatalogo: gastosCatalogo,
+      cotizacionesCatalogo: cotizacionesCatalogo,
+      ingresosInRange: ingresos,
+      gastosInRange: gastos,
+      cotizacionesInRange: cotizaciones,
     );
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -352,6 +373,11 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                     icon: FaIcon(FontAwesomeIcons.calendarDays, size: 13),
                     label: Text(_rangeLabel(_selectedRange)),
                   ),
+                  if (hasDataOutsideRange)
+                    OutlinedButton(
+                      onPressed: () => _showAllActivity(activityBounds),
+                      child: Text(trText('Ver todo')),
+                    ),
                 ],
               ),
               SizedBox(height: 14),
@@ -373,6 +399,21 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
     );
   }
 
+  Future<void> _showAllActivity(DateTimeRange? bounds) async {
+    if (bounds == null) return;
+    setState(() {
+      _didUserPickRange = true;
+      _selectedRange = DateTimeRange(
+        start: _startOfDay(bounds.start),
+        end: _endOfDay(bounds.end),
+      );
+    });
+    await _simulateDashboardRefresh(
+      toast:
+          '${trText('Dashboard actualizado para')} ${_rangeLabel(_selectedRange)}.',
+    );
+  }
+
   Future<void> _pickDashboardRange() async {
     final picked = await _showAppDateRangePicker(
       context,
@@ -380,6 +421,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
     );
     if (!mounted || picked == null) return;
     setState(() {
+      _didUserPickRange = true;
       _selectedRange = DateTimeRange(
         start: _startOfDay(picked.start),
         end: _endOfDay(picked.end),
@@ -397,6 +439,81 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
       start: _startOfDay(now.subtract(Duration(days: 49))),
       end: _endOfDay(now),
     );
+  }
+
+  void _maybeAutoAdjustRange({
+    required List<Ingreso> ingresosCatalogo,
+    required List<Gasto> gastosCatalogo,
+    required List<Cotizacion> cotizacionesCatalogo,
+    required List<Ingreso> ingresosInRange,
+    required List<Gasto> gastosInRange,
+    required List<Cotizacion> cotizacionesInRange,
+  }) {
+    if (_didUserPickRange || _didAutoAdjustRange) return;
+    if (ingresosCatalogo.isEmpty &&
+        gastosCatalogo.isEmpty &&
+        cotizacionesCatalogo.isEmpty) {
+      return;
+    }
+    if (ingresosInRange.isNotEmpty ||
+        gastosInRange.isNotEmpty ||
+        cotizacionesInRange.isNotEmpty) {
+      return;
+    }
+
+    final latest = _findLatestActivityDate(
+      ingresos: ingresosCatalogo,
+      gastos: gastosCatalogo,
+      cotizaciones: cotizacionesCatalogo,
+    );
+    if (latest == null) return;
+    if (_inDateRange(latest, _selectedRange)) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (_didUserPickRange || _didAutoAdjustRange) return;
+      setState(() {
+        _didAutoAdjustRange = true;
+        _selectedRange = DateTimeRange(
+          start: _startOfDay(latest.subtract(Duration(days: 49))),
+          end: _endOfDay(latest),
+        );
+      });
+      _simulateDashboardRefresh(
+        toast:
+            '${trText('Mostrando datos para')} ${_rangeLabel(_selectedRange)}.',
+      );
+    });
+  }
+
+  DateTime? _findLatestActivityDate({
+    required List<Ingreso> ingresos,
+    required List<Gasto> gastos,
+    required List<Cotizacion> cotizaciones,
+  }) {
+    final candidates = <DateTime>[
+      ...ingresos.map((item) => item.fecha),
+      ...gastos.map((item) => item.fecha),
+      ...cotizaciones.map((item) => item.fechaEmision),
+    ];
+    if (candidates.isEmpty) return null;
+    return candidates.reduce((a, b) => a.isAfter(b) ? a : b);
+  }
+
+  DateTimeRange? _findActivityBounds({
+    required List<Ingreso> ingresos,
+    required List<Gasto> gastos,
+    required List<Cotizacion> cotizaciones,
+  }) {
+    final candidates = <DateTime>[
+      ...ingresos.map((item) => item.fecha),
+      ...gastos.map((item) => item.fecha),
+      ...cotizaciones.map((item) => item.fechaEmision),
+    ];
+    if (candidates.isEmpty) return null;
+    final minDate = candidates.reduce((a, b) => a.isBefore(b) ? a : b);
+    final maxDate = candidates.reduce((a, b) => a.isAfter(b) ? a : b);
+    return DateTimeRange(start: minDate, end: maxDate);
   }
 
   Future<void> _simulateDashboardRefresh({String? toast}) async {

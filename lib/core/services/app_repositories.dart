@@ -81,6 +81,8 @@ abstract class ConfiguracionRepository {
   Future<void> updateEmpresa(EmpresaPerfil empresa);
   Future<UsuarioActual> getUsuarioActual();
   Future<void> updateUsuarioActualThemeMode(bool modoOscuro);
+  Future<void> updateUsuarioActualNombre(String nombre);
+  Future<List<EmpresaCatalogItem>> getEmpresasCatalog();
 }
 
 abstract class WorkspaceRepository {
@@ -700,6 +702,22 @@ class SupabaseConfiguracionRepository implements ConfiguracionRepository {
       },
     );
   }
+
+  @override
+  Future<void> updateUsuarioActualNombre(String nombre) async {
+    await _client.rpc(
+      'update_usuario_actual',
+      params: {
+        'p_payload': {'nombre': nombre},
+      },
+    );
+  }
+
+  @override
+  Future<List<EmpresaCatalogItem>> getEmpresasCatalog() async {
+    final response = await _client.rpc('list_empresas_catalogo');
+    return _mapList(response, _empresaCatalogItemFromRow);
+  }
 }
 
 class SupabaseWorkspaceRepository implements WorkspaceRepository {
@@ -1259,6 +1277,13 @@ UsuarioActual _usuarioActualFromRow(Map<String, dynamic> row) {
     ultimoAccesoAt: _dateTimeFrom(row['ultimo_acceso_at']),
     createdAt: _dateTimeFrom(row['created_at']),
     updatedAt: _dateTimeFrom(row['updated_at']),
+  );
+}
+
+EmpresaCatalogItem _empresaCatalogItemFromRow(Map<String, dynamic> row) {
+  return EmpresaCatalogItem(
+    id: row['id'] as String,
+    nombreComercial: (row['nombre_comercial'] ?? '') as String,
   );
 }
 

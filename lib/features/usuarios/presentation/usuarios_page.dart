@@ -1,9 +1,11 @@
 import 'package:cotimax/core/constants/app_colors.dart';
 import 'package:cotimax/core/localization/app_localization.dart';
+import 'package:cotimax/features/configuracion/application/configuracion_controller.dart';
 import 'package:cotimax/features/planes/application/planes_controller.dart';
 import 'package:cotimax/features/usuarios/application/usuarios_controller.dart';
 import 'package:cotimax/features/workspace/application/workspace_controller.dart';
 import 'package:cotimax/shared/enums/app_enums.dart';
+import 'package:cotimax/shared/models/domain_models.dart';
 import 'package:cotimax/shared/widgets/cotimax_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -34,6 +36,12 @@ class UsuariosPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final usuarios = ref.watch(usuariosControllerProvider);
     final plan = ref.watch(suscripcionControllerProvider);
+    final empresasCatalogo =
+        ref.watch(empresasCatalogoControllerProvider).valueOrNull ??
+        const <EmpresaCatalogItem>[];
+    final empresasById = {
+      for (final item in empresasCatalogo) item.id: item.nombreComercial,
+    };
 
     return ListView(
       children: [
@@ -213,14 +221,22 @@ class UsuariosPage extends ConsumerWidget {
                 .map(
                   (u) => DataRow(
                     cells: [
-                      DataCell(Text(u.nombre)),
-                      DataCell(Text(u.correo)),
                       DataCell(
                         Text(
-                          trText(u.rol == UserRole.admin ? 'Admin' : 'Usuario'),
+                          u.nombre.trim().isNotEmpty ? u.nombre : u.correo,
                         ),
                       ),
-                      DataCell(Text(u.empresaIds.join(', '))),
+                      DataCell(Text(u.correo)),
+                      DataCell(
+                        Text(userRoleLabel(u.rol)),
+                      ),
+                      DataCell(
+                        Text(
+                          u.empresaIds
+                              .map((id) => empresasById[id] ?? id)
+                              .join(', '),
+                        ),
+                      ),
                       DataCell(Text(trText(u.activo ? 'Si' : 'No'))),
                     ],
                   ),

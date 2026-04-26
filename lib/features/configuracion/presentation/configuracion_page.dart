@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:cotimax/core/constants/app_colors.dart';
 import 'package:cotimax/core/localization/app_localization.dart';
 import 'package:cotimax/core/platform/logo_picker.dart';
+import 'package:cotimax/core/platform/url_navigator.dart';
 import 'package:cotimax/features/configuracion/application/configuracion_controller.dart';
 import 'package:cotimax/features/clientes/application/clientes_controller.dart';
 import 'package:cotimax/features/materiales/application/materiales_controller.dart';
@@ -13,6 +14,7 @@ import 'package:cotimax/features/planes/presentation/plan_cards.dart';
 import 'package:cotimax/features/cotizaciones/application/cotizacion_pdf_service.dart';
 import 'package:cotimax/features/cotizaciones/application/cotizaciones_controller.dart';
 import 'package:cotimax/features/productos/application/productos_controller.dart';
+import 'package:cotimax/features/usuarios/application/usuarios_controller.dart';
 import 'package:cotimax/shared/enums/app_enums.dart';
 import 'package:cotimax/shared/models/domain_models.dart';
 import 'package:cotimax/shared/widgets/cotimax_rich_text_editor.dart';
@@ -184,6 +186,7 @@ class _ConfiguracionPageState extends ConsumerState<ConfiguracionPage> {
 
   static const _mainTabs = [
     'Gestión de cuenta',
+    'Perfil',
     'Empresa',
     'Localización',
     'Diseño de cotización',
@@ -348,10 +351,11 @@ class _ConfiguracionPageState extends ConsumerState<ConfiguracionPage> {
       final normalizedMain = mainTabParam.trim().toLowerCase();
       final desiredTab = switch (normalizedMain) {
         'cuenta' || 'account' || 'gestion' || 'gestion_de_cuenta' => 0,
-        'empresa' || 'company' => 1,
-        'localizacion' || 'localización' || 'locale' => 2,
-        'diseno' || 'diseño' || 'design' || 'cotizacion' => 3,
-        'impuestos' || 'tax' || 'taxes' => 4,
+        'perfil' || 'profile' || 'usuario' || 'user' => 1,
+        'empresa' || 'company' => 2,
+        'localizacion' || 'localización' || 'locale' => 3,
+        'diseno' || 'diseño' || 'design' || 'cotizacion' => 4,
+        'impuestos' || 'tax' || 'taxes' => 5,
         _ => null,
       };
       if (desiredTab != null && desiredTab != _mainTabIndex) {
@@ -436,6 +440,8 @@ class _ConfiguracionPageState extends ConsumerState<ConfiguracionPage> {
                         },
                       ),
                     if (_mainTabIndex == 1)
+                      _UserProfileSection(usuario: usuario),
+                    if (_mainTabIndex == 2)
                       _CompanySettingsSection(
                         key: ValueKey(
                           'company-${empresa.updatedAt.microsecondsSinceEpoch}-${usuario.updatedAt.microsecondsSinceEpoch}-$_companyTabIndex',
@@ -445,14 +451,14 @@ class _ConfiguracionPageState extends ConsumerState<ConfiguracionPage> {
                         onTabChanged: (index) =>
                             setState(() => _companyTabIndex = index),
                       ),
-                    if (_mainTabIndex == 2)
+                    if (_mainTabIndex == 3)
                       _LocalizationSettingsSection(
                         key: ValueKey(
                           'localizacion-${empresa.updatedAt.microsecondsSinceEpoch}',
                         ),
                         empresa: empresa,
                       ),
-                    if (_mainTabIndex == 3)
+                    if (_mainTabIndex == 4)
                       _InvoiceDesignSection(
                         empresa: empresa,
                         tabIndex: _invoiceTabIndex,
@@ -502,7 +508,7 @@ class _ConfiguracionPageState extends ConsumerState<ConfiguracionPage> {
                         onReset: _resetQuoteDesignDraft,
                         onSave: () => _saveQuoteDesign(empresa),
                       ),
-                    if (_mainTabIndex == 4)
+                    if (_mainTabIndex == 5)
                       _TaxSettingsSection(
                         key: ValueKey(
                           'impuestos-${empresa.updatedAt.microsecondsSinceEpoch}',
@@ -751,6 +757,116 @@ class _AppearanceAccountPanelState
   }
 }
 
+class _UserProfileSection extends ConsumerStatefulWidget {
+  _UserProfileSection({required this.usuario});
+
+  final UsuarioActual usuario;
+
+  @override
+  ConsumerState<_UserProfileSection> createState() => _UserProfileSectionState();
+}
+
+class _UserProfileSectionState extends ConsumerState<_UserProfileSection> {
+  late final TextEditingController _nombreController;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nombreController = TextEditingController(text: widget.usuario.nombre);
+  }
+
+  @override
+  void didUpdateWidget(covariant _UserProfileSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.usuario.updatedAt != widget.usuario.updatedAt &&
+        !_isSaving) {
+      _nombreController.text = widget.usuario.nombre;
+    }
+  }
+
+  @override
+  void dispose() {
+    _nombreController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (_isSaving) return;
+    final nextName = _nombreController.text.trim();
+    if (nextName.isEmpty) {
+      ToastHelper.showWarning(context, 'Ingresa tu nombre.');
+      return;
+    }
+
+    setState(() => _isSaving = true);
+    try {
+      await ref
+          .read(configuracionRepositoryProvider)
+          .updateUsuarioActualNombre(nextName);
+      ref.invalidate(usuarioActualControllerProvider);
+      ref.invalidate(usuariosControllerProvider);
+      if (!mounted) return;
+      ToastHelper.showSuccess(context, 'Nombre actualizado.');
+    } catch (error) {
+      if (!mounted) return;
+      ToastHelper.showError(
+        context,
+        buildActionErrorMessage(error, 'No se pudo actualizar tu nombre.'),
+      );
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _FormShellCard(
+          title: 'Perfil',
+          icon: Icons.person_outline_rounded,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _EditableFieldRow(
+                label: trText('Nombre de usuario'),
+                controller: _nombreController,
+              ),
+              SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '${trText('Rol')}: ${userRoleLabel(widget.usuario.rol)}',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: _isSaving ? null : _save,
+                    icon: _isSaving
+                        ? SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Icon(Icons.save_rounded),
+                    label: Text(trText('Guardar')),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _PlanAndBillingPanel extends StatelessWidget {
   _PlanAndBillingPanel({
     required this.ref,
@@ -769,6 +885,31 @@ class _PlanAndBillingPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final upgradePlans = allPlans.where((item) => item.id != plan.id).toList();
+    final canManageStripe = plan.id == 'pro' || plan.id == 'empresa';
+
+    Future<void> openStripeAction(String action) async {
+      try {
+        final response = await ref
+            .read(stripeCheckoutServiceProvider)
+            .createCheckout(plan: plan, action: action);
+
+        final url = Uri.tryParse(response.url);
+        if (url == null) {
+          throw 'URL inválida.';
+        }
+        final opened = await navigateToUrl(url.toString());
+        if (!opened && context.mounted) {
+          ToastHelper.show(context, 'No se pudo abrir Stripe.');
+        }
+      } catch (error) {
+        if (!context.mounted) return;
+        ToastHelper.showError(
+          context,
+          buildActionErrorMessage(error, 'No se pudo abrir Stripe.'),
+        );
+      }
+    }
+
     VoidCallback? buildChangePlanCallback(Plan targetPlan) {
       if (targetPlan.id != 'pro' && targetPlan.id != 'empresa') return null;
       return () {
@@ -847,10 +988,7 @@ class _PlanAndBillingPanel extends StatelessWidget {
             if (checkoutUrl == null) {
               throw 'URL de checkout inválida.';
             }
-            final opened = await launchUrl(
-              checkoutUrl,
-              mode: LaunchMode.platformDefault,
-            );
+            final opened = await navigateToUrl(checkoutUrl.toString());
             if (!opened && context.mounted) {
               ToastHelper.show(context, 'No se pudo abrir el checkout.');
             }
@@ -884,6 +1022,57 @@ class _PlanAndBillingPanel extends StatelessWidget {
             fontWeight: FontWeight.w700,
           ),
         ),
+        if (canManageStripe) ...[
+          SizedBox(height: 12),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              FilledButton.icon(
+                onPressed: () => unawaited(openStripeAction('portal')),
+                icon: Icon(Icons.manage_accounts_rounded, size: 16),
+                label: Text(trText('Administrar suscripción')),
+              ),
+              OutlinedButton.icon(
+                onPressed: () {
+                  unawaited(() async {
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (dialogContext) {
+                        return AlertDialog(
+                          title: Text(trText('Cancelar plan')),
+                          content: Text(
+                            trText(
+                              'Serás redirigido a Stripe para cancelar tu suscripción. ¿Continuar?',
+                            ),
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () =>
+                                  Navigator.of(dialogContext).pop(false),
+                              child: Text(trText('Volver')),
+                            ),
+                            FilledButton(
+                              onPressed: () =>
+                                  Navigator.of(dialogContext).pop(true),
+                              child: Text(trText('Continuar')),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                    if (!context.mounted) return;
+                    if (confirm == true) {
+                      await openStripeAction('cancel');
+                    }
+                  }());
+                },
+                icon: Icon(Icons.cancel_rounded, size: 16),
+                label: Text(trText('Cancelar plan')),
+              ),
+            ],
+          ),
+        ],
         SizedBox(height: 16),
         Container(
           padding: EdgeInsets.all(18),
@@ -1022,12 +1211,11 @@ class _PlanAndBillingPanel extends StatelessWidget {
           children: [
             Expanded(child: _ConfigSectionTitle(title: 'Método de pago')),
             TextButton.icon(
-              onPressed: () => ToastHelper.show(
-                context,
-                'Agregar método de pago disponible pronto.',
-              ),
-              icon: Icon(Icons.add, size: 16),
-              label: Text(trText('Agregar método de pago')),
+              onPressed: canManageStripe
+                  ? () => unawaited(openStripeAction('portal'))
+                  : null,
+              icon: Icon(Icons.open_in_new_rounded, size: 16),
+              label: Text(trText('Administrar en Stripe')),
             ),
           ],
         ),
@@ -1038,12 +1226,49 @@ class _PlanAndBillingPanel extends StatelessWidget {
             final paymentCard = _PaymentMethodCard(
               empresa: empresa,
               plan: plan,
+              onManageInStripe:
+                  canManageStripe ? () => unawaited(openStripeAction('portal')) : null,
+              onCancelPlan: canManageStripe
+                  ? () {
+                      unawaited(() async {
+                        final confirm = await showDialog<bool>(
+                          context: context,
+                          builder: (dialogContext) {
+                            return AlertDialog(
+                              title: Text(trText('Cancelar plan')),
+                              content: Text(
+                                trText(
+                                  'Serás redirigido a Stripe para cancelar tu suscripción. ¿Continuar?',
+                                ),
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () =>
+                                      Navigator.of(dialogContext).pop(false),
+                                  child: Text(trText('Volver')),
+                                ),
+                                FilledButton(
+                                  onPressed: () =>
+                                      Navigator.of(dialogContext).pop(true),
+                                  child: Text(trText('Continuar')),
+                                ),
+                              ],
+                            );
+                          },
+                        );
+                        if (!context.mounted) return;
+                        if (confirm == true) {
+                          await openStripeAction('cancel');
+                        }
+                      }());
+                    }
+                  : null,
             );
             final addCard = _PaymentMethodAddCard(
-              onTap: () => ToastHelper.show(
-                context,
-                'Agregar método de pago disponible pronto.',
-              ),
+              enabled: canManageStripe,
+              onTap: canManageStripe
+                  ? () => unawaited(openStripeAction('portal'))
+                  : null,
             );
 
             if (stacked) {
@@ -1542,6 +1767,29 @@ class _CompanySettingsSectionState
     setState(() => _logoDataUrl = selected);
   }
 
+  Future<void> _saveLogo() async {
+    if (_logoDataUrl.trim().isEmpty) {
+      ToastHelper.show(context, 'Carga un logo antes de guardar.');
+      return;
+    }
+
+    setState(() => _isSaving = true);
+
+    try {
+      await ref
+          .read(configuracionRepositoryProvider)
+          .updateEmpresa(_empresa.copyWith(logoUrl: _logoDataUrl.trim()));
+      ref.invalidate(empresaPerfilControllerProvider);
+
+      if (!mounted) return;
+      ToastHelper.show(context, 'Logo actualizado.');
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
+  }
+
   Future<void> _saveQuoteDefaults() async {
     setState(() => _isSaving = true);
 
@@ -1654,7 +1902,7 @@ class _CompanySettingsSectionState
           SizedBox(height: 6),
           Text(
             trText(
-              'Actualiza el logotipo y guárdalo junto con los datos de la empresa.',
+              'Actualiza el logotipo y guárdalo para que se refleje en todo el sistema.',
             ),
             style: TextStyle(
               color: AppColors.textSecondary,
@@ -1713,6 +1961,12 @@ class _CompanySettingsSectionState
                 ),
               ),
             ),
+          SizedBox(height: 16),
+          _SettingsActionBar(
+            label: 'Guardar logo',
+            isSaving: _isSaving,
+            onPressed: _saveLogo,
+          ),
         ],
       ),
     );
@@ -3190,13 +3444,21 @@ class _ConfigSectionTitle extends StatelessWidget {
 }
 
 class _PaymentMethodCard extends StatelessWidget {
-  _PaymentMethodCard({required this.empresa, required this.plan});
+  _PaymentMethodCard({
+    required this.empresa,
+    required this.plan,
+    this.onManageInStripe,
+    this.onCancelPlan,
+  });
 
   final EmpresaPerfil empresa;
   final Plan plan;
+  final VoidCallback? onManageInStripe;
+  final VoidCallback? onCancelPlan;
 
   @override
   Widget build(BuildContext context) {
+    final hasStripePlan = plan.id == 'pro' || plan.id == 'empresa';
     return Container(
       padding: EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -3216,7 +3478,7 @@ class _PaymentMethodCard extends StatelessWidget {
                   color: AppColors.textPrimary,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(Icons.credit_card_rounded, color: AppColors.white),
+                child: Icon(Icons.payments_rounded, color: AppColors.white),
               ),
               SizedBox(width: 12),
               Expanded(
@@ -3224,7 +3486,7 @@ class _PaymentMethodCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      trText('Visa terminación 4242'),
+                      trText('Stripe'),
                       style: TextStyle(
                         color: AppColors.textPrimary,
                         fontSize: 15,
@@ -3233,7 +3495,9 @@ class _PaymentMethodCard extends StatelessWidget {
                     ),
                     SizedBox(height: 4),
                     Text(
-                      trText('Facturación automática activada'),
+                      hasStripePlan
+                          ? trText('Administra tu suscripción y método de pago en Stripe.')
+                          : trText('Actualiza a Pro/Empresa para activar Stripe.'),
                       style: TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 12,
@@ -3259,6 +3523,27 @@ class _PaymentMethodCard extends StatelessWidget {
             label: trText('Correo de facturación'),
             value: empresa.correo,
           ),
+          if (onManageInStripe != null || onCancelPlan != null) ...[
+            SizedBox(height: 14),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                if (onManageInStripe != null)
+                  FilledButton.icon(
+                    onPressed: onManageInStripe,
+                    icon: Icon(Icons.open_in_new_rounded, size: 16),
+                    label: Text(trText('Abrir Stripe')),
+                  ),
+                if (onCancelPlan != null)
+                  OutlinedButton.icon(
+                    onPressed: onCancelPlan,
+                    icon: Icon(Icons.cancel_rounded, size: 16),
+                    label: Text(trText('Cancelar plan')),
+                  ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -3266,14 +3551,15 @@ class _PaymentMethodCard extends StatelessWidget {
 }
 
 class _PaymentMethodAddCard extends StatelessWidget {
-  _PaymentMethodAddCard({required this.onTap});
+  _PaymentMethodAddCard({required this.enabled, required this.onTap});
 
-  final VoidCallback onTap;
+  final bool enabled;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: onTap,
+      onTap: enabled ? onTap : null,
       borderRadius: BorderRadius.circular(12),
       child: Container(
         height: 188,
@@ -3286,12 +3572,16 @@ class _PaymentMethodAddCard extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.add, size: 34, color: AppColors.textPrimary),
+            Icon(
+              Icons.open_in_new_rounded,
+              size: 34,
+              color: enabled ? AppColors.textPrimary : AppColors.textMuted,
+            ),
             SizedBox(height: 18),
             Text(
-              trText('Agregar método de pago'),
+              trText('Administrar en Stripe'),
               style: TextStyle(
-                color: AppColors.textPrimary,
+                color: enabled ? AppColors.textPrimary : AppColors.textMuted,
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
               ),

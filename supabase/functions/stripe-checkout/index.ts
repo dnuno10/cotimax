@@ -7,11 +7,19 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 
 type Json = Record<string, unknown>;
 
+const corsHeaders = {
+  "access-control-allow-origin": "*",
+  "access-control-allow-headers":
+    "authorization, x-client-info, apikey, content-type",
+  "access-control-allow-methods": "POST, OPTIONS",
+};
+
 function json(body: Json, init: ResponseInit = {}) {
   return new Response(JSON.stringify(body), {
     ...init,
     headers: {
       "content-type": "application/json; charset=utf-8",
+      ...corsHeaders,
       ...(init.headers ?? {}),
     },
   });
@@ -39,11 +47,9 @@ function parseIntSafe(value: unknown) {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, {
+      status: 204,
       headers: {
-        "access-control-allow-origin": "*",
-        "access-control-allow-headers":
-          "authorization, x-client-info, apikey, content-type",
-        "access-control-allow-methods": "POST, OPTIONS",
+        ...corsHeaders,
       },
     });
   }
@@ -80,8 +86,13 @@ Deno.serve(async (req) => {
     return error(400, "Invalid JSON body.");
   }
 
+  const action = String(body["action"] ?? "checkout").trim();
+  if (action !== "checkout" && action !== "portal" && action !== "cancel") {
+    return error(400, "Invalid action. Expected 'checkout', 'portal' or 'cancel'.");
+  }
+
   const planId = String(body["plan_id"] ?? "").trim();
-  if (planId !== "pro" && planId !== "empresa") {
+  if (action === "checkout" && planId !== "pro" && planId !== "empresa") {
     return error(400, "Invalid plan_id. Expected 'pro' or 'empresa'.");
   }
 
@@ -114,8 +125,57 @@ Deno.serve(async (req) => {
   if (adminError) {
     return error(401, "No se pudo validar permisos.", { detail: adminError.message });
   }
-  if (!isAdmin) {
-    return error(403, "Solo un admin puede cambiar el plan.");
+
+  let isPrincipal = false;
+  try {
+    const { data: userData } = await userClient.auth.getUser();
+    const userId = String(userData?.user?.id ?? "").trim();
+    if (userId) {
+      const { data: ue } = await userClient
+        .from("usuario_empresas")
+        .select("es_principal")
+        .eq("usuario_id", userId)
+        .eq("empresa_id", empresaId)
+        .limit(1)
+        .maybeSingle();
+      isPrincipal = Boolean(ue?.es_principal);
+    }
+  } catch {
+    // ignore
+  }
+
+  if (!isAdmin && !isPrincipal) {
+    return error(403, "Solo el dueño (principal) o admin puede cambiar el plan.");
+  }
+
+  const { data: empresa, error: empresaRowError } = await adminClient
+    .from("empresas")
+    .select("id, stripe_customer_id, nombre_comercial, correo")
+    .eq("id", empresaId)
+    .single();
+  if (empresaRowError) {
+    return error(500, "No se pudo cargar la empresa.", { detail: empresaRowError.message });
+  }
+
+  let customerId = String(empresa.stripe_customer_id ?? "").trim();
+  if (!customerId) {
+    const customer = await stripe.customers.create({
+      name: String(empresa.nombre_comercial ?? "").trim() || undefined,
+      email: String(empresa.correo ?? "").trim() || undefined,
+      metadata: { empresa_id: String(empresaId) },
+    });
+    customerId = customer.id;
+    const { error: updateError } = await adminClient
+      .from("empresas")
+      .update({ stripe_customer_id: customerId })
+      .eq("id", empresaId);
+    if (updateError) {
+      return error(
+        500,
+        "Se creó el cliente en Stripe, pero no se pudo guardar en la BD.",
+        { detail: updateError.message },
+      );
+    }
   }
 
   const { data: plan, error: planError } = await adminClient
@@ -126,13 +186,44 @@ Deno.serve(async (req) => {
     .eq("id", planId)
     .limit(1)
     .maybeSingle();
-  if (planError) {
+  if (action === "checkout" && planError) {
     return error(500, "No se pudo cargar el plan.", { detail: planError.message });
   }
-  if (!plan) {
+  if (action === "checkout" && !plan) {
     return error(404, "Plan no encontrado.");
   }
 
+  const { data: suscripcionActual } = await adminClient
+    .from("suscripciones")
+    .select("stripe_subscription_id, plan_id, estado")
+    .eq("empresa_id", empresaId)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const existingSubscriptionId = String(suscripcionActual?.stripe_subscription_id ?? "").trim();
+
+  if (action === "portal" || action === "cancel") {
+    if (!existingSubscriptionId) {
+      return error(400, "No hay una suscripción activa para administrar.");
+    }
+
+    const params: any = {
+      customer: customerId,
+      return_url: `${appBaseUrl}/#/planes?checkout=portal`,
+    };
+    if (action === "cancel") {
+      params.flow_data = {
+        type: "subscription_cancel",
+        subscription_cancel: { subscription: existingSubscriptionId },
+      };
+    }
+
+    const portal = await stripe.billingPortal.sessions.create(params);
+    return json({ url: portal.url, mode: "portal" });
+  }
+
+  // action === "checkout"
   const billingMode = String(plan.billing_mode ?? "").trim();
   const minUsers = Number(plan.usuarios_minimos ?? 0) || 0;
   const maxUsers = Number(plan.usuarios_maximos ?? 0) || 0;
@@ -182,46 +273,6 @@ Deno.serve(async (req) => {
     }
   }
 
-  const { data: empresa, error: empresaRowError } = await adminClient
-    .from("empresas")
-    .select("id, stripe_customer_id, nombre_comercial, correo")
-    .eq("id", empresaId)
-    .single();
-  if (empresaRowError) {
-    return error(500, "No se pudo cargar la empresa.", { detail: empresaRowError.message });
-  }
-
-  let customerId = String(empresa.stripe_customer_id ?? "").trim();
-  if (!customerId) {
-    const customer = await stripe.customers.create({
-      name: String(empresa.nombre_comercial ?? "").trim() || undefined,
-      email: String(empresa.correo ?? "").trim() || undefined,
-      metadata: { empresa_id: String(empresaId) },
-    });
-    customerId = customer.id;
-    const { error: updateError } = await adminClient
-      .from("empresas")
-      .update({ stripe_customer_id: customerId })
-      .eq("id", empresaId);
-    if (updateError) {
-      return error(
-        500,
-        "Se creó el cliente en Stripe, pero no se pudo guardar en la BD.",
-        { detail: updateError.message },
-      );
-    }
-  }
-
-  const { data: suscripcionActual } = await adminClient
-    .from("suscripciones")
-    .select("stripe_subscription_id, plan_id, estado")
-    .eq("empresa_id", empresaId)
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  const existingSubscriptionId = String(suscripcionActual?.stripe_subscription_id ?? "").trim();
-
   // If there's an existing Stripe subscription, send them to the Billing Portal
   // to manage plan/quantity safely (avoids double-subscription charges).
   if (existingSubscriptionId) {
@@ -229,10 +280,7 @@ Deno.serve(async (req) => {
       customer: customerId,
       return_url: `${appBaseUrl}/#/planes?checkout=portal`,
     });
-    return json(
-      { url: portal.url, mode: "portal" },
-      { headers: { "access-control-allow-origin": "*" } },
-    );
+    return json({ url: portal.url, mode: "portal" });
   }
 
   const session = await stripe.checkout.sessions.create({
@@ -261,8 +309,5 @@ Deno.serve(async (req) => {
     cancel_url: `${appBaseUrl}/#/planes?checkout=cancel`,
   });
 
-  return json(
-    { url: session.url, mode: "checkout" },
-    { headers: { "access-control-allow-origin": "*" } },
-  );
+  return json({ url: session.url, mode: "checkout" });
 });
