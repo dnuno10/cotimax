@@ -40,6 +40,6 @@ final pendingTeamInvitesCountProvider = StreamProvider<int>((ref) {
       .from('empresa_invitaciones_miembros')
       .stream(primaryKey: ['id'])
       .eq('invited_user_id', userId)
-      .eq('status', 'pendiente')
-      .map((rows) => rows.length);
+      // Supabase stream solo permite 1 filtro (eq/neq/lt/gt...). Filtramos status en memoria.
+      .map((rows) => rows.where((row) => row['status'] == 'pendiente').length);
 });
