@@ -93,10 +93,22 @@ abstract class WorkspaceRepository {
   });
   Future<void> joinByInvitationCode(String code);
   Future<CompanyInvitationCode> getInvitationCode();
+
+  Future<InviteUserCandidate?> findUserCandidateForTeamInvite(String email);
+  Future<void> inviteMemberByEmail(String email);
+  Future<List<TeamMemberInvite>> listMyPendingTeamInvites();
+  Future<void> respondToTeamInvite({
+    required String inviteId,
+    required bool accept,
+  });
 }
 
 abstract class UsuariosRepository {
-  Future<List<Usuario>> getAll();
+  Future<List<CompanyMember>> getMembers();
+  Future<void> updateMemberRole({
+    required String userId,
+    required UserRole role,
+  });
 }
 
 abstract class PlanesRepository {
@@ -763,6 +775,47 @@ class SupabaseWorkspaceRepository implements WorkspaceRepository {
       codigo: (row['codigo'] ?? '') as String,
     );
   }
+
+  @override
+  Future<InviteUserCandidate?> findUserCandidateForTeamInvite(
+    String email,
+  ) async {
+    final response = await _client.rpc(
+      'find_usuario_by_email_for_team_invite',
+      params: {'p_email': email},
+    );
+    final items = _mapList(response, _inviteUserCandidateFromRow);
+    if (items.isEmpty) return null;
+    return items.first;
+  }
+
+  @override
+  Future<void> inviteMemberByEmail(String email) async {
+    await _client.rpc(
+      'invite_usuario_by_email_to_current_empresa',
+      params: {'p_email': email},
+    );
+  }
+
+  @override
+  Future<List<TeamMemberInvite>> listMyPendingTeamInvites() async {
+    final response = await _client.rpc('list_my_pending_team_invites');
+    return _mapList(response, _teamMemberInviteFromRow);
+  }
+
+  @override
+  Future<void> respondToTeamInvite({
+    required String inviteId,
+    required bool accept,
+  }) async {
+    await _client.rpc(
+      'respond_team_invite',
+      params: {
+        'p_invite_id': inviteId,
+        'p_action': accept ? 'aceptar' : 'rechazar',
+      },
+    );
+  }
 }
 
 class SupabaseUsuariosRepository implements UsuariosRepository {
@@ -771,9 +824,20 @@ class SupabaseUsuariosRepository implements UsuariosRepository {
   final SupabaseClient _client;
 
   @override
-  Future<List<Usuario>> getAll() async {
-    final response = await _client.rpc('list_usuarios');
-    return _mapList(response, _usuarioFromRow);
+  Future<List<CompanyMember>> getMembers() async {
+    final response = await _client.rpc('list_miembros_empresa_actual');
+    return _mapList(response, _companyMemberFromRow);
+  }
+
+  @override
+  Future<void> updateMemberRole({
+    required String userId,
+    required UserRole role,
+  }) async {
+    await _client.rpc(
+      'update_miembro_rol_empresa_actual',
+      params: {'p_usuario_id': userId, 'p_rol': role.key},
+    );
   }
 }
 
@@ -1287,21 +1351,34 @@ EmpresaCatalogItem _empresaCatalogItemFromRow(Map<String, dynamic> row) {
   );
 }
 
-Usuario _usuarioFromRow(Map<String, dynamic> row) {
-  final empresaIds = row['empresa_ids'] is List
-      ? (row['empresa_ids'] as List).map((item) => item.toString()).toList()
-      : <String>[if (row['empresa_id'] != null) row['empresa_id'].toString()];
-  return Usuario(
-    id: row['id'] as String,
+InviteUserCandidate _inviteUserCandidateFromRow(Map<String, dynamic> row) {
+  return InviteUserCandidate(
+    id: row['id']?.toString() ?? '',
     nombre: (row['nombre'] ?? '') as String,
-    telefono: (row['telefono'] ?? '') as String,
+    correo: (row['correo'] ?? '') as String,
+  );
+}
+
+TeamMemberInvite _teamMemberInviteFromRow(Map<String, dynamic> row) {
+  return TeamMemberInvite(
+    id: row['id']?.toString() ?? '',
+    empresaId: row['empresa_id']?.toString() ?? '',
+    empresaNombre: (row['empresa_nombre'] ?? '') as String,
+    invitedById: row['invited_by']?.toString() ?? '',
+    invitedByNombre: (row['invited_by_nombre'] ?? '') as String,
+    invitedEmail: (row['invited_email'] ?? '') as String,
+    createdAt: _dateTimeFrom(row['created_at']),
+  );
+}
+
+CompanyMember _companyMemberFromRow(Map<String, dynamic> row) {
+  return CompanyMember(
+    id: row['usuario_id']?.toString() ?? '',
+    nombre: (row['nombre'] ?? '') as String,
     correo: (row['correo'] ?? '') as String,
     rol: _enumByName(UserRole.values, row['rol']?.toString(), UserRole.usuario),
-    activo: _boolFrom(row['activo'], fallback: true),
-    ultimoAccesoAt: _dateTimeFrom(row['ultimo_acceso_at']),
-    empresaIds: empresaIds,
+    esPrincipal: _boolFrom(row['es_principal']),
     createdAt: _dateTimeFrom(row['created_at']),
-    updatedAt: _dateTimeFrom(row['updated_at']),
   );
 }
 

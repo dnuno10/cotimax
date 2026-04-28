@@ -4,9 +4,11 @@ import 'package:cotimax/core/localization/app_localization.dart';
 import 'package:cotimax/core/constants/app_colors.dart';
 import 'package:cotimax/core/platform/url_navigator.dart';
 import 'package:cotimax/core/routing/route_paths.dart';
+import 'package:cotimax/features/configuracion/application/configuracion_controller.dart';
 import 'package:cotimax/features/planes/application/planes_controller.dart';
 import 'package:cotimax/features/planes/application/stripe_checkout_service.dart';
 import 'package:cotimax/features/planes/presentation/plan_cards.dart';
+import 'package:cotimax/shared/enums/app_enums.dart';
 import 'package:cotimax/shared/models/domain_models.dart';
 import 'package:cotimax/shared/widgets/cotimax_widgets.dart';
 import 'package:flutter/material.dart';
@@ -76,7 +78,12 @@ class _PlanesPageState extends ConsumerState<PlanesPage> {
         final min = plan.usuariosMinimos > 0 ? plan.usuariosMinimos : 2;
         final max = plan.usuariosMaximos > 0 ? plan.usuariosMaximos : 50;
         final initial = (suscripcion?.usuariosActivos ?? min).clamp(min, max);
-        seats = await _promptSeatCount(context, initial: initial, min: min, max: max);
+        seats = await _promptSeatCount(
+          context,
+          initial: initial,
+          min: min,
+          max: max,
+        );
         if (!mounted || seats == null) return;
       }
 
@@ -177,7 +184,12 @@ class _PlanesPageState extends ConsumerState<PlanesPage> {
         unawaited(() async {
           while (DateTime.now().difference(started).inSeconds < 35) {
             ref.invalidate(suscripcionControllerProvider);
-            final current = await ref.read(suscripcionControllerProvider.future).catchError((_) => null);
+            Suscripcion? current;
+            try {
+              current = await ref.read(suscripcionControllerProvider.future);
+            } catch (_) {
+              current = null;
+            }
             if (current != null &&
                 (initial == null ||
                     current.planId != initial.planId ||
@@ -199,11 +211,7 @@ class _PlanesPageState extends ConsumerState<PlanesPage> {
                 child: CircularProgressIndicator(strokeWidth: 2),
               ),
               SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  trText('Actualizando tu suscripción...'),
-                ),
-              ),
+              Expanded(child: Text(trText('Actualizando tu suscripción...'))),
             ],
           ),
         );
@@ -222,6 +230,9 @@ class _PlanesPageState extends ConsumerState<PlanesPage> {
   Widget build(BuildContext context) {
     final planes = ref.watch(planesControllerProvider);
     final suscripcionAsync = ref.watch(suscripcionControllerProvider);
+    final isAdmin =
+        ref.watch(usuarioActualControllerProvider).valueOrNull?.rol ==
+        UserRole.admin;
     final activePlanId = suscripcionAsync.valueOrNull?.planId;
     final planesItems = planes.valueOrNull ?? const <Plan>[];
     Plan? activePlan;
@@ -231,10 +242,12 @@ class _PlanesPageState extends ConsumerState<PlanesPage> {
         break;
       }
     }
-    final canManageStripe = activePlanId == 'pro' || activePlanId == 'empresa';
+    final canManageStripe =
+        isAdmin && (activePlanId == 'pro' || activePlanId == 'empresa');
 
-    final checkoutStatus =
-        GoRouterState.of(context).uri.queryParameters['checkout'];
+    final checkoutStatus = GoRouterState.of(
+      context,
+    ).uri.queryParameters['checkout'];
     if (checkoutStatus == 'success' || checkoutStatus == 'portal') {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
@@ -281,7 +294,10 @@ class _PlanesPageState extends ConsumerState<PlanesPage> {
                     children: [
                       FilledButton.icon(
                         onPressed: () => unawaited(
-                          _openStripePortal(plan: activePlan!, action: 'portal'),
+                          _openStripePortal(
+                            plan: activePlan!,
+                            action: 'portal',
+                          ),
                         ),
                         icon: Icon(Icons.manage_accounts_rounded, size: 16),
                         label: Text(trText('Administrar suscripción')),
@@ -301,13 +317,14 @@ class _PlanesPageState extends ConsumerState<PlanesPage> {
                                   ),
                                   actions: [
                                     TextButton(
-                                      onPressed: () => Navigator.of(dialogContext)
-                                          .pop(false),
+                                      onPressed: () => Navigator.of(
+                                        dialogContext,
+                                      ).pop(false),
                                       child: Text(trText('Volver')),
                                     ),
                                     FilledButton(
-                                      onPressed: () => Navigator.of(dialogContext)
-                                          .pop(true),
+                                      onPressed: () =>
+                                          Navigator.of(dialogContext).pop(true),
                                       child: Text(trText('Continuar')),
                                     ),
                                   ],
@@ -355,12 +372,14 @@ class _PlanesPageState extends ConsumerState<PlanesPage> {
                   isActive: isActive,
                   onChangePlan: (!canBuy || isActive)
                       ? null
-                      : () => unawaited(
-                            _startPlanCheckout(
-                              plan: plan,
-                              suscripcion: suscripcion,
-                            ),
+                      : isAdmin
+                      ? () => unawaited(
+                          _startPlanCheckout(
+                            plan: plan,
+                            suscripcion: suscripcion,
                           ),
+                        )
+                      : null,
                 );
               }
 

@@ -125,27 +125,8 @@ Deno.serve(async (req) => {
   if (adminError) {
     return error(401, "No se pudo validar permisos.", { detail: adminError.message });
   }
-
-  let isPrincipal = false;
-  try {
-    const { data: userData } = await userClient.auth.getUser();
-    const userId = String(userData?.user?.id ?? "").trim();
-    if (userId) {
-      const { data: ue } = await userClient
-        .from("usuario_empresas")
-        .select("es_principal")
-        .eq("usuario_id", userId)
-        .eq("empresa_id", empresaId)
-        .limit(1)
-        .maybeSingle();
-      isPrincipal = Boolean(ue?.es_principal);
-    }
-  } catch {
-    // ignore
-  }
-
-  if (!isAdmin && !isPrincipal) {
-    return error(403, "Solo el dueño (principal) o admin puede cambiar el plan.");
+  if (!isAdmin) {
+    return error(403, "Solo un admin puede cambiar el plan.");
   }
 
   const { data: empresa, error: empresaRowError } = await adminClient

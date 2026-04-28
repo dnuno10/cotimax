@@ -9,6 +9,7 @@ import 'package:cotimax/features/auth/application/auth_controller.dart';
 import 'package:cotimax/features/configuracion/application/configuracion_controller.dart';
 import 'package:cotimax/features/planes/application/plan_access.dart';
 import 'package:cotimax/features/workspace/application/workspace_controller.dart';
+import 'package:cotimax/features/workspace/presentation/team_invites_dialog.dart';
 import 'package:cotimax/shared/enums/app_enums.dart';
 import 'package:cotimax/shared/models/domain_models.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -887,8 +888,8 @@ class SidebarNavigation extends ConsumerWidget {
                             final displayName = usuario.nombre.trim().isNotEmpty
                                 ? usuario.nombre.trim()
                                 : (usuario.correo.trim().isNotEmpty
-                                    ? usuario.correo.trim()
-                                    : trText('Cuenta'));
+                                      ? usuario.correo.trim()
+                                      : trText('Cuenta'));
                             return Expanded(
                               child: Row(
                                 children: [
@@ -961,7 +962,7 @@ class SidebarNavigation extends ConsumerWidget {
   }
 }
 
-class Topbar extends StatelessWidget {
+class Topbar extends ConsumerWidget {
   Topbar({required this.title, this.onMenuTap, this.onSearchTap, super.key});
 
   final String title;
@@ -969,10 +970,12 @@ class Topbar extends StatelessWidget {
   final VoidCallback? onSearchTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final width = MediaQuery.sizeOf(context).width;
     final compact = width < 1180;
     final mobile = width < 900;
+    final pendingInvitesCount =
+        ref.watch(pendingTeamInvitesCountProvider).valueOrNull ?? 0;
 
     return AnimatedContainer(
       duration: Duration(milliseconds: 220),
@@ -1056,8 +1059,49 @@ class Topbar extends StatelessWidget {
           SizedBox(width: AppSpacing.sm),
           if (!mobile) ...[
             IconButton(
-              onPressed: () {},
-              icon: FaIcon(FontAwesomeIcons.bell, size: 14),
+              onPressed: () {
+                ref.invalidate(pendingTeamInvitesProvider);
+                showDialog(
+                  context: context,
+                  builder: (_) => TeamInvitesDialog(),
+                );
+              },
+              icon: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  FaIcon(FontAwesomeIcons.bell, size: 14),
+                  if (pendingInvitesCount > 0)
+                    Positioned(
+                      right: -6,
+                      top: -6,
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.accent,
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(
+                            color: AppColors.white,
+                            width: 1.4,
+                          ),
+                        ),
+                        child: Text(
+                          pendingInvitesCount > 99
+                              ? '99+'
+                              : pendingInvitesCount.toString(),
+                          style: TextStyle(
+                            color: AppColors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                            height: 1.1,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
             SizedBox(width: AppSpacing.sm),
             ElevatedButton.icon(
@@ -1065,7 +1109,7 @@ class Topbar extends StatelessWidget {
                 backgroundColor: AppColors.accent,
                 foregroundColor: AppColors.white,
               ),
-              onPressed: () {},
+              onPressed: () => context.go(RoutePaths.planes),
               icon: FaIcon(FontAwesomeIcons.gem, size: 14),
               label: Text(trText('Actualizar a Pro')),
             ),
@@ -3184,9 +3228,7 @@ class _NavItem extends ConsumerWidget {
                     child: Icon(
                       Icons.workspace_premium_rounded,
                       size: 16,
-                      color: selected
-                          ? AppColors.white
-                          : AppColors.accent,
+                      color: selected ? AppColors.white : AppColors.accent,
                     ),
                   ),
                 if (showCreate)

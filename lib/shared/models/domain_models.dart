@@ -912,6 +912,56 @@ class CompanyInvitationCode {
   final String codigo;
 }
 
+class InviteUserCandidate {
+  InviteUserCandidate({
+    required this.id,
+    required this.nombre,
+    required this.correo,
+  });
+
+  final String id;
+  final String nombre;
+  final String correo;
+}
+
+class TeamMemberInvite {
+  TeamMemberInvite({
+    required this.id,
+    required this.empresaId,
+    required this.empresaNombre,
+    required this.invitedById,
+    required this.invitedByNombre,
+    required this.invitedEmail,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String empresaId;
+  final String empresaNombre;
+  final String invitedById;
+  final String invitedByNombre;
+  final String invitedEmail;
+  final DateTime createdAt;
+}
+
+class CompanyMember {
+  CompanyMember({
+    required this.id,
+    required this.nombre,
+    required this.correo,
+    required this.rol,
+    required this.esPrincipal,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String nombre;
+  final String correo;
+  final UserRole rol;
+  final bool esPrincipal;
+  final DateTime createdAt;
+}
+
 class Usuario {
   Usuario({
     required this.id,

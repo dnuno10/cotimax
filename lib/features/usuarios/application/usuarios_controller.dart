@@ -7,6 +7,8 @@ final usuariosRepositoryProvider = Provider<UsuariosRepository>((ref) {
   return SupabaseUsuariosRepository(ref.watch(supabaseClientProvider));
 });
 
-final usuariosControllerProvider = FutureProvider<List<Usuario>>((ref) async {
-  return ref.watch(usuariosRepositoryProvider).getAll();
+final usuariosControllerProvider = FutureProvider<List<CompanyMember>>((
+  ref,
+) async {
+  return ref.watch(usuariosRepositoryProvider).getMembers();
 });

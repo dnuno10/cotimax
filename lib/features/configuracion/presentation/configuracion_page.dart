@@ -763,7 +763,8 @@ class _UserProfileSection extends ConsumerStatefulWidget {
   final UsuarioActual usuario;
 
   @override
-  ConsumerState<_UserProfileSection> createState() => _UserProfileSectionState();
+  ConsumerState<_UserProfileSection> createState() =>
+      _UserProfileSectionState();
 }
 
 class _UserProfileSectionState extends ConsumerState<_UserProfileSection> {
@@ -779,8 +780,7 @@ class _UserProfileSectionState extends ConsumerState<_UserProfileSection> {
   @override
   void didUpdateWidget(covariant _UserProfileSection oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.usuario.updatedAt != widget.usuario.updatedAt &&
-        !_isSaving) {
+    if (oldWidget.usuario.updatedAt != widget.usuario.updatedAt && !_isSaving) {
       _nombreController.text = widget.usuario.nombre;
     }
   }
@@ -885,7 +885,11 @@ class _PlanAndBillingPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final upgradePlans = allPlans.where((item) => item.id != plan.id).toList();
-    final canManageStripe = plan.id == 'pro' || plan.id == 'empresa';
+    final isAdmin =
+        ref.watch(usuarioActualControllerProvider).valueOrNull?.rol ==
+        UserRole.admin;
+    final canManageStripe =
+        isAdmin && (plan.id == 'pro' || plan.id == 'empresa');
 
     Future<void> openStripeAction(String action) async {
       try {
@@ -911,6 +915,7 @@ class _PlanAndBillingPanel extends StatelessWidget {
     }
 
     VoidCallback? buildChangePlanCallback(Plan targetPlan) {
+      if (!isAdmin) return null;
       if (targetPlan.id != 'pro' && targetPlan.id != 'empresa') return null;
       return () {
         unawaited(() async {
@@ -1226,8 +1231,9 @@ class _PlanAndBillingPanel extends StatelessWidget {
             final paymentCard = _PaymentMethodCard(
               empresa: empresa,
               plan: plan,
-              onManageInStripe:
-                  canManageStripe ? () => unawaited(openStripeAction('portal')) : null,
+              onManageInStripe: canManageStripe
+                  ? () => unawaited(openStripeAction('portal'))
+                  : null,
               onCancelPlan: canManageStripe
                   ? () {
                       unawaited(() async {
@@ -3496,8 +3502,12 @@ class _PaymentMethodCard extends StatelessWidget {
                     SizedBox(height: 4),
                     Text(
                       hasStripePlan
-                          ? trText('Administra tu suscripción y método de pago en Stripe.')
-                          : trText('Actualiza a Pro/Empresa para activar Stripe.'),
+                          ? trText(
+                              'Administra tu suscripción y método de pago en Stripe.',
+                            )
+                          : trText(
+                              'Actualiza a Pro/Empresa para activar Stripe.',
+                            ),
                       style: TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 12,
