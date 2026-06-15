@@ -14,7 +14,8 @@ import 'package:printing/printing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class CotizacionPdfService {
-  static const int _pdfLayoutVersion = 4;
+  static const int _pdfLayoutVersion = 5;
+  static const double _retIsrRate = 0.0125;
   static const Duration _googleFontsTimeout = Duration(milliseconds: 850);
   static Future<_CotizacionPdfFonts>? _fontsFuture;
   static String? _cachedFontFamily;
@@ -32,6 +33,17 @@ class CotizacionPdfService {
   static Map<String, dynamic>? _empresaActualCache;
   static DateTime? _empresaActualCacheAt;
   static Future<pw.MemoryImage?>? _cotimaxWatermarkFuture;
+
+  static double _retIsrAmount(Cotizacion cotizacion) {
+    if (!cotizacion.retIsr) return 0;
+    final base = (cotizacion.subtotal - cotizacion.descuentoTotal)
+        .clamp(0, double.infinity)
+        .toDouble();
+    return (base * _retIsrRate).clamp(0, double.infinity).toDouble();
+  }
+
+  static String _retIsrLabel() =>
+      'RET ISR (${(_retIsrRate * 100).toStringAsFixed(2)}%)';
 
   static void invalidateCompanyCache() {
     _empresaActualCache = null;
@@ -760,6 +772,13 @@ class CotizacionPdfService {
                             labelColor: pdfTheme.textMuted,
                             valueColor: pdfTheme.textPrimary,
                           ),
+                          if (cotizacion.retIsr)
+                            _totalLine(
+                              _retIsrLabel(),
+                              '-${currency.format(_retIsrAmount(cotizacion))}',
+                              labelColor: pdfTheme.textMuted,
+                              valueColor: pdfTheme.textPrimary,
+                            ),
                           pw.Divider(color: pdfTheme.border),
                           _totalLine(
                             isEnglish ? 'Total' : 'Total',
@@ -1805,6 +1824,11 @@ class CotizacionPdfService {
                       : 'Impuesto ${cotizacion.impuestoPorcentaje.toStringAsFixed(0)}%',
                   currency.format(cotizacion.impuestoTotal),
                 ),
+                if (cotizacion.retIsr)
+                  _corpTotalRow(
+                    _retIsrLabel(),
+                    '-${currency.format(_retIsrAmount(cotizacion))}',
+                  ),
                 _corpTotalRow(
                   isEnglish ? 'Total' : 'Total',
                   currency.format(cotizacion.total),
@@ -2267,6 +2291,12 @@ class CotizacionPdfService {
                       currency.format(cotizacion.impuestoTotal),
                       textDark,
                     ),
+                    if (cotizacion.retIsr)
+                      _minimalSummaryRow(
+                        _retIsrLabel(),
+                        '-${currency.format(_retIsrAmount(cotizacion))}',
+                        textDark,
+                      ),
                     _minimalSummaryRow(
                       isEnglish ? 'TOTAL' : 'TOTAL',
                       currency.format(cotizacion.total),
@@ -2749,6 +2779,12 @@ class CotizacionPdfService {
                     currency.format(cotizacion.impuestoTotal),
                     dark,
                   ),
+                  if (cotizacion.retIsr)
+                    _minimalSummaryRow(
+                      _retIsrLabel(),
+                      '-${currency.format(_retIsrAmount(cotizacion))}',
+                      dark,
+                    ),
                   _minimalSummaryRow(
                     'TOTAL',
                     currency.format(cotizacion.total),
@@ -3073,6 +3109,12 @@ class CotizacionPdfService {
                 currency.format(cotizacion.impuestoTotal),
                 ink,
               ),
+              if (cotizacion.retIsr)
+                _minimalSummaryRow(
+                  _retIsrLabel(),
+                  '-${currency.format(_retIsrAmount(cotizacion))}',
+                  ink,
+                ),
               _minimalSummaryRow(
                 'TOTAL',
                 currency.format(cotizacion.total),
@@ -3179,13 +3221,10 @@ class CotizacionPdfService {
     final taxRate = cotizacion.impuestoPorcentaje;
     const paid = 0.0;
     final balance = cotizacion.total.clamp(0, double.infinity).toDouble();
-    final retIsrRate = 0.0125;
     final retIsrBase = (cotizacion.subtotal - cotizacion.descuentoTotal)
         .clamp(0, double.infinity)
         .toDouble();
-    final retIsrAmount = cotizacion.retIsr
-        ? (retIsrBase * retIsrRate).clamp(0, double.infinity).toDouble()
-        : 0.0;
+    final retIsrAmount = _retIsrAmount(cotizacion);
     final leftContact = <String>[
       if (empresa.telefono.trim().isNotEmpty) empresa.telefono.trim(),
       if (empresa.correo.trim().isNotEmpty) empresa.correo.trim(),
@@ -3407,7 +3446,7 @@ class CotizacionPdfService {
               ),
               if (cotizacion.retIsr)
                 _industrialSummaryLine(
-                  '${isEnglish ? 'RET ISR' : 'RET ISR'} (${(retIsrRate * 100).toStringAsFixed(2)}%) :',
+                  '${_retIsrLabel()} :',
                   '-${currency.format(retIsrAmount)}',
                   textDark,
                 ),
