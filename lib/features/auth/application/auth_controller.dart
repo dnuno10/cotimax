@@ -1,11 +1,12 @@
 import 'package:cotimax/features/auth/data/auth_repository.dart';
 import 'package:cotimax/features/auth/data/supabase_auth_repository.dart';
 import 'package:cotimax/core/services/backend_providers.dart';
+import 'package:cotimax/features/cotizaciones/application/cotizacion_pdf_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AuthState {
-   AuthState({
+  AuthState({
     required this.isAuthenticated,
     this.isLoading = false,
     this.error,
@@ -101,7 +102,8 @@ class AuthController extends Notifier<AuthState> {
 
   Future<void> signOut() async {
     await ref.read(authRepositoryProvider).signOut();
-    state =  AuthState(isAuthenticated: false);
+    CotizacionPdfService.invalidateCompanyCache();
+    state = AuthState(isAuthenticated: false);
   }
 
   void resetOtpFlow() {

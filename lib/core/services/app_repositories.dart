@@ -79,6 +79,7 @@ abstract class RecordatoriosRepository {
 abstract class ConfiguracionRepository {
   Future<EmpresaPerfil> getEmpresa();
   Future<void> updateEmpresa(EmpresaPerfil empresa);
+  Future<void> updateEmpresaDatos(EmpresaPerfil empresa);
   Future<UsuarioActual> getUsuarioActual();
   Future<void> updateUsuarioActualThemeMode(bool modoOscuro);
   Future<void> updateUsuarioActualNombre(String nombre);
@@ -109,11 +110,6 @@ abstract class UsuariosRepository {
     required String userId,
     required UserRole role,
   });
-}
-
-abstract class PlanesRepository {
-  Future<List<Plan>> getPlanes();
-  Future<Suscripcion> getSuscripcion();
 }
 
 class SupabaseClientesRepository implements ClientesRepository {
@@ -641,7 +637,7 @@ class SupabaseConfiguracionRepository implements ConfiguracionRepository {
           'nombre_fiscal': empresa.nombreFiscal,
           'nombre_comercial': empresa.nombreComercial,
           'rfc': empresa.rfc,
-          'direccion': empresa.direccion,
+          'direccion': empresa.direccionCompleta,
           'calle': empresa.calle,
           'apartamento_suite': empresa.apartamentoSuite,
           'ciudad': empresa.ciudad,
@@ -697,6 +693,39 @@ class SupabaseConfiguracionRepository implements ConfiguracionRepository {
         },
       },
     );
+  }
+
+  @override
+  Future<void> updateEmpresaDatos(EmpresaPerfil empresa) async {
+    try {
+      await _client.rpc(
+        'update_empresa_datos_actual',
+        params: {
+          'p_payload': {
+            'logo_url': empresa.logoUrl,
+            'nombre_fiscal': empresa.nombreFiscal,
+            'nombre_comercial': empresa.nombreComercial,
+            'rfc': empresa.rfc,
+            'direccion': empresa.direccionCompleta,
+            'calle': empresa.calle,
+            'apartamento_suite': empresa.apartamentoSuite,
+            'ciudad': empresa.ciudad,
+            'estado_provincia': empresa.estadoProvincia,
+            'codigo_postal': empresa.codigoPostal,
+            'pais': empresa.pais,
+            'telefono': empresa.telefono,
+            'correo': empresa.correo,
+            'sitio_web': empresa.sitioWeb,
+          },
+        },
+      );
+    } on PostgrestException catch (error) {
+      final rpcUnavailable =
+          error.code == 'PGRST202' ||
+          error.message.contains('update_empresa_datos_actual');
+      if (!rpcUnavailable) rethrow;
+      await updateEmpresa(empresa);
+    }
   }
 
   @override
@@ -838,24 +867,6 @@ class SupabaseUsuariosRepository implements UsuariosRepository {
       'update_miembro_rol_empresa_actual',
       params: {'p_usuario_id': userId, 'p_rol': role.key},
     );
-  }
-}
-
-class SupabasePlanesRepository implements PlanesRepository {
-  SupabasePlanesRepository(this._client);
-
-  final SupabaseClient _client;
-
-  @override
-  Future<List<Plan>> getPlanes() async {
-    final response = await _client.rpc('list_planes');
-    return _mapList(response, _planFromRow);
-  }
-
-  @override
-  Future<Suscripcion> getSuscripcion() async {
-    final response = await _client.rpc('get_suscripcion_actual');
-    return _suscripcionFromRow(Map<String, dynamic>.from(response as Map));
   }
 }
 
@@ -1379,48 +1390,5 @@ CompanyMember _companyMemberFromRow(Map<String, dynamic> row) {
     rol: _enumByName(UserRole.values, row['rol']?.toString(), UserRole.usuario),
     esPrincipal: _boolFrom(row['es_principal']),
     createdAt: _dateTimeFrom(row['created_at']),
-  );
-}
-
-Plan _planFromRow(Map<String, dynamic> row) {
-  return Plan(
-    id: row['id'] as String,
-    nombre: (row['nombre'] ?? '') as String,
-    precioMensual: _doubleFrom(row['precio_mensual']),
-    billingMode: (row['billing_mode'] ?? 'flat_monthly') as String,
-    precioPorUsuario: _doubleFrom(row['precio_por_usuario']),
-    descripcion: (row['descripcion'] ?? '') as String,
-    limiteClientes: (row['limite_clientes'] as num?)?.toInt() ?? 0,
-    limiteProductos: (row['limite_productos'] as num?)?.toInt() ?? 0,
-    limiteMateriales: (row['limite_materiales'] as num?)?.toInt() ?? 0,
-    limiteCotizacionesMensuales:
-        (row['limite_cotizaciones_mensuales'] as num?)?.toInt() ?? 0,
-    limiteUsuarios: (row['limite_usuarios'] as num?)?.toInt() ?? 0,
-    limiteEmpresas: (row['limite_empresas'] as num?)?.toInt() ?? 0,
-    usuariosMinimos: (row['usuarios_minimos'] as num?)?.toInt() ?? 0,
-    usuariosMaximos: (row['usuarios_maximos'] as num?)?.toInt() ?? 0,
-    incluyeIngresosGastos: _boolFrom(row['incluye_ingresos_gastos']),
-    incluyeDashboard: _boolFrom(row['incluye_dashboard']),
-    incluyeAnalitica: _boolFrom(row['incluye_analitica']),
-    incluyePersonalizacionPdf: _boolFrom(row['incluye_personalizacion_pdf']),
-    incluyeNotasPrivadas: _boolFrom(row['incluye_notas_privadas']),
-    incluyeEstadosCotizacion: _boolFrom(row['incluye_estados_cotizacion']),
-    incluyeMarcaAgua: _boolFrom(row['incluye_marca_agua']),
-    activo: _boolFrom(row['activo'], fallback: true),
-  );
-}
-
-Suscripcion _suscripcionFromRow(Map<String, dynamic> row) {
-  return Suscripcion(
-    id: row['id'] as String,
-    empresaId: (row['empresa_id'] ?? BackendConfig.defaultEmpresaId) as String,
-    planId: (row['plan_id'] ?? '') as String,
-    estado: (row['estado'] ?? '') as String,
-    fechaInicio: _dateTimeFrom(row['fecha_inicio']),
-    fechaFin: _dateTimeFrom(row['fecha_fin']),
-    renovacionAutomatica: _boolFrom(row['renovacion_automatica']),
-    usuariosActivos: (row['usuarios_activos'] as num?)?.toInt() ?? 0,
-    createdAt: _dateTimeFrom(row['created_at']),
-    updatedAt: _dateTimeFrom(row['updated_at']),
   );
 }

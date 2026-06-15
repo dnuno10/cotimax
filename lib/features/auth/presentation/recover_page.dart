@@ -8,7 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 class RecoverPage extends ConsumerStatefulWidget {
-   RecoverPage({super.key});
+  RecoverPage({super.key});
 
   @override
   ConsumerState<RecoverPage> createState() => _RecoverPageState();
@@ -66,11 +66,11 @@ class _RecoverPageState extends ConsumerState<RecoverPage> {
           SafeArea(
             child: Center(
               child: ConstrainedBox(
-                constraints:  BoxConstraints(maxWidth: 430),
+                constraints: BoxConstraints(maxWidth: 430),
                 child: Padding(
-                  padding:  EdgeInsets.all(16),
+                  padding: EdgeInsets.all(16),
                   child: Container(
-                    padding:  EdgeInsets.all(28),
+                    padding: EdgeInsets.all(28),
                     decoration: BoxDecoration(
                       color: AppColors.white.withValues(alpha: 0.92),
                       borderRadius: BorderRadius.circular(
@@ -81,7 +81,7 @@ class _RecoverPageState extends ConsumerState<RecoverPage> {
                         BoxShadow(
                           color: AppColors.textPrimary.withValues(alpha: 0.10),
                           blurRadius: 30,
-                          offset:  Offset(0, 16),
+                          offset: Offset(0, 16),
                         ),
                       ],
                     ),
@@ -94,8 +94,8 @@ class _RecoverPageState extends ConsumerState<RecoverPage> {
                           height: 48,
                           fit: BoxFit.contain,
                         ),
-                         SizedBox(height: 18),
-                         Text(
+                        SizedBox(height: 18),
+                        Text(
                           'Recuperar acceso',
                           style: TextStyle(
                             fontWeight: FontWeight.w800,
@@ -104,8 +104,8 @@ class _RecoverPageState extends ConsumerState<RecoverPage> {
                             height: 1,
                           ),
                         ),
-                         SizedBox(height: 8),
-                         Text(
+                        SizedBox(height: 8),
+                        Text(
                           'Te enviaremos un enlace para restablecer tu contrasena.',
                           style: TextStyle(
                             color: AppColors.textSecondary,
@@ -113,22 +113,22 @@ class _RecoverPageState extends ConsumerState<RecoverPage> {
                             fontSize: 13,
                           ),
                         ),
-                         SizedBox(height: 20),
+                        SizedBox(height: 20),
                         TextField(
                           controller: _emailController,
                           decoration: InputDecoration(
                             labelText: 'Correo',
                             prefixIcon: Padding(
                               padding: EdgeInsets.only(left: 14, right: 10),
-                              child: FaIcon(
-                                FontAwesomeIcons.envelope,
+                              child: Icon(
+                                FontAwesomeIcons.envelope.data,
                                 size: 14,
                                 color: AppColors.textMuted,
                               ),
                             ),
                           ),
                         ),
-                         SizedBox(height: 18),
+                        SizedBox(height: 18),
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
@@ -143,17 +143,17 @@ class _RecoverPageState extends ConsumerState<RecoverPage> {
                           ),
                         ),
                         if (auth.error != null) ...[
-                           SizedBox(height: 10),
+                          SizedBox(height: 10),
                           Text(
                             auth.error!,
-                            style:  TextStyle(
+                            style: TextStyle(
                               color: AppColors.error,
                               fontWeight: FontWeight.w700,
                               fontSize: 12,
                             ),
                           ),
                         ],
-                         SizedBox(height: 10),
+                        SizedBox(height: 10),
                         SizedBox(
                           width: double.infinity,
                           child: OutlinedButton(
@@ -175,7 +175,7 @@ class _RecoverPageState extends ConsumerState<RecoverPage> {
 }
 
 class _Glow extends StatelessWidget {
-   _Glow({required this.size, required this.color});
+  _Glow({required this.size, required this.color});
 
   final double size;
   final Color color;

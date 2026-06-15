@@ -196,11 +196,10 @@ class _GastosPageState extends ConsumerState<GastosPage> {
         }
 
         final categoriasCatalogo =
-            ref.watch(gastoCategoriasControllerProvider).valueOrNull ??
+            ref.watch(gastoCategoriasControllerProvider).value ??
             const <GastoCategoria>[];
         final ingresosCatalogo =
-            ref.watch(ingresosControllerProvider).valueOrNull ??
-            const <Ingreso>[];
+            ref.watch(ingresosControllerProvider).value ?? const <Ingreso>[];
         final linkedIncomeByExpense = _incomeByLinkedExpense(ingresosCatalogo);
         final categorias = {
           for (final item in categoriasCatalogo) item.id: item,
@@ -234,8 +233,7 @@ class _GastosPageState extends ConsumerState<GastosPage> {
             ? 'Atencion'
             : 'Riesgo';
         final serie = _buildExpenseSeriesForRange(filteredGastos, activeRange);
-        final recurrentes =
-            recurrentesAsync.valueOrNull ?? const <GastoRecurrente>[];
+        final recurrentes = recurrentesAsync.value ?? const <GastoRecurrente>[];
         final projectedSerie = _buildProjectedExpenseSeries(
           gastos: filteredGastos,
           recurrentes: recurrentes,
@@ -982,7 +980,7 @@ class _GastoFormState extends ConsumerState<_GastoForm> {
     );
     _fechaInicioRecurrenciaController = seededTextController(
       DateFormat(
-      'yyyy-MM-dd',
+        'yyyy-MM-dd',
       ).format(item?.fechaInicioRecurrencia ?? item?.fecha ?? DateTime.now()),
     );
     _referenciaController = seededTextController(item?.referencia);
@@ -1020,7 +1018,7 @@ class _GastoFormState extends ConsumerState<_GastoForm> {
   @override
   Widget build(BuildContext context) {
     final categoriasCatalogo =
-        ref.watch(gastoCategoriasControllerProvider).valueOrNull ??
+        ref.watch(gastoCategoriasControllerProvider).value ??
         const <GastoCategoria>[];
     final proveedoresAsync = ref.watch(proveedoresCatalogControllerProvider);
     final categoriaOptions = categoriasCatalogo
@@ -1048,7 +1046,7 @@ class _GastoFormState extends ConsumerState<_GastoForm> {
                   children: [
                     SectionCard(
                       title: 'Datos del gasto',
-                      titleIcon: FontAwesomeIcons.receipt,
+                      titleIcon: FontAwesomeIcons.receipt.data,
                       headerBackgroundColor: AppColors.background,
                       child: Column(
                         children: [
@@ -1156,7 +1154,7 @@ class _GastoFormState extends ConsumerState<_GastoForm> {
                     SizedBox(height: 12),
                     SectionCard(
                       title: 'Seguimiento',
-                      titleIcon: FontAwesomeIcons.calendarCheck,
+                      titleIcon: FontAwesomeIcons.calendarCheck.data,
                       headerBackgroundColor: AppColors.background,
                       child: Column(
                         children: [
@@ -1241,19 +1239,16 @@ class _GastoFormState extends ConsumerState<_GastoForm> {
                                           ),
                                         ),
                                         ...proveedores.map(
-                                          (proveedor) =>
-                                              DropdownMenuItem<String>(
-                                                value: proveedor.id,
-                                                child: Text(
-                                                  _providerOptionLabel(
-                                                    proveedor,
-                                                  ),
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                  style:
-                                                      cotimaxDropdownTextStyle,
-                                                ),
-                                              ),
+                                          (
+                                            proveedor,
+                                          ) => DropdownMenuItem<String>(
+                                            value: proveedor.id,
+                                            child: Text(
+                                              _providerOptionLabel(proveedor),
+                                              overflow: TextOverflow.ellipsis,
+                                              style: cotimaxDropdownTextStyle,
+                                            ),
+                                          ),
                                         ),
                                       ],
                                       onChanged: (value) => setState(() {
@@ -1331,7 +1326,7 @@ class _GastoFormState extends ConsumerState<_GastoForm> {
                     SizedBox(height: 12),
                     RecurrenceConfigurationCard(
                       title: 'Recurrencia del gasto',
-                      titleIcon: FontAwesomeIcons.arrowsRotate,
+                      titleIcon: FontAwesomeIcons.arrowsRotate.data,
                       isRecurring: _recurrente,
                       frequency: _recurrencia,
                       selectedWeekdays: _diasSemana,
@@ -1498,7 +1493,7 @@ class _GastoFormState extends ConsumerState<_GastoForm> {
     final selected = _proveedorIdValue.trim();
     if (selected.isEmpty) return '';
     final proveedores =
-        ref.read(proveedoresCatalogControllerProvider).valueOrNull ??
+        ref.read(proveedoresCatalogControllerProvider).value ??
         const <Proveedor>[];
     for (final proveedor in proveedores) {
       if (proveedor.id == selected) {
@@ -1676,7 +1671,7 @@ class _GastoFormState extends ConsumerState<_GastoForm> {
     }
 
     final categorias =
-        ref.read(gastoCategoriasControllerProvider).valueOrNull ??
+        ref.read(gastoCategoriasControllerProvider).value ??
         const <GastoCategoria>[];
     final actual = categorias.where((item) => item.id == categoriaId);
     if (actual.isEmpty) {

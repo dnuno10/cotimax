@@ -659,6 +659,18 @@ class EmpresaPerfil {
   final bool quoteEmbedAttachments;
   final bool quoteShowPageNumber;
 
+  String get direccionCompleta {
+    final partes = [
+      calle,
+      apartamentoSuite,
+      ciudad,
+      estadoProvincia,
+      codigoPostal,
+      pais,
+    ].where((parte) => parte.trim().isNotEmpty).toList(growable: false);
+    return partes.isEmpty ? direccion.trim() : partes.join(', ');
+  }
+
   EmpresaPerfil copyWith({
     String? logoUrl,
     String? nombreFiscal,
@@ -984,82 +996,6 @@ class Usuario {
   final bool activo;
   final DateTime ultimoAccesoAt;
   final List<String> empresaIds;
-  final DateTime createdAt;
-  final DateTime updatedAt;
-}
-
-class Plan {
-  Plan({
-    required this.id,
-    required this.nombre,
-    required this.precioMensual,
-    required this.billingMode,
-    required this.precioPorUsuario,
-    required this.descripcion,
-    required this.limiteClientes,
-    required this.limiteProductos,
-    required this.limiteMateriales,
-    required this.limiteCotizacionesMensuales,
-    required this.limiteUsuarios,
-    required this.limiteEmpresas,
-    required this.usuariosMinimos,
-    required this.usuariosMaximos,
-    required this.incluyeIngresosGastos,
-    required this.incluyeDashboard,
-    required this.incluyeAnalitica,
-    required this.incluyePersonalizacionPdf,
-    required this.incluyeNotasPrivadas,
-    required this.incluyeEstadosCotizacion,
-    required this.incluyeMarcaAgua,
-    required this.activo,
-  });
-
-  final String id;
-  final String nombre;
-  final double precioMensual;
-  final String billingMode;
-  final double precioPorUsuario;
-  final String descripcion;
-  final int limiteClientes;
-  final int limiteProductos;
-  final int limiteMateriales;
-  final int limiteCotizacionesMensuales;
-  final int limiteUsuarios;
-  final int limiteEmpresas;
-  final int usuariosMinimos;
-  final int usuariosMaximos;
-  final bool incluyeIngresosGastos;
-  final bool incluyeDashboard;
-  final bool incluyeAnalitica;
-  final bool incluyePersonalizacionPdf;
-  final bool incluyeNotasPrivadas;
-  final bool incluyeEstadosCotizacion;
-  final bool incluyeMarcaAgua;
-  final bool activo;
-}
-
-class Suscripcion {
-  Suscripcion({
-    required this.id,
-    required this.empresaId,
-    required this.planId,
-    required this.estado,
-    required this.fechaInicio,
-    required this.fechaFin,
-    required this.renovacionAutomatica,
-    required this.usuariosActivos,
-    required this.createdAt,
-    required this.updatedAt,
-  });
-
-  final String id;
-  final String empresaId;
-  final String planId;
-  final String estado;
-  final DateTime fechaInicio;
-  final DateTime fechaFin;
-  final bool renovacionAutomatica;
-  final int usuariosActivos;
   final DateTime createdAt;
   final DateTime updatedAt;
 }

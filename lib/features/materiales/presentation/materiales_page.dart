@@ -2,7 +2,6 @@ import 'package:cotimax/core/constants/app_colors.dart';
 import 'package:cotimax/core/localization/app_localization.dart';
 import 'package:cotimax/core/routing/route_paths.dart';
 import 'package:cotimax/features/materiales/application/materiales_controller.dart';
-import 'package:cotimax/features/planes/application/plan_access.dart';
 import 'package:cotimax/features/productos/application/productos_controller.dart';
 import 'package:cotimax/features/proveedores/application/proveedores_controller.dart';
 import 'package:cotimax/shared/models/domain_models.dart';
@@ -224,7 +223,7 @@ class _MaterialesPageState extends ConsumerState<MaterialesPage> {
             }
 
             final productosCatalogo =
-                ref.watch(productosControllerProvider).valueOrNull ??
+                ref.watch(productosControllerProvider).value ??
                 const <ProductoServicio>[];
             final materialesFiltrados = materiales.where((material) {
               final matchesTipo = _tipoFilter == 'Todos'
@@ -427,26 +426,6 @@ class _MaterialesPageState extends ConsumerState<MaterialesPage> {
   }
 
   Future<void> _openForm(BuildContext context, MaterialInsumo? material) async {
-    if (material == null) {
-      final planAccess = await ref.read(activePlanAccessProvider.future);
-      final materiales =
-          ref.read(materialesControllerProvider).valueOrNull ??
-          await ref.read(materialesControllerProvider.future);
-      if (!mounted) return;
-      if (hasReachedPlanLimit(
-        limit: planAccess.plan.limiteMateriales,
-        used: materiales?.length ?? 0,
-      )) {
-        await showPlanUpgradeDialog(
-          context,
-          title: 'Límite del plan Starter',
-          message:
-              'Tu plan Starter permite hasta 5 materiales. Actualiza a Pro para registrar más materiales.',
-        );
-        return;
-      }
-    }
-
     showDialog<void>(
       context: context,
       builder: (_) => ModalBase(
@@ -698,7 +677,7 @@ class _MaterialFormState extends ConsumerState<_MaterialForm> {
     final proveedoresAsync = ref.watch(proveedoresControllerProvider);
     return _MaterialSection(
       title: widget.material == null ? 'Nuevo material' : 'Editar material',
-      icon: FontAwesomeIcons.cubes,
+      icon: FontAwesomeIcons.cubes.data,
       child: Column(
         children: [
           _MaterialFieldRow(label: 'Nombre *', controller: _nombreController),
@@ -888,12 +867,12 @@ class _MaterialFormState extends ConsumerState<_MaterialForm> {
 
   Widget _buildProductsTab() {
     final productosCatalogo =
-        ref.watch(productosControllerProvider).valueOrNull ??
+        ref.watch(productosControllerProvider).value ??
         const <ProductoServicio>[];
     if (productosCatalogo.isEmpty) {
       return _MaterialSection(
         title: 'Relacion con productos',
-        icon: FontAwesomeIcons.boxOpen,
+        icon: FontAwesomeIcons.boxOpen.data,
         child: EmptyFieldState(
           hintText: trText('No hay productos registrados.'),
           message: 'No hay datos para relacionar este material con productos.',
@@ -913,7 +892,7 @@ class _MaterialFormState extends ConsumerState<_MaterialForm> {
 
     return _MaterialSection(
       title: 'Relacion con productos',
-      icon: FontAwesomeIcons.boxOpen,
+      icon: FontAwesomeIcons.boxOpen.data,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1031,28 +1010,8 @@ class _MaterialFormState extends ConsumerState<_MaterialForm> {
     }
 
     final now = DateTime.now();
-    if (widget.material == null) {
-      final planAccess = await ref.read(activePlanAccessProvider.future);
-      final materiales =
-          ref.read(materialesControllerProvider).valueOrNull ??
-          const <MaterialInsumo>[];
-      if (hasReachedPlanLimit(
-        limit: planAccess.plan.limiteMateriales,
-        used: materiales.length,
-      )) {
-        if (!mounted) return;
-        await showPlanUpgradeDialog(
-          context,
-          title: 'Límite del plan Starter',
-          message:
-              'Tu plan Starter permite hasta 5 materiales. Actualiza a Pro para registrar más materiales.',
-        );
-        return;
-      }
-    }
     final proveedores =
-        ref.read(proveedoresControllerProvider).valueOrNull ??
-        const <Proveedor>[];
+        ref.read(proveedoresControllerProvider).value ?? const <Proveedor>[];
     final resolvedProveedorId = _resolveProveedorId(proveedores);
     Proveedor? proveedor;
     if (resolvedProveedorId != null) {
@@ -1189,7 +1148,7 @@ class _MaterialSection extends StatelessWidget {
                 Expanded(
                   child: Row(
                     children: [
-                      FaIcon(icon, size: 14, color: AppColors.textPrimary),
+                      Icon(icon, size: 14, color: AppColors.textPrimary),
                       SizedBox(width: 8),
                       Expanded(
                         child: Text(

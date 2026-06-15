@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 final recordatoriosRepositoryProvider = Provider<RecordatoriosRepository>((
   ref,
 ) {
+  ref.watch(authSessionUserIdProvider);
   return SupabaseRecordatoriosRepository(ref.watch(supabaseClientProvider));
 });
 

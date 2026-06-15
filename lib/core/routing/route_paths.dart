@@ -14,5 +14,4 @@ class RoutePaths {
   static const analitica = '/analitica';
   static const configuracion = '/configuracion';
   static const usuarios = '/usuarios';
-  static const planes = '/planes';
 }

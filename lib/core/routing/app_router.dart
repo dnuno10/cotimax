@@ -11,7 +11,6 @@ import 'package:cotimax/features/dashboard/presentation/dashboard_page.dart';
 import 'package:cotimax/features/gastos/presentation/gastos_page.dart';
 import 'package:cotimax/features/ingresos/presentation/ingresos_page.dart';
 import 'package:cotimax/features/materiales/presentation/materiales_page.dart';
-import 'package:cotimax/features/planes/presentation/planes_page.dart';
 import 'package:cotimax/features/productos/presentation/productos_page.dart';
 import 'package:cotimax/features/proveedores/presentation/proveedores_page.dart';
 import 'package:cotimax/features/recordatorios/presentation/recordatorios_page.dart';
@@ -65,7 +64,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   }
 
   String withRedirect(String path, String redirectTo) {
-    return Uri(path: path, queryParameters: {'redirect': redirectTo}).toString();
+    return Uri(
+      path: path,
+      queryParameters: {'redirect': redirectTo},
+    ).toString();
   }
 
   String pageTitle(String location) {
@@ -105,9 +107,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     if (location.startsWith(RoutePaths.usuarios)) {
       return tr('Usuarios', 'Users');
     }
-    if (location.startsWith(RoutePaths.planes)) {
-      return tr('Planes', 'Plans');
-    }
     return 'Cotimax';
   }
 
@@ -121,8 +120,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final isAuthRoute =
           path == RoutePaths.login || path == RoutePaths.recover;
       final isWorkspaceSetupRoute = path == RoutePaths.workspaceSetup;
-      final redirectTo = sanitizeRedirectParam(state.uri.queryParameters['redirect']);
-      final effectiveTarget = sanitizeRedirectParam(state.uri.toString()) ??
+      final redirectTo = sanitizeRedirectParam(
+        state.uri.queryParameters['redirect'],
+      );
+      final effectiveTarget =
+          sanitizeRedirectParam(state.uri.toString()) ??
           sanitizeRedirectParam(state.matchedLocation) ??
           state.uri.path;
 
@@ -131,11 +133,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       }
 
       if (!auth.isAuthenticated && isWorkspaceSetupRoute) {
-        return withRedirect(RoutePaths.login, redirectTo ?? RoutePaths.dashboard);
+        return withRedirect(
+          RoutePaths.login,
+          redirectTo ?? RoutePaths.dashboard,
+        );
       }
 
       if (auth.isAuthenticated && isAuthRoute) {
-        final hasCompany = workspaceStatus.valueOrNull?.hasCompany == true;
+        final hasCompany = workspaceStatus.value?.hasCompany == true;
         if (!hasCompany) {
           return redirectTo == null
               ? RoutePaths.workspaceSetup
@@ -145,15 +150,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       }
 
       if (auth.isAuthenticated && !isWorkspaceSetupRoute) {
-        final hasCompany = workspaceStatus.valueOrNull?.hasCompany == true;
+        final hasCompany = workspaceStatus.value?.hasCompany == true;
         if (!hasCompany) {
-          final intended = redirectTo ?? sanitizeRedirectParam(state.uri.toString()) ?? RoutePaths.dashboard;
+          final intended =
+              redirectTo ??
+              sanitizeRedirectParam(state.uri.toString()) ??
+              RoutePaths.dashboard;
           return withRedirect(RoutePaths.workspaceSetup, intended);
         }
       }
 
       if (auth.isAuthenticated && isWorkspaceSetupRoute) {
-        final hasCompany = workspaceStatus.valueOrNull?.hasCompany == true;
+        final hasCompany = workspaceStatus.value?.hasCompany == true;
         if (hasCompany) {
           return redirectTo ?? RoutePaths.dashboard;
         }
@@ -220,7 +228,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: RoutePaths.usuarios,
             builder: (_, __) => UsuariosPage(),
           ),
-          GoRoute(path: RoutePaths.planes, builder: (_, __) => PlanesPage()),
         ],
       ),
     ],

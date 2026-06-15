@@ -10,7 +10,6 @@ import 'package:cotimax/features/cotizaciones/application/cotizacion_pdf_service
 import 'package:cotimax/features/cotizaciones/application/cotizaciones_controller.dart';
 import 'package:cotimax/features/gastos/application/gastos_controller.dart';
 import 'package:cotimax/features/ingresos/application/ingresos_controller.dart';
-import 'package:cotimax/features/planes/application/plan_access.dart';
 import 'package:cotimax/features/productos/application/productos_controller.dart';
 import 'package:cotimax/features/recordatorios/application/recordatorios_controller.dart';
 import 'package:cotimax/features/workspace/application/workspace_controller.dart';
@@ -68,7 +67,7 @@ class _CotizacionesPageState extends ConsumerState<CotizacionesPage> {
   Widget build(BuildContext context) {
     final cotizaciones = ref.watch(cotizacionesControllerProvider);
     final clientesCatalogo =
-        ref.watch(clientesControllerProvider).valueOrNull ?? const <Cliente>[];
+        ref.watch(clientesControllerProvider).value ?? const <Cliente>[];
     final clientesById = {
       for (final cliente in clientesCatalogo)
         cliente.id: _clientDisplayName(cliente),
@@ -358,30 +357,6 @@ class _CotizacionesPageState extends ConsumerState<CotizacionesPage> {
   }
 
   Future<void> _openQuoteForm(BuildContext context, [Cotizacion? quote]) async {
-    if (quote == null) {
-      final planAccess = await ref.read(activePlanAccessProvider.future);
-      final cotizaciones =
-          ref.read(cotizacionesControllerProvider).valueOrNull ??
-          await ref.read(cotizacionesControllerProvider.future);
-      final monthlyUsed = monthlyQuoteUsage(
-        cotizaciones ?? const <Cotizacion>[],
-        planAccess.suscripcion.fechaInicio,
-      );
-      if (!mounted) return;
-      if (hasReachedPlanLimit(
-        limit: planAccess.plan.limiteCotizacionesMensuales,
-        used: monthlyUsed,
-      )) {
-        await showPlanUpgradeDialog(
-          context,
-          title: 'Límite mensual de cotizaciones',
-          message:
-              'Tu plan Starter incluye hasta 10 cotizaciones por mes y aplica marca de agua de Cotimax. Actualiza a Pro para crear cotizaciones ilimitadas.',
-        );
-        return;
-      }
-    }
-
     showDialog<void>(
       barrierDismissible: false,
       context: context,
@@ -674,12 +649,11 @@ class _CotizacionesPageState extends ConsumerState<CotizacionesPage> {
     WidgetRef ref,
     Ingreso ingreso,
   ) async {
-    final gastos =
-        ref.read(gastosControllerProvider).valueOrNull ?? const <Gasto>[];
+    final gastos = ref.read(gastosControllerProvider).value ?? const <Gasto>[];
     if (gastos.isEmpty) return;
 
     final categoriasCatalogo =
-        ref.read(gastoCategoriasControllerProvider).valueOrNull ??
+        ref.read(gastoCategoriasControllerProvider).value ??
         const <GastoCategoria>[];
     final categoriasById = {
       for (final categoria in categoriasCatalogo) categoria.id: categoria,
@@ -798,9 +772,7 @@ class _CotizacionesPageState extends ConsumerState<CotizacionesPage> {
       fechaInicioRecurrencia: ingreso.fechaInicioRecurrencia,
       iconKey: ingreso.iconKey,
       gastoFuenteId: selectedGastoId,
-      gastoFuenteNombre: selectedGastoId.isEmpty
-          ? ''
-          : gastoLabel,
+      gastoFuenteNombre: selectedGastoId.isEmpty ? '' : gastoLabel,
       createdAt: ingreso.createdAt,
       updatedAt: DateTime.now(),
     );
@@ -828,7 +800,8 @@ String _expenseLinkLabel(
             ? desc
             : (provider.isNotEmpty ? provider : trText('Gasto')));
   final rawCategoria = gasto.gastoCategoriaId.trim();
-  final resolvedCategoria = categoriasById[rawCategoria]?.nombre ??
+  final resolvedCategoria =
+      categoriasById[rawCategoria]?.nombre ??
       (rawCategoria.isNotEmpty && !_looksLikeUuid(rawCategoria)
           ? rawCategoria
           : '');
@@ -1710,7 +1683,7 @@ Future<Ingreso> _ensureIngresoForQuotePayment(
   Cotizacion quote,
 ) async {
   final ingresos =
-      ref.read(ingresosControllerProvider).valueOrNull ?? const <Ingreso>[];
+      ref.read(ingresosControllerProvider).value ?? const <Ingreso>[];
   for (final ingreso in ingresos) {
     if (ingreso.cotizacionId == quote.id) {
       return ingreso;
@@ -1860,7 +1833,7 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
     if (quoteEmpresaId != null && quoteEmpresaId.isNotEmpty) {
       return quoteEmpresaId;
     }
-    final status = ref.read(workspaceStatusProvider).valueOrNull;
+    final status = ref.read(workspaceStatusProvider).value;
     final fromWorkspace = status?.empresaId?.trim() ?? '';
     return fromWorkspace.isEmpty ? null : fromWorkspace;
   }
@@ -2205,12 +2178,11 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
 
   @override
   Widget build(BuildContext context) {
-    final empresa = ref.watch(empresaPerfilControllerProvider).valueOrNull;
+    final empresa = ref.watch(empresaPerfilControllerProvider).value;
     final clientesAsync = ref.watch(clientesControllerProvider);
-    final clientesCatalogo = clientesAsync.valueOrNull ?? const <Cliente>[];
+    final clientesCatalogo = clientesAsync.value ?? const <Cliente>[];
     final cotizacionesCatalogo =
-        ref.watch(cotizacionesControllerProvider).valueOrNull ??
-        const <Cotizacion>[];
+        ref.watch(cotizacionesControllerProvider).value ?? const <Cotizacion>[];
     final clientLabelsById = {
       for (final cliente in clientesCatalogo)
         cliente.id: _clientDisplayName(cliente),
@@ -2286,7 +2258,7 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
                               final blocks = [
                                 _QuoteSection(
                                   title: 'Cliente',
-                                  icon: FontAwesomeIcons.userGroup,
+                                  icon: FontAwesomeIcons.userGroup.data,
                                   child: clientesAsync.when(
                                     loading: () => SizedBox(
                                       height: 72,
@@ -2329,7 +2301,7 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
                                 ),
                                 _QuoteSection(
                                   title: 'Fechas y anticipo',
-                                  icon: FontAwesomeIcons.calendarDays,
+                                  icon: FontAwesomeIcons.calendarDays.data,
                                   child: Column(
                                     children: [
                                       _QuoteFieldRow(
@@ -2365,7 +2337,7 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
                                 ),
                                 _QuoteSection(
                                   title: 'Control comercial',
-                                  icon: FontAwesomeIcons.clipboardList,
+                                  icon: FontAwesomeIcons.clipboardList.data,
                                   child: Column(
                                     children: [
                                       _QuoteFieldRow(
@@ -2469,7 +2441,7 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
                           SizedBox(height: 10),
                           _QuoteSection(
                             title: 'Productos',
-                            icon: FontAwesomeIcons.boxOpen,
+                            icon: FontAwesomeIcons.boxOpen.data,
                             child: _buildProductsSection(),
                           ),
                           SizedBox(height: 10),
@@ -2478,7 +2450,7 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
                               final wide = constraints.maxWidth >= 980;
                               final notes = _QuoteSection(
                                 title: 'Notas y textos',
-                                icon: FontAwesomeIcons.noteSticky,
+                                icon: FontAwesomeIcons.noteSticky.data,
                                 trailing: TextButton.icon(
                                   onPressed: _openQuoteDefaultValuesSettings,
                                   icon: Icon(Icons.tune_rounded, size: 16),
@@ -2518,7 +2490,7 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
 
                               final summary = _QuoteSection(
                                 title: 'Resumen',
-                                icon: FontAwesomeIcons.chartPie,
+                                icon: FontAwesomeIcons.chartPie.data,
                                 child: Column(
                                   children: [
                                     _QuoteSummaryRow(
@@ -3098,29 +3070,6 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
     bool allowEmptyLineItems = false,
   }) async {
     if (_savingStatus != null) return;
-    if (widget.quote == null) {
-      final planAccess = await ref.read(activePlanAccessProvider.future);
-      final cotizaciones =
-          ref.read(cotizacionesControllerProvider).valueOrNull ??
-          const <Cotizacion>[];
-      final monthlyUsed = monthlyQuoteUsage(
-        cotizaciones,
-        planAccess.suscripcion.fechaInicio,
-      );
-      if (hasReachedPlanLimit(
-        limit: planAccess.plan.limiteCotizacionesMensuales,
-        used: monthlyUsed,
-      )) {
-        if (!mounted) return;
-        await showPlanUpgradeDialog(
-          context,
-          title: 'Límite mensual de cotizaciones',
-          message:
-              'Tu plan Starter incluye hasta 10 cotizaciones por mes y aplica marca de agua de Cotimax. Actualiza a Pro para crear cotizaciones ilimitadas.',
-        );
-        return;
-      }
-    }
     final meaningfulLines = _lineas.where(_hasMeaningfulLineData).toList();
     final subtotal = _subtotalAmount;
     final discount = _discountAmount(subtotal);
@@ -3292,7 +3241,7 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
     if (quote == null) return null;
 
     final clientes =
-        ref.read(clientesControllerProvider).valueOrNull ?? const <Cliente>[];
+        ref.read(clientesControllerProvider).value ?? const <Cliente>[];
     Cliente? cliente;
     final selectedClientId = _selectedClientId?.trim() ?? '';
     if (selectedClientId.isNotEmpty) {
@@ -3652,7 +3601,7 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
     final selectedId = _selectedTaxRateId?.trim() ?? '';
     if (selectedId.isEmpty) return 0;
     if (selectedId.isNotEmpty) {
-      final empresa = ref.read(empresaPerfilControllerProvider).valueOrNull;
+      final empresa = ref.read(empresaPerfilControllerProvider).value;
       final rates = empresa?.impuestos.tasas ?? const <EmpresaTasaImpuesto>[];
       for (final rate in rates) {
         if (rate.id == selectedId) return rate.porcentaje;
@@ -3695,7 +3644,7 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
   double get _headerTaxPercent => _selectedSubtotalTaxPercent;
 
   String? _resolveNearestTaxRateIdForPercent(double percent) {
-    final empresa = ref.read(empresaPerfilControllerProvider).valueOrNull;
+    final empresa = ref.read(empresaPerfilControllerProvider).value;
     final rates = empresa?.impuestos.tasas ?? const <EmpresaTasaImpuesto>[];
     if (rates.isEmpty) return null;
     EmpresaTasaImpuesto nearest = rates.first;
@@ -3767,7 +3716,7 @@ class _QuoteSection extends StatelessWidget {
                 Expanded(
                   child: Row(
                     children: [
-                      FaIcon(icon, size: 14, color: AppColors.textPrimary),
+                      Icon(icon, size: 14, color: AppColors.textPrimary),
                       SizedBox(width: 8),
                       Expanded(
                         child: Text(

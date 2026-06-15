@@ -44,19 +44,18 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
   @override
   Widget build(BuildContext context) {
     final ingresosCatalogo =
-        ref.watch(ingresosControllerProvider).valueOrNull ?? const <Ingreso>[];
+        ref.watch(ingresosControllerProvider).value ?? const <Ingreso>[];
     final gastosCatalogo =
-        ref.watch(gastosControllerProvider).valueOrNull ?? const <Gasto>[];
+        ref.watch(gastosControllerProvider).value ?? const <Gasto>[];
     final clientesCatalogo =
-        ref.watch(clientesControllerProvider).valueOrNull ?? const <Cliente>[];
+        ref.watch(clientesControllerProvider).value ?? const <Cliente>[];
     final cotizacionesCatalogo =
-        ref.watch(cotizacionesControllerProvider).valueOrNull ??
-        const <Cotizacion>[];
+        ref.watch(cotizacionesControllerProvider).value ?? const <Cotizacion>[];
     final detallesCatalogo =
-        ref.watch(detalleCotizacionesControllerProvider).valueOrNull ??
+        ref.watch(detalleCotizacionesControllerProvider).value ??
         const <DetalleCotizacion>[];
     final productosCatalogo =
-        ref.watch(productosControllerProvider).valueOrNull ??
+        ref.watch(productosControllerProvider).value ??
         const <ProductoServicio>[];
     final ingresos =
         ingresosCatalogo
@@ -81,7 +80,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
     final cotizacionesMap = {for (final item in cotizaciones) item.id: item};
     final categoriasGastoMap = {
       for (final item
-          in (ref.watch(gastoCategoriasControllerProvider).valueOrNull ??
+          in (ref.watch(gastoCategoriasControllerProvider).value ??
               const <GastoCategoria>[]))
         item.id: item,
     };
@@ -370,7 +369,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                 actions: [
                   OutlinedButton.icon(
                     onPressed: _pickDashboardRange,
-                    icon: FaIcon(FontAwesomeIcons.calendarDays, size: 13),
+                    icon: Icon(FontAwesomeIcons.calendarDays.data, size: 13),
                     label: Text(_rangeLabel(_selectedRange)),
                   ),
                   if (hasDataOutsideRange)
@@ -693,7 +692,7 @@ class _IngresosPanel extends StatelessWidget {
     return SectionCard(
       title: 'Ingresos totales',
       trailing: _TopChip(
-        icon: FontAwesomeIcons.arrowTrendUp,
+        icon: FontAwesomeIcons.arrowTrendUp.data,
         label: 'Tendencia de ingresos',
       ),
       child: Column(
@@ -807,7 +806,7 @@ class _GastosImpactPanel extends StatelessWidget {
     return SectionCard(
       title: 'Gastos totales',
       trailing: _TopChip(
-        icon: FontAwesomeIcons.arrowTrendDown,
+        icon: FontAwesomeIcons.arrowTrendDown.data,
         label: 'Tendencia de gastos',
       ),
       child: Column(
@@ -1073,7 +1072,7 @@ class _PipelinePanel extends StatelessWidget {
     return SectionCard(
       title: 'Cotizaciones prioritarias',
       trailing: _TopChip(
-        icon: FontAwesomeIcons.fileInvoiceDollar,
+        icon: FontAwesomeIcons.fileInvoiceDollar.data,
         label: 'Seguimiento',
       ),
       child: Column(
@@ -1178,7 +1177,7 @@ class _RecentIncomePanel extends StatelessWidget {
     return CotimaxDataTable(
       title: trText('Ultimos ingresos'),
       trailing: _TopChip(
-        icon: FontAwesomeIcons.receipt,
+        icon: FontAwesomeIcons.receipt.data,
         label: trText('Cobranza'),
       ),
       emptyTitle: trText('Todavia no hay ingresos recientes en el rango.'),
@@ -1485,7 +1484,7 @@ class _TopChip extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        FaIcon(icon, size: 12, color: AppColors.textSecondary),
+        Icon(icon, size: 12, color: AppColors.textSecondary),
         SizedBox(width: 8),
         Text(
           trText(label),
@@ -1510,29 +1509,29 @@ class _QuickActionsPanel extends StatelessWidget {
       child: Wrap(
         spacing: 10,
         runSpacing: 10,
-        children: const [
+        children: [
           _QuickActionButton(
-            icon: FontAwesomeIcons.users,
+            icon: FontAwesomeIcons.users.data,
             label: 'Nuevo cliente',
             route: RoutePaths.clientes,
           ),
           _QuickActionButton(
-            icon: FontAwesomeIcons.boxOpen,
+            icon: FontAwesomeIcons.boxOpen.data,
             label: 'Nuevo producto',
             route: RoutePaths.productos,
           ),
           _QuickActionButton(
-            icon: FontAwesomeIcons.fileInvoiceDollar,
+            icon: FontAwesomeIcons.fileInvoiceDollar.data,
             label: 'Nueva cotización',
             route: RoutePaths.cotizaciones,
           ),
           _QuickActionButton(
-            icon: FontAwesomeIcons.wallet,
+            icon: FontAwesomeIcons.wallet.data,
             label: 'Registrar ingreso',
             route: RoutePaths.ingresos,
           ),
           _QuickActionButton(
-            icon: FontAwesomeIcons.receipt,
+            icon: FontAwesomeIcons.receipt.data,
             label: 'Registrar gasto',
             route: RoutePaths.gastos,
           ),
@@ -1557,7 +1556,7 @@ class _QuickActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return OutlinedButton.icon(
       onPressed: () => context.go('$route?create=1'),
-      icon: FaIcon(icon, size: 13),
+      icon: Icon(icon, size: 13),
       label: Text(trText(label)),
     );
   }
@@ -2323,7 +2322,7 @@ class _ClientProfitabilityPanel extends StatelessWidget {
     return SectionCard(
       title: 'Rentabilidad por cliente',
       trailing: _TopChip(
-        icon: FontAwesomeIcons.handshakeAngle,
+        icon: FontAwesomeIcons.handshakeAngle.data,
         label: 'Clientes clave',
       ),
       child: visible.isEmpty
@@ -2496,7 +2495,10 @@ class _IncomeConcentrationPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return SectionCard(
       title: 'Concentracion de ingresos',
-      trailing: _TopChip(icon: FontAwesomeIcons.chartPie, label: 'Dependencia'),
+      trailing: _TopChip(
+        icon: FontAwesomeIcons.chartPie.data,
+        label: 'Dependencia',
+      ),
       child: summary.totalIncome <= 0
           ? InlineEmptyMessage()
           : Column(

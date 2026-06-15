@@ -4,6 +4,7 @@ import 'package:cotimax/shared/models/domain_models.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final ingresosRepositoryProvider = Provider<IngresosRepository>((ref) {
+  ref.watch(authSessionUserIdProvider);
   return SupabaseIngresosRepository(ref.watch(supabaseClientProvider));
 });
 

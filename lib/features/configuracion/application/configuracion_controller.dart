@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 final configuracionRepositoryProvider = Provider<ConfiguracionRepository>((
   ref,
 ) {
+  ref.watch(authSessionUserIdProvider);
   return SupabaseConfiguracionRepository(ref.watch(supabaseClientProvider));
 });
 
@@ -23,5 +24,5 @@ final usuarioActualControllerProvider = FutureProvider<UsuarioActual>((
 
 final empresasCatalogoControllerProvider =
     FutureProvider<List<EmpresaCatalogItem>>((ref) async {
-  return ref.watch(configuracionRepositoryProvider).getEmpresasCatalog();
-});
+      return ref.watch(configuracionRepositoryProvider).getEmpresasCatalog();
+    });

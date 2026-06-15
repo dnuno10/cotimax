@@ -33,8 +33,7 @@ class _RecordatoriosPageState extends ConsumerState<RecordatoriosPage> {
   Widget build(BuildContext context) {
     final recordatoriosAsync = ref.watch(recordatoriosControllerProvider);
     final cotizacionesCatalogo =
-        ref.watch(cotizacionesControllerProvider).valueOrNull ??
-        const <Cotizacion>[];
+        ref.watch(cotizacionesControllerProvider).value ?? const <Cotizacion>[];
     final cotizacionesById = {
       for (final cotizacion in cotizacionesCatalogo)
         cotizacion.id: cotizacion.folio,
@@ -72,7 +71,7 @@ class _RecordatoriosPageState extends ConsumerState<RecordatoriosPage> {
         const SizedBox(height: 12),
         SectionCard(
           title: 'Calendario de recordatorios',
-          titleIcon: FontAwesomeIcons.calendarDays,
+          titleIcon: FontAwesomeIcons.calendarDays.data,
           child: recordatoriosAsync.when(
             loading: LoadingSkeleton.new,
             error: (_, __) => ErrorStateWidget(
@@ -568,10 +567,9 @@ class _RecordatorioFormState extends ConsumerState<_RecordatorioForm> {
   @override
   Widget build(BuildContext context) {
     final clientes =
-        ref.watch(clientesControllerProvider).valueOrNull ?? const <Cliente>[];
+        ref.watch(clientesControllerProvider).value ?? const <Cliente>[];
     final cotizaciones =
-        ref.watch(cotizacionesControllerProvider).valueOrNull ??
-        const <Cotizacion>[];
+        ref.watch(cotizacionesControllerProvider).value ?? const <Cotizacion>[];
     final clientOptions = [
       (value: '', label: 'Sin cliente'),
       ...clientes.map(
@@ -605,7 +603,7 @@ class _RecordatorioFormState extends ConsumerState<_RecordatorioForm> {
                   children: [
                     SectionCard(
                       title: 'Datos del recordatorio',
-                      titleIcon: FontAwesomeIcons.bell,
+                      titleIcon: FontAwesomeIcons.bell.data,
                       headerBackgroundColor: AppColors.background,
                       child: Column(
                         children: [
@@ -787,7 +785,7 @@ class _RecordatorioFormState extends ConsumerState<_RecordatorioForm> {
                     const SizedBox(height: 12),
                     RecurrenceConfigurationCard(
                       title: 'Recurrencia del recordatorio',
-                      titleIcon: FontAwesomeIcons.arrowsRotate,
+                      titleIcon: FontAwesomeIcons.arrowsRotate.data,
                       isRecurring: _recurrente,
                       frequency: _recurrencia,
                       selectedWeekdays: _diasSemana,
@@ -877,7 +875,7 @@ class _RecordatorioFormState extends ConsumerState<_RecordatorioForm> {
     }
 
     final clientes =
-        ref.read(clientesControllerProvider).valueOrNull ?? const <Cliente>[];
+        ref.read(clientesControllerProvider).value ?? const <Cliente>[];
     final now = DateTime.now();
     final fecha = DateTime.tryParse(_fechaController.text.trim()) ?? now;
     final fechaInicio =

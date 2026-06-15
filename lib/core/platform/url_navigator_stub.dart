@@ -5,4 +5,3 @@ Future<bool> navigateToUrl(String url) {
   if (uri == null) return Future.value(false);
   return launchUrl(uri, mode: LaunchMode.externalApplication);
 }
-

@@ -45,7 +45,7 @@ class RecurrenceConfigurationCard extends StatelessWidget {
     this.startDateHintText = 'AAAA-MM-DD',
     this.startDateHelperText,
     this.onStartDateTap,
-    this.titleIcon = FontAwesomeIcons.arrowsRotate,
+    this.titleIcon,
     super.key,
   });
 
@@ -56,7 +56,7 @@ class RecurrenceConfigurationCard extends StatelessWidget {
   final ValueChanged<bool> onRecurringChanged;
   final ValueChanged<RecurrenceFrequency?> onFrequencyChanged;
   final ValueChanged<int> onToggleWeekday;
-  final IconData titleIcon;
+  final IconData? titleIcon;
   final TextEditingController? startDateController;
   final String startDateLabel;
   final String startDateHintText;
@@ -85,7 +85,11 @@ class RecurrenceConfigurationCard extends StatelessWidget {
                 Expanded(
                   child: Row(
                     children: [
-                      FaIcon(titleIcon, size: 14, color: AppColors.textPrimary),
+                      Icon(
+                        titleIcon ?? FontAwesomeIcons.arrowsRotate.data,
+                        size: 14,
+                        color: AppColors.textPrimary,
+                      ),
                       SizedBox(width: 8),
                       Expanded(
                         child: Text(

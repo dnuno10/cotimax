@@ -10,3 +10,8 @@ final supabaseClientProvider = Provider<SupabaseClient>((ref) {
   }
   return Supabase.instance.client;
 });
+
+final authSessionUserIdProvider = StreamProvider<String?>((ref) {
+  final client = ref.watch(supabaseClientProvider);
+  return client.auth.onAuthStateChange.map((state) => state.session?.user.id);
+});

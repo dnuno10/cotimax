@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:cotimax/core/constants/app_colors.dart';
 import 'package:cotimax/core/localization/app_localization.dart';
 import 'package:cotimax/features/configuracion/application/configuracion_controller.dart';
-import 'package:cotimax/features/planes/application/planes_controller.dart';
 import 'package:cotimax/features/usuarios/application/usuarios_controller.dart';
 import 'package:cotimax/features/workspace/application/workspace_controller.dart';
 import 'package:cotimax/shared/enums/app_enums.dart';
@@ -12,24 +11,6 @@ import 'package:cotimax/shared/widgets/cotimax_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
-
-const _supportEmail = 'support@cotimax.com';
-
-Future<void> _contactSupportByEmail(BuildContext context) async {
-  final emailUri = Uri(
-    scheme: 'mailto',
-    path: _supportEmail,
-    queryParameters: {'subject': 'Cotimax Enterprise > 50 miembros'},
-  );
-  final opened = await launchUrl(emailUri);
-  if (!opened && context.mounted) {
-    ToastHelper.show(
-      context,
-      'No se pudo abrir tu cliente de correo. Escribe a $_supportEmail.',
-    );
-  }
-}
 
 class UsuariosPage extends ConsumerWidget {
   UsuariosPage({super.key});
@@ -37,10 +18,8 @@ class UsuariosPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final usuarios = ref.watch(usuariosControllerProvider);
-    final plan = ref.watch(suscripcionControllerProvider);
-    final usuarioActual = ref
-        .watch(usuarioActualControllerProvider)
-        .valueOrNull;
+    final usuarioActual = ref.watch(usuarioActualControllerProvider).value;
+    final invitation = ref.watch(companyInvitationCodeProvider);
 
     return ListView(
       children: [
@@ -49,145 +28,66 @@ class UsuariosPage extends ConsumerWidget {
           subtitle: 'Administracion de usuarios, roles y empresas asignadas.',
         ),
         SizedBox(height: 12),
-        plan.when(
-          data: (sub) {
-            if (sub.planId == 'starter' || sub.planId == 'pro') {
-              return SectionCard(
-                title: 'Bloqueo por plan',
-                child: Row(
-                  children: [
-                    Icon(Icons.lock_outline),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Tu plan actual limita a 1 usuario. Haz upgrade para gestionar multiusuario.',
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            if (usuarioActual?.rol != UserRole.admin) {
-              return SectionCard(
-                title: tr('Invitaciones de equipo', 'Team invitations'),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(Icons.info_outline, color: AppColors.textMuted),
-                    SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        tr(
-                          'Solo los administradores pueden invitar miembros. Pide a un admin que te invite.',
-                          'Only admins can invite members. Ask an admin to invite you.',
-                        ),
-                        style: TextStyle(
-                          color: AppColors.textSecondary,
-                          fontWeight: FontWeight.w600,
-                          height: 1.45,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            final invitation = ref.watch(companyInvitationCodeProvider);
-            return invitation.when(
-              loading: () => SizedBox.shrink(),
-              error: (_, __) => SectionCard(
-                title: tr('Invitaciones de equipo', 'Team invitations'),
-                child: Text(
-                  tr(
-                    'No se pudo generar el código de invitación en este momento.',
-                    'Could not generate the invitation code right now.',
-                  ),
+        if (usuarioActual?.rol != UserRole.admin)
+          SectionCard(
+            title: tr('Invitaciones de equipo', 'Team invitations'),
+            child: Text(
+              tr(
+                'Solo los administradores pueden invitar miembros.',
+                'Only administrators can invite members.',
+              ),
+            ),
+          )
+        else
+          invitation.when(
+            loading: () => SizedBox.shrink(),
+            error: (_, __) => SectionCard(
+              title: tr('Invitaciones de equipo', 'Team invitations'),
+              child: Text(
+                tr(
+                  'No se pudo generar el código de invitación.',
+                  'Could not generate the invitation code.',
                 ),
               ),
-              data: (code) => SectionCard(
-                title: tr(
-                  'Invitaciones de equipo (2 a 50)',
-                  'Team invites (2 to 50)',
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.key_outlined),
-                        SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            code.codigo,
-                            style: TextStyle(
-                              color: AppColors.textPrimary,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.8,
-                            ),
-                          ),
-                        ),
-                        OutlinedButton.icon(
-                          onPressed: () async {
-                            await Clipboard.setData(
-                              ClipboardData(text: code.codigo),
-                            );
-                            if (!context.mounted) return;
-                            ToastHelper.showSuccess(
-                              context,
-                              tr(
-                                'Código de invitación copiado.',
-                                'Invitation code copied.',
-                              ),
-                            );
-                          },
-                          icon: Icon(Icons.copy_rounded, size: 16),
-                          label: Text(tr('Copiar', 'Copy')),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      tr(
-                        'Recuerda: tu equipo no puede exceder los asientos comprados en Stripe.',
-                        'Reminder: your team cannot exceed the seats purchased in Stripe.',
-                      ),
+            ),
+            data: (code) => SectionCard(
+              title: tr('Invitaciones de equipo', 'Team invitations'),
+              child: Row(
+                children: [
+                  Icon(Icons.key_outlined),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      code.codigo,
                       style: TextStyle(
-                        color: AppColors.textSecondary,
-                        fontWeight: FontWeight.w600,
-                        height: 1.45,
+                        color: AppColors.textPrimary,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.8,
                       ),
                     ),
-                    SizedBox(height: 8),
-                    TextButton.icon(
-                      onPressed: () => _contactSupportByEmail(context),
-                      icon: Icon(Icons.email_rounded, size: 18),
-                      label: Text(
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      await Clipboard.setData(ClipboardData(text: code.codigo));
+                      if (!context.mounted) return;
+                      ToastHelper.showSuccess(
+                        context,
                         tr(
-                          'Escribir a support@cotimax.com',
-                          'Email support@cotimax.com',
+                          'Código de invitación copiado.',
+                          'Invitation code copied.',
                         ),
-                      ),
-                    ),
-                  ],
-                ),
+                      );
+                    },
+                    icon: Icon(Icons.copy_rounded, size: 16),
+                    label: Text(tr('Copiar', 'Copy')),
+                  ),
+                ],
               ),
-            );
-          },
-          loading: () => SizedBox.shrink(),
-          error: (_, __) => SizedBox.shrink(),
-        ),
-        SizedBox(height: 12),
-        plan.when(
-          loading: () => SizedBox.shrink(),
-          error: (_, __) => SizedBox.shrink(),
-          data: (sub) => InviteMemberByEmailCard(
-            enabled:
-                sub.planId == 'empresa' && usuarioActual?.rol == UserRole.admin,
+            ),
           ),
-        ),
+        SizedBox(height: 12),
+        InviteMemberByEmailCard(enabled: usuarioActual?.rol == UserRole.admin),
         SizedBox(height: 12),
         usuarios.when(
           loading: LoadingSkeleton.new,
@@ -446,8 +346,8 @@ class _InviteMemberByEmailCardState
                 Expanded(
                   child: Text(
                     tr(
-                      'Disponible solo para admins con plan Empresa.',
-                      'Only available for admins on the Enterprise plan.',
+                      'Disponible solo para administradores de la empresa.',
+                      'Only available to company administrators.',
                     ),
                     style: TextStyle(
                       color: AppColors.textSecondary,

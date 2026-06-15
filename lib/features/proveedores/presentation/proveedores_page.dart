@@ -424,7 +424,7 @@ class _ProveedorFormState extends ConsumerState<_ProveedorForm> {
   @override
   Widget build(BuildContext context) {
     final proveedoresExistentes =
-        ref.watch(proveedoresCatalogControllerProvider).valueOrNull ??
+        ref.watch(proveedoresCatalogControllerProvider).value ??
         const <Proveedor>[];
     final numeroSugerido = nextSequentialValue(
       proveedoresExistentes
@@ -500,7 +500,7 @@ class _ProveedorFormState extends ConsumerState<_ProveedorForm> {
         final wide = constraints.maxWidth >= 980;
         final left = _ProviderSection(
           title: 'Detalles de la empresa',
-          icon: FontAwesomeIcons.building,
+          icon: FontAwesomeIcons.building.data,
           headerBackgroundColor: AppColors.background,
           child: Column(
             children: [
@@ -554,7 +554,7 @@ class _ProveedorFormState extends ConsumerState<_ProveedorForm> {
           children: [
             _ProviderSection(
               title: 'Contactos',
-              icon: FontAwesomeIcons.addressBook,
+              icon: FontAwesomeIcons.addressBook.data,
               headerBackgroundColor: AppColors.background,
               child: Column(
                 children: [
@@ -606,7 +606,7 @@ class _ProveedorFormState extends ConsumerState<_ProveedorForm> {
     }
 
     final proveedoresExistentes =
-        ref.read(proveedoresCatalogControllerProvider).valueOrNull ??
+        ref.read(proveedoresCatalogControllerProvider).value ??
         const <Proveedor>[];
     final numeroIngresado = _numeroController.text.trim();
     final numeroDefinitivo = numeroIngresado.isNotEmpty
@@ -739,7 +739,7 @@ class _ProviderSection extends StatelessWidget {
                 Expanded(
                   child: Row(
                     children: [
-                      FaIcon(icon, size: 14, color: AppColors.textPrimary),
+                      Icon(icon, size: 14, color: AppColors.textPrimary),
                       SizedBox(width: 8),
                       Expanded(
                         child: Text(

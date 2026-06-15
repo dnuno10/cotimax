@@ -7,7 +7,6 @@ import 'package:cotimax/core/utils/uuid.dart';
 import 'package:cotimax/features/configuracion/application/configuracion_controller.dart';
 import 'package:cotimax/features/cotizaciones/application/cotizaciones_controller.dart';
 import 'package:cotimax/features/materiales/application/materiales_controller.dart';
-import 'package:cotimax/features/planes/application/plan_access.dart';
 import 'package:cotimax/features/productos/application/productos_controller.dart';
 import 'package:cotimax/features/workspace/application/workspace_controller.dart';
 import 'package:cotimax/shared/enums/app_enums.dart';
@@ -389,26 +388,6 @@ class _ProductosPageState extends ConsumerState<ProductosPage> {
   }
 
   Future<void> _openForm(BuildContext context, [ProductoServicio? item]) async {
-    if (item == null) {
-      final planAccess = await ref.read(activePlanAccessProvider.future);
-      final productos =
-          ref.read(productosControllerProvider).valueOrNull ??
-          await ref.read(productosControllerProvider.future);
-      if (!mounted) return;
-      if (hasReachedPlanLimit(
-        limit: planAccess.plan.limiteProductos,
-        used: productos?.length ?? 0,
-      )) {
-        await showPlanUpgradeDialog(
-          context,
-          title: 'Límite del plan Starter',
-          message:
-              'Tu plan Starter permite hasta 5 productos o servicios. Actualiza a Pro para registrar más items.',
-        );
-        return;
-      }
-    }
-
     return showDialog<void>(
       context: context,
       builder: (_) => ModalBase(
@@ -732,14 +711,11 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
   }
 
   Widget _buildCreateTab() {
-    final empresa = ref.watch(empresaPerfilControllerProvider).valueOrNull;
+    final empresa = ref.watch(empresaPerfilControllerProvider).value;
     final impuestosRegistrados = _buildConfiguredTaxOptions(empresa);
     final materialesCatalogo =
-        ref.watch(materialesControllerProvider).valueOrNull ??
+        ref.watch(materialesControllerProvider).value ??
         const <MaterialInsumo>[];
-    final planAccess = ref.watch(activePlanAccessProvider).valueOrNull;
-    final canManageImages = _canManageProductImages(planAccess);
-
     _scheduleMaterialDraftSync(materialesCatalogo);
     final noneTaxOption = tr('Ninguno', 'None');
     final impuestoActual = _impuestoController.text.trim();
@@ -753,11 +729,6 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
         children: [
           _ProductoCustomFieldRow(
             label: 'Imagen',
-            labelSuffix: Icon(
-              Icons.workspace_premium_rounded,
-              size: 16,
-              color: AppColors.accent,
-            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -858,17 +829,6 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
                       ),
                   ],
                 ),
-                if (!canManageImages) ...[
-                  SizedBox(height: 8),
-                  Text(
-                    'Imágenes de producto disponibles en Pro o Empresa.',
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
               ],
             ),
           ),
@@ -1027,7 +987,7 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
 
   Widget _buildMaterialsTab() {
     final materialesCatalogo =
-        ref.watch(materialesControllerProvider).valueOrNull ??
+        ref.watch(materialesControllerProvider).value ??
         const <MaterialInsumo>[];
 
     _scheduleMaterialDraftSync(materialesCatalogo);
@@ -1190,7 +1150,7 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
   void _seleccionarMaterialCatalogo(int index, String? materialId) {
     final draft = _materiales[index];
     final catalogo =
-        ref.read(materialesControllerProvider).valueOrNull ??
+        ref.read(materialesControllerProvider).value ??
         const <MaterialInsumo>[];
     MaterialInsumo? material;
     for (final item in catalogo) {
@@ -1313,10 +1273,7 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
     setState(() => _isHydrating = true);
     try {
       final client = ref.read(supabaseClientProvider);
-      final empresaId = ref
-          .read(workspaceStatusProvider)
-          .valueOrNull
-          ?.empresaId;
+      final empresaId = ref.read(workspaceStatusProvider).value?.empresaId;
       dynamic productQuery = client
           .from('productos_servicios')
           .select(
@@ -1494,24 +1451,7 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
     return formatNumericValue(value, decimalDigits: 2);
   }
 
-  bool _canManageProductImages(ActivePlanAccess? access) {
-    final planId = access?.plan.id ?? 'starter';
-    return planId == 'pro' || planId == 'empresa';
-  }
-
   Future<void> _pickProductImage() async {
-    final access = await ref.read(activePlanAccessProvider.future);
-    if (!_canManageProductImages(access)) {
-      if (!mounted) return;
-      await showPlanUpgradeDialog(
-        context,
-        title: 'Imágenes disponibles en Pro',
-        message:
-            'Necesitas el plan Pro o Empresa para agregar o actualizar imágenes en productos.',
-      );
-      return;
-    }
-
     final picked = await pickProductImage();
     if (!mounted || picked == null) return;
 
@@ -1536,18 +1476,6 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
   }
 
   Future<void> _clearProductImage() async {
-    final access = await ref.read(activePlanAccessProvider.future);
-    if (!_canManageProductImages(access)) {
-      if (!mounted) return;
-      await showPlanUpgradeDialog(
-        context,
-        title: 'Imágenes disponibles en Pro',
-        message:
-            'Necesitas el plan Pro o Empresa para quitar imágenes en productos.',
-      );
-      return;
-    }
-
     setState(() {
       _pendingImage = null;
       _removeImage = true;
@@ -1564,25 +1492,6 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
         'Debes capturar el nombre del producto antes de guardarlo.',
       );
       return;
-    }
-    if (widget.item == null) {
-      final planAccess = await ref.read(activePlanAccessProvider.future);
-      final productos =
-          ref.read(productosControllerProvider).valueOrNull ??
-          const <ProductoServicio>[];
-      if (hasReachedPlanLimit(
-        limit: planAccess.plan.limiteProductos,
-        used: productos.length,
-      )) {
-        if (!mounted) return;
-        await showPlanUpgradeDialog(
-          context,
-          title: 'Límite del plan Starter',
-          message:
-              'Tu plan Starter permite hasta 5 productos o servicios. Actualiza a Pro para registrar más items.',
-        );
-        return;
-      }
     }
     final productId = _draftProductId;
 
@@ -1642,61 +1551,60 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
       await ref.read(productosRepositoryProvider).upsert(payload);
 
       if (_pendingImage != null || _removeImage) {
-        final access = await ref.read(activePlanAccessProvider.future);
-        if (_canManageProductImages(access)) {
-          final client = ref.read(supabaseClientProvider);
-          final existingBucket = widget.item?.imagenBucket ?? '';
-          final existingPath = widget.item?.imagenPath ?? '';
+        final client = ref.read(supabaseClientProvider);
+        final existingBucket = widget.item?.imagenBucket ?? '';
+        final existingPath = widget.item?.imagenPath ?? '';
 
-          if (existingBucket.trim().isNotEmpty &&
-              existingPath.trim().isNotEmpty) {
-            try {
-              await client.storage.from(existingBucket).remove([existingPath]);
-            } catch (_) {
-              // Ignore storage cleanup errors.
-            }
+        if (existingBucket.trim().isNotEmpty &&
+            existingPath.trim().isNotEmpty) {
+          try {
+            await client.storage.from(existingBucket).remove([existingPath]);
+          } catch (_) {
+            // Ignore storage cleanup errors.
           }
+        }
 
-          if (_removeImage) {
-            await client.rpc(
-              'update_producto_imagen',
-              params: {
-                'p_id': productId,
-                'p_imagen_bucket': '',
-                'p_imagen_path': '',
-                'p_imagen_url': '',
-              },
-            );
-          } else if (_pendingImage != null) {
-            final empresaId =
-                ref.read(workspaceStatusProvider).valueOrNull?.empresaId ??
-                access.suscripcion.empresaId;
-            final ext = _pendingImage!.extension;
-            final mime = _pendingImage!.mimeType.trim().isEmpty
-                ? 'image/$ext'
-                : _pendingImage!.mimeType.trim();
-            final path = '${empresaId.trim()}/$productId/main.$ext';
-
-            await client.storage
-                .from(_productImagesBucket)
-                .uploadBinary(
-                  path,
-                  _pendingImage!.bytes,
-                  fileOptions: FileOptions(contentType: mime, upsert: true),
-                );
-            final publicUrl = client.storage
-                .from(_productImagesBucket)
-                .getPublicUrl(path);
-            await client.rpc(
-              'update_producto_imagen',
-              params: {
-                'p_id': productId,
-                'p_imagen_bucket': _productImagesBucket,
-                'p_imagen_path': path,
-                'p_imagen_url': publicUrl,
-              },
-            );
+        if (_removeImage) {
+          await client.rpc(
+            'update_producto_imagen',
+            params: {
+              'p_id': productId,
+              'p_imagen_bucket': '',
+              'p_imagen_path': '',
+              'p_imagen_url': '',
+            },
+          );
+        } else if (_pendingImage != null) {
+          final empresaId =
+              ref.read(workspaceStatusProvider).value?.empresaId ?? '';
+          if (empresaId.trim().isEmpty) {
+            throw StateError('No se pudo determinar la empresa actual.');
           }
+          final ext = _pendingImage!.extension;
+          final mime = _pendingImage!.mimeType.trim().isEmpty
+              ? 'image/$ext'
+              : _pendingImage!.mimeType.trim();
+          final path = '${empresaId.trim()}/$productId/main.$ext';
+
+          await client.storage
+              .from(_productImagesBucket)
+              .uploadBinary(
+                path,
+                _pendingImage!.bytes,
+                fileOptions: FileOptions(contentType: mime, upsert: true),
+              );
+          final publicUrl = client.storage
+              .from(_productImagesBucket)
+              .getPublicUrl(path);
+          await client.rpc(
+            'update_producto_imagen',
+            params: {
+              'p_id': productId,
+              'p_imagen_bucket': _productImagesBucket,
+              'p_imagen_path': path,
+              'p_imagen_url': publicUrl,
+            },
+          );
         }
       }
 

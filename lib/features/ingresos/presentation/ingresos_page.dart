@@ -163,18 +163,17 @@ class _IngresosPageState extends ConsumerState<IngresosPage> {
         }
 
         final clientesCatalogo =
-            ref.watch(clientesControllerProvider).valueOrNull ??
-            const <Cliente>[];
+            ref.watch(clientesControllerProvider).value ?? const <Cliente>[];
         final cotizacionesCatalogo =
-            ref.watch(cotizacionesControllerProvider).valueOrNull ??
+            ref.watch(cotizacionesControllerProvider).value ??
             const <Cotizacion>[];
         final gastosCatalogo =
-            ref.watch(gastosControllerProvider).valueOrNull ?? const <Gasto>[];
+            ref.watch(gastosControllerProvider).value ?? const <Gasto>[];
         final productosCatalogo =
-            ref.watch(productosControllerProvider).valueOrNull ??
+            ref.watch(productosControllerProvider).value ??
             const <ProductoServicio>[];
         final detallesCatalogo =
-            ref.watch(detalleCotizacionesControllerProvider).valueOrNull ??
+            ref.watch(detalleCotizacionesControllerProvider).value ??
             const <DetalleCotizacion>[];
         final clientes = {for (final item in clientesCatalogo) item.id: item};
         final cotizaciones = {
@@ -826,21 +825,20 @@ class _IngresoFormState extends ConsumerState<_IngresoForm> {
   @override
   Widget build(BuildContext context) {
     final clientesCatalogo =
-        ref.watch(clientesControllerProvider).valueOrNull ?? const <Cliente>[];
+        ref.watch(clientesControllerProvider).value ?? const <Cliente>[];
     final gastoCategoriasCatalogo =
-        ref.watch(gastoCategoriasControllerProvider).valueOrNull ??
+        ref.watch(gastoCategoriasControllerProvider).value ??
         const <GastoCategoria>[];
     final gastoCategoriasById = {
       for (final categoria in gastoCategoriasCatalogo) categoria.id: categoria,
     };
     final categoriasCatalogo =
-        ref.watch(ingresoCategoriasControllerProvider).valueOrNull ??
+        ref.watch(ingresoCategoriasControllerProvider).value ??
         const <IngresoCategoria>[];
     final cotizacionesCatalogo =
-        ref.watch(cotizacionesControllerProvider).valueOrNull ??
-        const <Cotizacion>[];
+        ref.watch(cotizacionesControllerProvider).value ?? const <Cotizacion>[];
     final gastosCatalogo =
-        ref.watch(gastosControllerProvider).valueOrNull ?? const <Gasto>[];
+        ref.watch(gastosControllerProvider).value ?? const <Gasto>[];
     final categoriaOptions = categoriasCatalogo
         .map((item) => _LookupOption(value: item.id, label: item.nombre))
         .toList();
@@ -879,10 +877,7 @@ class _IngresoFormState extends ConsumerState<_IngresoForm> {
         .map(
           (item) => _LookupOption(
             value: item.id,
-            label: _expenseLinkLabel(
-              item,
-              categoriasById: gastoCategoriasById,
-            ),
+            label: _expenseLinkLabel(item, categoriasById: gastoCategoriasById),
           ),
         )
         .toList();
@@ -906,7 +901,7 @@ class _IngresoFormState extends ConsumerState<_IngresoForm> {
                   children: [
                     SectionCard(
                       title: 'Datos del ingreso',
-                      titleIcon: FontAwesomeIcons.wallet,
+                      titleIcon: FontAwesomeIcons.wallet.data,
                       headerBackgroundColor: AppColors.background,
                       child: Column(
                         children: [
@@ -1101,7 +1096,7 @@ class _IngresoFormState extends ConsumerState<_IngresoForm> {
                     SizedBox(height: 12),
                     SectionCard(
                       title: 'Seguimiento',
-                      titleIcon: FontAwesomeIcons.calendarCheck,
+                      titleIcon: FontAwesomeIcons.calendarCheck.data,
                       headerBackgroundColor: AppColors.background,
                       child: Column(
                         children: [
@@ -1163,7 +1158,7 @@ class _IngresoFormState extends ConsumerState<_IngresoForm> {
                     SizedBox(height: 12),
                     RecurrenceConfigurationCard(
                       title: 'Recurrencia del ingreso',
-                      titleIcon: FontAwesomeIcons.arrowsRotate,
+                      titleIcon: FontAwesomeIcons.arrowsRotate.data,
                       isRecurring: _recurrente,
                       frequency: _recurrencia,
                       selectedWeekdays: _diasSemana,
@@ -1253,12 +1248,11 @@ class _IngresoFormState extends ConsumerState<_IngresoForm> {
         movementDate;
     final gastoById = {
       for (final item
-          in (ref.read(gastosControllerProvider).valueOrNull ??
-              const <Gasto>[]))
+          in (ref.read(gastosControllerProvider).value ?? const <Gasto>[]))
         item.id: item,
     };
     final categoriasCatalogo =
-        ref.read(gastoCategoriasControllerProvider).valueOrNull ??
+        ref.read(gastoCategoriasControllerProvider).value ??
         const <GastoCategoria>[];
     final categoriasById = {
       for (final categoria in categoriasCatalogo) categoria.id: categoria,
@@ -1509,7 +1503,7 @@ class _IngresoFormState extends ConsumerState<_IngresoForm> {
     }
 
     final categorias =
-        ref.read(ingresoCategoriasControllerProvider).valueOrNull ??
+        ref.read(ingresoCategoriasControllerProvider).value ??
         const <IngresoCategoria>[];
     final actual = categorias.where((item) => item.id == categoriaId);
     if (actual.isEmpty) {
@@ -2631,7 +2625,8 @@ String _expenseLinkLabel(
             ? desc
             : (provider.isNotEmpty ? provider : trText('Gasto')));
   final rawCategoria = gasto.gastoCategoriaId.trim();
-  final resolvedCategoria = categoriasById[rawCategoria]?.nombre ??
+  final resolvedCategoria =
+      categoriasById[rawCategoria]?.nombre ??
       (rawCategoria.isNotEmpty && !_looksLikeUuid(rawCategoria)
           ? rawCategoria
           : '');

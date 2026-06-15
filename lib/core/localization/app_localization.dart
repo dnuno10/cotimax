@@ -2,6 +2,7 @@ import 'package:cotimax/features/auth/application/auth_controller.dart';
 import 'package:cotimax/features/configuracion/application/configuracion_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:intl/intl.dart';
 
 class AppPresentationSettings {
@@ -38,8 +39,8 @@ final appPresentationSettingsProvider = Provider<AppPresentationSettings>((
     return AppPresentationSettings.fallback;
   }
 
-  final empresa = ref.watch(empresaPerfilControllerProvider).valueOrNull;
-  final usuario = ref.watch(usuarioActualControllerProvider).valueOrNull;
+  final empresa = ref.watch(empresaPerfilControllerProvider).value;
+  final usuario = ref.watch(usuarioActualControllerProvider).value;
   final persistedThemeMode = (usuario?.modoOscuro ?? false)
       ? ThemeMode.dark
       : ThemeMode.light;
@@ -75,7 +76,7 @@ final themeOverlayVisibleProvider = Provider<bool>((ref) {
   }
 
   final usuarioActual = ref.watch(usuarioActualControllerProvider);
-  return usuarioActual.isLoading && usuarioActual.valueOrNull == null;
+  return usuarioActual.isLoading && usuarioActual.value == null;
 });
 
 AppPresentationSettings _currentSettings = AppPresentationSettings.fallback;
@@ -196,7 +197,6 @@ final Map<String, String> _englishTranslations = {
   'Analítica': 'Analytics',
   'Configuración': 'Settings',
   'Usuarios': 'Users',
-  'Planes': 'Plans',
   'COMERCIAL': 'SALES',
   'ADMINISTRACION': 'ADMINISTRATION',
   'Busca clientes, folios, productos o acciones':
@@ -214,10 +214,7 @@ final Map<String, String> _englishTranslations = {
   'Aplicar': 'Apply',
   'Confirmar': 'Confirm',
   'Reintentar': 'Retry',
-  'Actualizar a Pro': 'Upgrade to Pro',
-  'Upgrade ahora': 'Upgrade now',
   'Subir imagen': 'Upload image',
-  'Consumo del plan': 'Plan usage',
   'Ocurrio un error': 'An error occurred',
   'Selecciona el rango': 'Select the range',
   'Selecciona un rango': 'Select a range',
@@ -423,8 +420,6 @@ final Map<String, String> _englishTranslations = {
   'Folio o referencia': 'Folio or reference',
   'Descripcion breve': 'Short description',
   'Notas internas del gasto': 'Internal expense notes',
-  'Plan de actualización': 'Upgrade plan',
-  'Gestionar plan': 'Manage plan',
   'Elegir': 'Choose',
   'Buscar icono por nombre': 'Search icon by name',
   'Enviar enlace': 'Send link',
@@ -527,16 +522,11 @@ final Map<String, String> _englishTranslations = {
   'Ilimitadas': 'Unlimited',
   'Usuarios activos': 'Active users',
   'Cotizaciones mes': 'Monthly quotes',
-  'Actualiza a los planes Pro o Enterprise para funciones avanzadas.':
-      'Upgrade to Pro or Enterprise plans for advanced features.',
-  'Comience su prueba GRATUITA de 14 días del Plan Pro':
-      'Start your FREE 14-day trial of the Pro Plan',
   'Abre un dialogo compacto para cambiarlo':
       'Open a compact dialog to change it',
   'Seleccionar icono': 'Select icon',
   'Toca un icono para seleccionarlo': 'Tap an icon to select it',
   'Reportes por usuario: proximamente.': 'Per-user reports: coming soon.',
-  'Cambiar plan': 'Change plan',
   'Nuevo cliente': 'New client',
   'Nuevo proveedor': 'New supplier',
   'Nuevo producto': 'New product',
@@ -555,7 +545,6 @@ final Map<String, String> _englishTranslations = {
   'Empresa': 'Company',
   'Gestión de cuenta': 'Account Management',
   'Descripción general': 'Overview',
-  'Módulos habilitados': 'Enabled Modules',
   'Zona peligrosa': 'Danger Zone',
   'Moneda': 'Currency',
   'Idioma': 'Language',
@@ -597,12 +586,9 @@ final Map<String, String> _englishTranslations = {
   'Agregar método de pago': 'Add payment method',
   'Agregar método de pago disponible pronto.':
       'Add payment method coming soon.',
-  'Gestionar plan disponible pronto.': 'Manage plan coming soon.',
   'Purgar datos disponible pronto.': 'Data purge coming soon.',
   'Eliminación de cuenta disponible pronto.': 'Account deletion coming soon.',
   'No se pudo cargar la configuración.': 'Could not load settings.',
-  'No se pudo cargar la suscripción.': 'Could not load subscription.',
-  'No se pudo cargar el plan.': 'Could not load plan.',
   'Datos de empresa guardados.': 'Company details saved.',
   'Configuración de localización guardada.': 'Localization settings saved.',
   'Configuración de impuestos guardada.': 'Tax settings saved.',
@@ -655,7 +641,6 @@ final Map<String, String> _englishTranslations = {
   'Carga operativa semanal': 'Weekly operating load',
   'Flujo de caja': 'Cash flow',
   'Flujo': 'Flow',
-  'Tu plan': 'Your Plan',
   'Ilimitado': 'Unlimited',
   'Historico': 'Historical',
   'Historico real': 'Actual historical',
@@ -832,7 +817,6 @@ final Map<String, String> _englishTranslations = {
   'Purgar Datos': 'Purge Data',
   'Eliminar cuenta': 'Delete account',
   'Resumen de cuenta': 'Account summary',
-  'Plan activo': 'Active plan',
   'Correo principal': 'Primary email',
   'Sitio web': 'Website',
   'Capacidad actual': 'Current capacity',

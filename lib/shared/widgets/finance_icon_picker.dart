@@ -372,7 +372,7 @@ const List<FinanceIconOption> financeIconOptions = [
   ),
   FinanceIconOption(
     key: 'workspace_premium',
-    label: 'Premium',
+    label: 'Destacado',
     icon: Icons.workspace_premium_rounded,
   ),
   FinanceIconOption(

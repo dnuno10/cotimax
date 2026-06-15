@@ -1,5 +1,6 @@
 import 'package:cotimax/core/constants/app_colors.dart';
 import 'package:cotimax/core/constants/app_spacing.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -117,7 +118,7 @@ class AppTheme {
       hoverColor: colorScheme.primary.withValues(alpha: 0.05),
       dividerColor: border,
       fontFamily: GoogleFonts.plusJakartaSans().fontFamily,
-      pageTransitionsTheme:  PageTransitionsTheme(
+      pageTransitionsTheme: PageTransitionsTheme(
         builders: {
           TargetPlatform.android: FadeUpwardsPageTransitionsBuilder(),
           TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
@@ -155,10 +156,7 @@ class AppTheme {
           fontSize: 13,
           fontWeight: FontWeight.w600,
         ),
-        contentPadding:  EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 14,
-        ),
+        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppSpacing.radius),
           borderSide: BorderSide(color: border),
@@ -181,8 +179,8 @@ class AppTheme {
             return colorScheme.primary;
           }),
           foregroundColor: WidgetStatePropertyAll(textOnPrimary),
-          elevation:  WidgetStatePropertyAll(0),
-          padding:  WidgetStatePropertyAll(
+          elevation: WidgetStatePropertyAll(0),
+          padding: WidgetStatePropertyAll(
             EdgeInsets.symmetric(horizontal: 18, vertical: 14),
           ),
           shape: WidgetStatePropertyAll(
@@ -204,7 +202,9 @@ class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: ButtonStyle(
           side: WidgetStatePropertyAll(BorderSide(color: border)),
-          backgroundColor: WidgetStatePropertyAll(surface.withValues(alpha: 0.72)),
+          backgroundColor: WidgetStatePropertyAll(
+            surface.withValues(alpha: 0.72),
+          ),
           foregroundColor: WidgetStatePropertyAll(primaryText),
           shape: WidgetStatePropertyAll(
             RoundedRectangleBorder(
@@ -217,7 +217,7 @@ class AppTheme {
               fontWeight: FontWeight.w700,
             ),
           ),
-          padding:  WidgetStatePropertyAll(
+          padding: WidgetStatePropertyAll(
             EdgeInsets.symmetric(horizontal: 16, vertical: 13),
           ),
         ),
@@ -290,7 +290,7 @@ class AppTheme {
         shadowColor: Colors.transparent,
         elevation: 0,
         position: PopupMenuPosition.under,
-        menuPadding:  EdgeInsets.symmetric(vertical: 8),
+        menuPadding: EdgeInsets.symmetric(vertical: 8),
         textStyle: GoogleFonts.plusJakartaSans(
           fontSize: 13,
           fontWeight: FontWeight.w700,
@@ -346,11 +346,7 @@ class AppTheme {
           side: BorderSide(color: border),
         ),
       ),
-      dividerTheme: DividerThemeData(
-        color: border,
-        thickness: 1,
-        space: 1,
-      ),
+      dividerTheme: DividerThemeData(color: border, thickness: 1, space: 1),
       listTileTheme: ListTileThemeData(
         iconColor: secondaryText,
         textColor: primaryText,
@@ -432,8 +428,8 @@ class AppTheme {
         labelColor: primaryText,
         unselectedLabelColor: mutedText,
         indicatorColor: colorScheme.primary,
-        labelStyle:  TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-        unselectedLabelStyle:  TextStyle(
+        labelStyle: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+        unselectedLabelStyle: TextStyle(
           fontWeight: FontWeight.w600,
           fontSize: 13,
         ),

@@ -4,7 +4,6 @@ import 'package:cotimax/core/routing/route_paths.dart';
 import 'package:cotimax/features/clientes/application/clientes_controller.dart';
 import 'package:cotimax/features/cotizaciones/application/cotizaciones_controller.dart';
 import 'package:cotimax/features/ingresos/application/ingresos_controller.dart';
-import 'package:cotimax/features/planes/application/plan_access.dart';
 import 'package:cotimax/features/recordatorios/application/recordatorios_controller.dart';
 import 'package:cotimax/shared/models/domain_models.dart';
 import 'package:cotimax/shared/widgets/cotimax_widgets.dart';
@@ -460,26 +459,6 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
   }
 
   Future<void> _openForm(BuildContext context, Cliente? cliente) async {
-    if (cliente == null) {
-      final planAccess = await ref.read(activePlanAccessProvider.future);
-      final clientes =
-          ref.read(clientesControllerProvider).valueOrNull ??
-          await ref.read(clientesControllerProvider.future);
-      if (!mounted) return;
-      if (hasReachedPlanLimit(
-        limit: planAccess.plan.limiteClientes,
-        used: clientes?.length ?? 0,
-      )) {
-        await showPlanUpgradeDialog(
-          context,
-          title: 'Límite del plan Starter',
-          message:
-              'Tu plan Starter permite hasta 5 clientes. Actualiza a Pro para registrar más clientes.',
-        );
-        return;
-      }
-    }
-
     showDialog<void>(
       context: context,
       builder: (_) => ModalBase(
@@ -707,7 +686,7 @@ class _ClienteFormState extends ConsumerState<_ClienteForm> {
   @override
   Widget build(BuildContext context) {
     final clientesExistentes =
-        ref.watch(clientesControllerProvider).valueOrNull ?? const <Cliente>[];
+        ref.watch(clientesControllerProvider).value ?? const <Cliente>[];
     final numeroSugerido = nextSequentialValue(
       clientesExistentes
           .where((item) => item.id != widget.cliente?.id)
@@ -826,23 +805,7 @@ class _ClienteFormState extends ConsumerState<_ClienteForm> {
     }
 
     final clientesExistentes =
-        ref.read(clientesControllerProvider).valueOrNull ?? const <Cliente>[];
-    if (widget.cliente == null) {
-      final planAccess = await ref.read(activePlanAccessProvider.future);
-      if (hasReachedPlanLimit(
-        limit: planAccess.plan.limiteClientes,
-        used: clientesExistentes.length,
-      )) {
-        if (!mounted) return;
-        await showPlanUpgradeDialog(
-          context,
-          title: 'Límite del plan Starter',
-          message:
-              'Tu plan Starter permite hasta 5 clientes. Actualiza a Pro para registrar más clientes.',
-        );
-        return;
-      }
-    }
+        ref.read(clientesControllerProvider).value ?? const <Cliente>[];
     final numeroIngresado = _numeroController.text.trim();
     final numeroDefinitivo = numeroIngresado.isNotEmpty
         ? numeroIngresado
@@ -986,7 +949,7 @@ class _ClientCreateTab extends StatelessWidget {
         final wide = constraints.maxWidth >= 980;
         final left = _ClientSection(
           title: 'Detalles de la empresa',
-          icon: FontAwesomeIcons.building,
+          icon: FontAwesomeIcons.building.data,
           headerBackgroundColor: AppColors.background,
           child: Column(
             children: [
@@ -1040,7 +1003,7 @@ class _ClientCreateTab extends StatelessWidget {
           children: [
             _ClientSection(
               title: 'Contactos',
-              icon: FontAwesomeIcons.addressBook,
+              icon: FontAwesomeIcons.addressBook.data,
               headerBackgroundColor: AppColors.background,
               child: Column(
                 children: [
@@ -1066,7 +1029,7 @@ class _ClientCreateTab extends StatelessWidget {
             SizedBox(height: 10),
             _ClientSection(
               title: 'Dirección de envío',
-              icon: FontAwesomeIcons.locationDot,
+              icon: FontAwesomeIcons.locationDot.data,
               headerBackgroundColor: AppColors.background,
               child: Column(
                 children: [
@@ -1141,7 +1104,7 @@ class _ClientConfigTabState extends State<_ClientConfigTab> {
         : taskRateOptions.first;
     final configSection = _ClientSection(
       title: 'Configuración',
-      icon: FontAwesomeIcons.sliders,
+      icon: FontAwesomeIcons.sliders.data,
       headerBackgroundColor: AppColors.background,
       child: Column(
         children: [
@@ -1200,7 +1163,7 @@ class _ClientConfigTabState extends State<_ClientConfigTab> {
 
     final classifySection = _ClientSection(
       title: 'Clasificar',
-      icon: FontAwesomeIcons.tags,
+      icon: FontAwesomeIcons.tags.data,
       headerBackgroundColor: AppColors.background,
       child: Column(
         children: [
@@ -1251,7 +1214,7 @@ class _ClientConfigTabState extends State<_ClientConfigTab> {
             SizedBox(height: 10),
             _ClientSection(
               title: 'Notas internas',
-              icon: FontAwesomeIcons.noteSticky,
+              icon: FontAwesomeIcons.noteSticky.data,
               headerBackgroundColor: AppColors.background,
               child: Column(
                 children: [
@@ -1342,7 +1305,7 @@ class _ClientSection extends StatelessWidget {
                 Expanded(
                   child: Row(
                     children: [
-                      FaIcon(icon, size: 14, color: AppColors.textPrimary),
+                      Icon(icon, size: 14, color: AppColors.textPrimary),
                       SizedBox(width: 8),
                       Expanded(
                         child: Text(

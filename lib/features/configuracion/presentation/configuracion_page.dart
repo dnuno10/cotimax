@@ -4,13 +4,9 @@ import 'dart:typed_data';
 import 'package:cotimax/core/constants/app_colors.dart';
 import 'package:cotimax/core/localization/app_localization.dart';
 import 'package:cotimax/core/platform/logo_picker.dart';
-import 'package:cotimax/core/platform/url_navigator.dart';
 import 'package:cotimax/features/configuracion/application/configuracion_controller.dart';
 import 'package:cotimax/features/clientes/application/clientes_controller.dart';
 import 'package:cotimax/features/materiales/application/materiales_controller.dart';
-import 'package:cotimax/features/planes/application/planes_controller.dart';
-import 'package:cotimax/features/planes/application/stripe_checkout_service.dart';
-import 'package:cotimax/features/planes/presentation/plan_cards.dart';
 import 'package:cotimax/features/cotizaciones/application/cotizacion_pdf_service.dart';
 import 'package:cotimax/features/cotizaciones/application/cotizaciones_controller.dart';
 import 'package:cotimax/features/productos/application/productos_controller.dart';
@@ -24,26 +20,7 @@ import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import 'package:printing/printing.dart';
-import 'package:url_launcher/url_launcher.dart';
-
-const _supportEmail = 'support@cotimax.com';
-
-Future<void> _contactSupportByEmail(BuildContext context) async {
-  final emailUri = Uri(
-    scheme: 'mailto',
-    path: _supportEmail,
-    queryParameters: {'subject': 'Cotimax Enterprise > 50 miembros'},
-  );
-  final opened = await launchUrl(emailUri);
-  if (!opened && context.mounted) {
-    ToastHelper.show(
-      context,
-      'No se pudo abrir tu cliente de correo. Escribe a $_supportEmail.',
-    );
-  }
-}
 
 List<({String value, String label})> localizationCurrencyOptions = [
   (value: 'MXN', label: 'MXN - Peso mexicano'),
@@ -146,20 +123,6 @@ class _ConfiguracionPageState extends ConsumerState<ConfiguracionPage> {
   int _invoiceTabIndex = 0;
   int _companyTabIndex = 0;
 
-  final Map<String, bool> _enabledModules = {
-    'Facturas': true,
-    'Facturas recurrentes': true,
-    'Cotizaciones': true,
-    'Creditos': false,
-    'Proyectos': false,
-    'Tareas': false,
-    'Vendedores': false,
-    'Gastos': true,
-    'Ordenes de compra': true,
-    'Gastos recurrentes': true,
-    'Actas': false,
-  };
-
   String _invoiceDesign = 'Clean';
   String _quoteDesign = 'corporativo';
   String _creditDesign = 'Clean';
@@ -194,10 +157,8 @@ class _ConfiguracionPageState extends ConsumerState<ConfiguracionPage> {
   ];
 
   static const _accountTabs = [
-    'Plan',
     'Descripción general',
     'Apariencia',
-    'Módulos habilitados',
     'Zona peligrosa',
   ];
 
@@ -432,12 +393,8 @@ class _ConfiguracionPageState extends ConsumerState<ConfiguracionPage> {
                         usuario: usuario,
                         tabIndex: _accountTabIndex,
                         tabs: _accountTabs,
-                        enabledModules: _enabledModules,
                         onTabChanged: (index) =>
                             setState(() => _accountTabIndex = index),
-                        onModuleChanged: (label, value) {
-                          setState(() => _enabledModules[label] = value);
-                        },
                       ),
                     if (_mainTabIndex == 1)
                       _UserProfileSection(usuario: usuario),
@@ -570,104 +527,55 @@ class _AccountManagementSection extends ConsumerWidget {
     required this.usuario,
     required this.tabIndex,
     required this.tabs,
-    required this.enabledModules,
     required this.onTabChanged,
-    required this.onModuleChanged,
   });
 
   final EmpresaPerfil empresa;
   final UsuarioActual usuario;
   final int tabIndex;
   final List<String> tabs;
-  final Map<String, bool> enabledModules;
   final ValueChanged<int> onTabChanged;
-  final void Function(String label, bool value) onModuleChanged;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final suscripcionAsync = ref.watch(suscripcionControllerProvider);
-    final planesAsync = ref.watch(planesControllerProvider);
-
-    return suscripcionAsync.when(
-      loading: LoadingSkeleton.new,
-      error: (_, __) => ErrorStateWidget(
-        message: 'No se pudo cargar la suscripción.',
-        onRetry: () {
-          ref.invalidate(suscripcionControllerProvider);
-          ref.invalidate(planesControllerProvider);
-        },
-      ),
-      data: (suscripcion) => planesAsync.when(
-        loading: LoadingSkeleton.new,
-        error: (_, __) => ErrorStateWidget(
-          message: 'No se pudo cargar el plan.',
-          onRetry: () => ref.invalidate(planesControllerProvider),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          trText('Gestión de cuenta'),
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+          ),
         ),
-        data: (planes) {
-          final currentPlan = planes.firstWhere(
-            (plan) => plan.id == suscripcion.planId,
-            orElse: () => planes.first,
-          );
-
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                trText('Gestión de cuenta'),
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
+        SizedBox(height: 14),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: List.generate(
+              tabs.length,
+              (index) => Padding(
+                padding: EdgeInsets.only(
+                  right: index == tabs.length - 1 ? 0 : 18,
+                ),
+                child: _TopConfigTab(
+                  label: tabs[index],
+                  selected: tabIndex == index,
+                  onTap: () => onTabChanged(index),
                 ),
               ),
-              SizedBox(height: 14),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: List.generate(
-                    tabs.length,
-                    (index) => Padding(
-                      padding: EdgeInsets.only(
-                        right: index == tabs.length - 1 ? 0 : 18,
-                      ),
-                      child: _TopConfigTab(
-                        label: tabs[index],
-                        selected: tabIndex == index,
-                        onTap: () => onTabChanged(index),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(height: 4),
-              Container(height: 1, color: AppColors.border),
-              SizedBox(height: 18),
-              if (tabIndex == 0)
-                _PlanAndBillingPanel(
-                  ref: ref,
-                  empresa: empresa,
-                  plan: currentPlan,
-                  suscripcion: suscripcion,
-                  allPlans: planes,
-                ),
-              if (tabIndex == 1)
-                _GeneralAccountPanel(
-                  empresa: empresa,
-                  plan: currentPlan,
-                  suscripcion: suscripcion,
-                ),
-              if (tabIndex == 2)
-                _AppearanceAccountPanel(initialDarkMode: usuario.modoOscuro),
-              if (tabIndex == 3)
-                _EnabledModulesPanel(
-                  enabledModules: enabledModules,
-                  onChanged: onModuleChanged,
-                ),
-              if (tabIndex == 4) _DangerZonePanel(),
-            ],
-          );
-        },
-      ),
+            ),
+          ),
+        ),
+        SizedBox(height: 4),
+        Container(height: 1, color: AppColors.border),
+        SizedBox(height: 18),
+        if (tabIndex == 0) _GeneralAccountPanel(empresa: empresa),
+        if (tabIndex == 1)
+          _AppearanceAccountPanel(initialDarkMode: usuario.modoOscuro),
+        if (tabIndex == 2) _DangerZonePanel(),
+      ],
     );
   }
 }
@@ -867,472 +775,23 @@ class _UserProfileSectionState extends ConsumerState<_UserProfileSection> {
   }
 }
 
-class _PlanAndBillingPanel extends StatelessWidget {
-  _PlanAndBillingPanel({
-    required this.ref,
-    required this.empresa,
-    required this.plan,
-    required this.suscripcion,
-    required this.allPlans,
-  });
-
-  final WidgetRef ref;
-  final EmpresaPerfil empresa;
-  final Plan plan;
-  final Suscripcion suscripcion;
-  final List<Plan> allPlans;
-
-  @override
-  Widget build(BuildContext context) {
-    final upgradePlans = allPlans.where((item) => item.id != plan.id).toList();
-    final isAdmin =
-        ref.watch(usuarioActualControllerProvider).valueOrNull?.rol ==
-        UserRole.admin;
-    final canManageStripe =
-        isAdmin && (plan.id == 'pro' || plan.id == 'empresa');
-
-    Future<void> openStripeAction(String action) async {
-      try {
-        final response = await ref
-            .read(stripeCheckoutServiceProvider)
-            .createCheckout(plan: plan, action: action);
-
-        final url = Uri.tryParse(response.url);
-        if (url == null) {
-          throw 'URL inválida.';
-        }
-        final opened = await navigateToUrl(url.toString());
-        if (!opened && context.mounted) {
-          ToastHelper.show(context, 'No se pudo abrir Stripe.');
-        }
-      } catch (error) {
-        if (!context.mounted) return;
-        ToastHelper.showError(
-          context,
-          buildActionErrorMessage(error, 'No se pudo abrir Stripe.'),
-        );
-      }
-    }
-
-    VoidCallback? buildChangePlanCallback(Plan targetPlan) {
-      if (!isAdmin) return null;
-      if (targetPlan.id != 'pro' && targetPlan.id != 'empresa') return null;
-      return () {
-        unawaited(() async {
-          try {
-            int? seats;
-            if (targetPlan.id == 'empresa') {
-              final min = targetPlan.usuariosMinimos > 0
-                  ? targetPlan.usuariosMinimos
-                  : 2;
-              final max = targetPlan.usuariosMaximos > 0
-                  ? targetPlan.usuariosMaximos
-                  : 50;
-              final initial = suscripcion.usuariosActivos.clamp(min, max);
-              final controller = TextEditingController(text: '$initial');
-              seats = await showDialog<int>(
-                context: context,
-                builder: (dialogContext) {
-                  return AlertDialog(
-                    title: Text(trText('Asientos del plan Empresa')),
-                    content: SizedBox(
-                      width: 420,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            tr(
-                              'Selecciona cuántos asientos necesitas (mínimo $min, máximo $max).',
-                              'Select how many seats you need (min $min, max $max).',
-                            ),
-                          ),
-                          SizedBox(height: 12),
-                          TextField(
-                            controller: controller,
-                            keyboardType: TextInputType.number,
-                            decoration: InputDecoration(
-                              labelText: trText('Asientos'),
-                              hintText: '$min-$max',
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(dialogContext).pop(),
-                        child: Text(trText('Cancelar')),
-                      ),
-                      ElevatedButton(
-                        onPressed: () {
-                          final value = int.tryParse(controller.text.trim());
-                          if (value == null || value < min || value > max) {
-                            ToastHelper.show(
-                              dialogContext,
-                              'Ingresa un número entre $min y $max.',
-                            );
-                            return;
-                          }
-                          Navigator.of(dialogContext).pop(value);
-                        },
-                        child: Text(trText('Continuar')),
-                      ),
-                    ],
-                  );
-                },
-              );
-              if (seats == null) return;
-            }
-
-            final response = await ref
-                .read(stripeCheckoutServiceProvider)
-                .createCheckout(plan: targetPlan, seats: seats);
-
-            final checkoutUrl = Uri.tryParse(response.url);
-            if (checkoutUrl == null) {
-              throw 'URL de checkout inválida.';
-            }
-            final opened = await navigateToUrl(checkoutUrl.toString());
-            if (!opened && context.mounted) {
-              ToastHelper.show(context, 'No se pudo abrir el checkout.');
-            }
-          } catch (error) {
-            if (!context.mounted) return;
-            ToastHelper.showError(
-              context,
-              buildActionErrorMessage(error, 'No se pudo iniciar el checkout.'),
-            );
-          }
-        }());
-      };
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _ConfigSectionTitle(title: 'Tu plan'),
-        SizedBox(height: 12),
-        PlanFeatureCard(
-          plan: plan,
-          isActive: true,
-          showEnterpriseContactHint: false,
-        ),
-        SizedBox(height: 10),
-        Text(
-          '${trText('Renueva')} ${DateFormat('dd MMM yyyy', currentIntlLocale()).format(suscripcion.fechaFin)}',
-          style: TextStyle(
-            color: AppColors.textSecondary,
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        if (canManageStripe) ...[
-          SizedBox(height: 12),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              FilledButton.icon(
-                onPressed: () => unawaited(openStripeAction('portal')),
-                icon: Icon(Icons.manage_accounts_rounded, size: 16),
-                label: Text(trText('Administrar suscripción')),
-              ),
-              OutlinedButton.icon(
-                onPressed: () {
-                  unawaited(() async {
-                    final confirm = await showDialog<bool>(
-                      context: context,
-                      builder: (dialogContext) {
-                        return AlertDialog(
-                          title: Text(trText('Cancelar plan')),
-                          content: Text(
-                            trText(
-                              'Serás redirigido a Stripe para cancelar tu suscripción. ¿Continuar?',
-                            ),
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () =>
-                                  Navigator.of(dialogContext).pop(false),
-                              child: Text(trText('Volver')),
-                            ),
-                            FilledButton(
-                              onPressed: () =>
-                                  Navigator.of(dialogContext).pop(true),
-                              child: Text(trText('Continuar')),
-                            ),
-                          ],
-                        );
-                      },
-                    );
-                    if (!context.mounted) return;
-                    if (confirm == true) {
-                      await openStripeAction('cancel');
-                    }
-                  }());
-                },
-                icon: Icon(Icons.cancel_rounded, size: 16),
-                label: Text(trText('Cancelar plan')),
-              ),
-            ],
-          ),
-        ],
-        SizedBox(height: 16),
-        Container(
-          padding: EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: AppColors.background,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.border),
-          ),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final stacked = constraints.maxWidth < 920;
-
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    trText(
-                      'Actualiza a los planes Pro o Enterprise para funciones avanzadas.',
-                    ),
-                    style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  SizedBox(height: 12),
-                  stacked
-                      ? Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            for (
-                              var index = 0;
-                              index < upgradePlans.length;
-                              index++
-                            ) ...[
-                              PlanFeatureCard(
-                                plan: upgradePlans[index],
-                                isActive: false,
-                                onChangePlan: buildChangePlanCallback(
-                                  upgradePlans[index],
-                                ),
-                                showEnterpriseContactHint: false,
-                              ),
-                              SizedBox(height: 12),
-                            ],
-                          ],
-                        )
-                      : IntrinsicHeight(
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              for (
-                                var index = 0;
-                                index < upgradePlans.length;
-                                index++
-                              ) ...[
-                                Expanded(
-                                  child: PlanFeatureCard(
-                                    plan: upgradePlans[index],
-                                    isActive: false,
-                                    onChangePlan: buildChangePlanCallback(
-                                      upgradePlans[index],
-                                    ),
-                                    showEnterpriseContactHint: false,
-                                  ),
-                                ),
-                                if (index < upgradePlans.length - 1)
-                                  SizedBox(width: 12),
-                              ],
-                            ],
-                          ),
-                        ),
-                  SizedBox(height: 12),
-                  Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.05),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(
-                          Icons.support_agent_rounded,
-                          color: AppColors.primary,
-                          size: 18,
-                        ),
-                        SizedBox(width: 8),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                trText(
-                                  'Si tu equipo es de más de 50 miembros, escríbenos directamente al correo support@cotimax.com.',
-                                ),
-                                style: TextStyle(
-                                  color: AppColors.textPrimary,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  height: 1.4,
-                                ),
-                              ),
-                              SizedBox(height: 8),
-                              FilledButton.icon(
-                                onPressed: () =>
-                                    _contactSupportByEmail(context),
-                                icon: Icon(Icons.email_rounded, size: 16),
-                                label: Text('Escribir a $_supportEmail'),
-                                style: FilledButton.styleFrom(
-                                  backgroundColor: AppColors.primary,
-                                  foregroundColor: AppColors.white,
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 10,
-                                  ),
-                                  minimumSize: Size(0, 36),
-                                  tapTargetSize:
-                                      MaterialTapTargetSize.shrinkWrap,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
-        ),
-        SizedBox(height: 28),
-        Row(
-          children: [
-            Expanded(child: _ConfigSectionTitle(title: 'Método de pago')),
-            TextButton.icon(
-              onPressed: canManageStripe
-                  ? () => unawaited(openStripeAction('portal'))
-                  : null,
-              icon: Icon(Icons.open_in_new_rounded, size: 16),
-              label: Text(trText('Administrar en Stripe')),
-            ),
-          ],
-        ),
-        SizedBox(height: 12),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final stacked = constraints.maxWidth < 840;
-            final paymentCard = _PaymentMethodCard(
-              empresa: empresa,
-              plan: plan,
-              onManageInStripe: canManageStripe
-                  ? () => unawaited(openStripeAction('portal'))
-                  : null,
-              onCancelPlan: canManageStripe
-                  ? () {
-                      unawaited(() async {
-                        final confirm = await showDialog<bool>(
-                          context: context,
-                          builder: (dialogContext) {
-                            return AlertDialog(
-                              title: Text(trText('Cancelar plan')),
-                              content: Text(
-                                trText(
-                                  'Serás redirigido a Stripe para cancelar tu suscripción. ¿Continuar?',
-                                ),
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () =>
-                                      Navigator.of(dialogContext).pop(false),
-                                  child: Text(trText('Volver')),
-                                ),
-                                FilledButton(
-                                  onPressed: () =>
-                                      Navigator.of(dialogContext).pop(true),
-                                  child: Text(trText('Continuar')),
-                                ),
-                              ],
-                            );
-                          },
-                        );
-                        if (!context.mounted) return;
-                        if (confirm == true) {
-                          await openStripeAction('cancel');
-                        }
-                      }());
-                    }
-                  : null,
-            );
-            final addCard = _PaymentMethodAddCard(
-              enabled: canManageStripe,
-              onTap: canManageStripe
-                  ? () => unawaited(openStripeAction('portal'))
-                  : null,
-            );
-
-            if (stacked) {
-              return Column(
-                children: [paymentCard, SizedBox(height: 12), addCard],
-              );
-            }
-
-            return Row(
-              children: [
-                Expanded(child: paymentCard),
-                SizedBox(width: 12),
-                SizedBox(width: 250, child: addCard),
-              ],
-            );
-          },
-        ),
-      ],
-    );
-  }
-}
-
 class _GeneralAccountPanel extends ConsumerWidget {
-  _GeneralAccountPanel({
-    required this.empresa,
-    required this.plan,
-    required this.suscripcion,
-  });
+  _GeneralAccountPanel({required this.empresa});
 
   final EmpresaPerfil empresa;
-  final Plan plan;
-  final Suscripcion suscripcion;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final clientes =
-        ref.watch(clientesControllerProvider).valueOrNull ?? const <Cliente>[];
+        ref.watch(clientesControllerProvider).value ?? const <Cliente>[];
     final productos =
-        ref.watch(productosControllerProvider).valueOrNull ??
+        ref.watch(productosControllerProvider).value ??
         const <ProductoServicio>[];
     final materiales =
-        ref.watch(materialesControllerProvider).valueOrNull ??
+        ref.watch(materialesControllerProvider).value ??
         const <MaterialInsumo>[];
     final cotizaciones =
-        ref.watch(cotizacionesControllerProvider).valueOrNull ??
-        const <Cotizacion>[];
-    final quoteWindow = _monthlyQuoteWindow(suscripcion.fechaInicio);
-    final monthlyQuotesUsed = cotizaciones.where((quote) {
-      return !quote.fechaEmision.isBefore(quoteWindow.start) &&
-          quote.fechaEmision.isBefore(quoteWindow.end);
-    }).length;
-    final locale = currentIntlLocale();
-    final renewalDate = DateFormat(
-      'dd MMM yyyy',
-      locale,
-    ).format(suscripcion.fechaFin);
-    final resetDate = DateFormat('dd MMM yyyy', locale).format(quoteWindow.end);
-
+        ref.watch(cotizacionesControllerProvider).value ?? const <Cotizacion>[];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1351,27 +810,23 @@ class _GeneralAccountPanel extends ConsumerWidget {
                     children: [
                       _AccountMetricCard(
                         icon: Icons.apartment_rounded,
-                        label: 'Plan activo',
-                        value: plan.nombre,
+                        label: 'Cuenta',
+                        value: 'Cotimax Pro',
                       ),
                       _AccountMetricCard(
-                        icon: Icons.event_available_rounded,
-                        label: 'Renovación',
-                        value: renewalDate,
-                        helper: _friendlyFutureDateLabel(suscripcion.fechaFin),
+                        icon: Icons.all_inclusive_rounded,
+                        label: 'Capacidad',
+                        value: 'Sin límites',
                       ),
                       _AccountMetricCard(
                         icon: Icons.group_rounded,
-                        label: 'Usuarios activos',
-                        value:
-                            '${suscripcion.usuariosActivos} de ${_planUsersLabel(plan)}',
+                        label: 'Empresas por cuenta',
+                        value: '1',
                       ),
                       _AccountMetricCard(
-                        icon: Icons.sync_rounded,
+                        icon: Icons.verified_rounded,
                         label: 'Estado',
-                        value: suscripcion.renovacionAutomatica
-                            ? 'Renovación automática'
-                            : 'Renovación manual',
+                        value: 'Activo',
                       ),
                     ],
                   );
@@ -1437,12 +892,12 @@ class _GeneralAccountPanel extends ConsumerWidget {
         ),
         SizedBox(height: 12),
         _FormShellCard(
-          title: 'Capacidad actual',
+          title: 'Actividad actual',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Monitorea el uso actual de tu plan y la próxima recarga de cotizaciones mensuales.',
+                'Consulta el volumen actual de información de tu empresa. No hay límites de uso.',
                 style: TextStyle(
                   color: AppColors.textSecondary,
                   fontSize: 13,
@@ -1450,114 +905,36 @@ class _GeneralAccountPanel extends ConsumerWidget {
                 ),
               ),
               SizedBox(height: 16),
-              _CapacityUsageCard(
-                icon: Icons.people_alt_rounded,
-                label: 'Clientes',
-                used: clientes.length,
-                limit: plan.limiteClientes,
-                accent: AppColors.primary,
-              ),
-              SizedBox(height: 14),
-              _CapacityUsageCard(
-                icon: Icons.inventory_2_rounded,
-                label: 'Productos',
-                used: productos.length,
-                limit: plan.limiteProductos,
-                accent: AppColors.accent,
-              ),
-              SizedBox(height: 14),
-              _CapacityUsageCard(
-                icon: Icons.precision_manufacturing_rounded,
-                label: 'Materiales',
-                used: materiales.length,
-                limit: plan.limiteMateriales,
-                accent: AppColors.warning,
-              ),
-              SizedBox(height: 14),
-              _CapacityUsageCard(
-                icon: Icons.request_quote_rounded,
-                label: 'Cotizaciones mensuales',
-                used: monthlyQuotesUsed,
-                limit: plan.limiteCotizacionesMensuales,
-                accent: AppColors.success,
-                helper:
-                    'Ciclo actual: ${DateFormat('dd MMM', locale).format(quoteWindow.start)} - $resetDate',
-                footer:
-                    'Se recargan ${_friendlyFutureDateLabel(quoteWindow.end).toLowerCase()} ($resetDate).',
+              Wrap(
+                spacing: 18,
+                runSpacing: 16,
+                children: [
+                  _AccountMetricCard(
+                    icon: Icons.people_alt_rounded,
+                    label: 'Clientes',
+                    value: '${clientes.length}',
+                  ),
+                  _AccountMetricCard(
+                    icon: Icons.inventory_2_rounded,
+                    label: 'Productos',
+                    value: '${productos.length}',
+                  ),
+                  _AccountMetricCard(
+                    icon: Icons.precision_manufacturing_rounded,
+                    label: 'Materiales',
+                    value: '${materiales.length}',
+                  ),
+                  _AccountMetricCard(
+                    icon: Icons.request_quote_rounded,
+                    label: 'Cotizaciones',
+                    value: '${cotizaciones.length}',
+                  ),
+                ],
               ),
             ],
           ),
         ),
       ],
-    );
-  }
-}
-
-class _EnabledModulesPanel extends StatelessWidget {
-  _EnabledModulesPanel({required this.enabledModules, required this.onChanged});
-
-  final Map<String, bool> enabledModules;
-  final void Function(String label, bool value) onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final entries = enabledModules.entries.toList();
-
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        children: [
-          Container(
-            width: double.infinity,
-            padding: EdgeInsets.fromLTRB(18, 18, 18, 12),
-            decoration: BoxDecoration(
-              color: AppColors.background,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-            ),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: _ConfigSectionTitle(
-                title: 'Módulos habilitados',
-                icon: Icons.view_module_rounded,
-              ),
-            ),
-          ),
-          Container(height: 1, color: AppColors.border),
-          for (var index = 0; index < entries.length; index++)
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-              decoration: BoxDecoration(
-                border: Border(
-                  top: index == 0
-                      ? BorderSide.none
-                      : BorderSide(color: AppColors.border),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      trText(entries[index].key),
-                      style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  Switch(
-                    value: entries[index].value,
-                    onChanged: (value) => onChanged(entries[index].key, value),
-                  ),
-                ],
-              ),
-            ),
-        ],
-      ),
     );
   }
 }
@@ -1738,7 +1115,7 @@ class _CompanySettingsSectionState
     try {
       await ref
           .read(configuracionRepositoryProvider)
-          .updateEmpresa(
+          .updateEmpresaDatos(
             _empresa.copyWith(
               nombreComercial: nombreComercial,
               nombreFiscal: nombreFiscal,
@@ -1756,10 +1133,20 @@ class _CompanySettingsSectionState
               logoUrl: _logoDataUrl.trim(),
             ),
           );
+      CotizacionPdfService.invalidateCompanyCache();
       ref.invalidate(empresaPerfilControllerProvider);
 
       if (!mounted) return;
       ToastHelper.show(context, 'Datos de empresa guardados.');
+    } catch (error) {
+      if (!mounted) return;
+      ToastHelper.showError(
+        context,
+        buildActionErrorMessage(
+          error,
+          'No se pudieron guardar los datos de la empresa.',
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() => _isSaving = false);
@@ -3449,172 +2836,16 @@ class _ConfigSectionTitle extends StatelessWidget {
   }
 }
 
-class _PaymentMethodCard extends StatelessWidget {
-  _PaymentMethodCard({
-    required this.empresa,
-    required this.plan,
-    this.onManageInStripe,
-    this.onCancelPlan,
-  });
-
-  final EmpresaPerfil empresa;
-  final Plan plan;
-  final VoidCallback? onManageInStripe;
-  final VoidCallback? onCancelPlan;
-
-  @override
-  Widget build(BuildContext context) {
-    final hasStripePlan = plan.id == 'pro' || plan.id == 'empresa';
-    return Container(
-      padding: EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: AppColors.textPrimary,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(Icons.payments_rounded, color: AppColors.white),
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      trText('Stripe'),
-                      style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      hasStripePlan
-                          ? trText(
-                              'Administra tu suscripción y método de pago en Stripe.',
-                            )
-                          : trText(
-                              'Actualiza a Pro/Empresa para activar Stripe.',
-                            ),
-                      style: TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Text(
-                _planPriceLabel(plan),
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 14),
-          _InfoLine(label: trText('Titular'), value: empresa.nombreComercial),
-          _InfoLine(
-            label: trText('Correo de facturación'),
-            value: empresa.correo,
-          ),
-          if (onManageInStripe != null || onCancelPlan != null) ...[
-            SizedBox(height: 14),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                if (onManageInStripe != null)
-                  FilledButton.icon(
-                    onPressed: onManageInStripe,
-                    icon: Icon(Icons.open_in_new_rounded, size: 16),
-                    label: Text(trText('Abrir Stripe')),
-                  ),
-                if (onCancelPlan != null)
-                  OutlinedButton.icon(
-                    onPressed: onCancelPlan,
-                    icon: Icon(Icons.cancel_rounded, size: 16),
-                    label: Text(trText('Cancelar plan')),
-                  ),
-              ],
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _PaymentMethodAddCard extends StatelessWidget {
-  _PaymentMethodAddCard({required this.enabled, required this.onTap});
-
-  final bool enabled;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: enabled ? onTap : null,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        height: 188,
-        padding: EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.open_in_new_rounded,
-              size: 34,
-              color: enabled ? AppColors.textPrimary : AppColors.textMuted,
-            ),
-            SizedBox(height: 18),
-            Text(
-              trText('Administrar en Stripe'),
-              style: TextStyle(
-                color: enabled ? AppColors.textPrimary : AppColors.textMuted,
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _AccountMetricCard extends StatelessWidget {
   _AccountMetricCard({
     required this.icon,
     required this.label,
     required this.value,
-    this.helper,
   });
 
   final IconData icon;
   final String label;
   final String value;
-  final String? helper;
 
   @override
   Widget build(BuildContext context) {
@@ -3642,17 +2873,6 @@ class _AccountMetricCard extends StatelessWidget {
               fontWeight: FontWeight.w800,
             ),
           ),
-          if (helper != null) ...[
-            SizedBox(height: 6),
-            Text(
-              trText(helper!),
-              style: TextStyle(
-                color: AppColors.textMuted,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
         ],
       ),
     );
@@ -3705,152 +2925,6 @@ class _AccountDetailLine extends StatelessWidget {
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _InfoLine extends StatelessWidget {
-  _InfoLine({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 220,
-            child: Text(
-              trText(label),
-              style: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CapacityUsageCard extends StatelessWidget {
-  _CapacityUsageCard({
-    required this.icon,
-    required this.label,
-    required this.used,
-    required this.limit,
-    required this.accent,
-    this.helper,
-    this.footer,
-  });
-
-  final IconData icon;
-  final String label;
-  final int used;
-  final int limit;
-  final Color accent;
-  final String? helper;
-  final String? footer;
-
-  @override
-  Widget build(BuildContext context) {
-    final unlimited = limit < 0;
-    final progress = unlimited
-        ? 1.0
-        : limit == 0
-        ? 0.0
-        : (used / limit).clamp(0.0, 1.0);
-
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, size: 20, color: accent),
-              SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      trText(label),
-                      style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    if (helper != null)
-                      Text(
-                        trText(helper!),
-                        style: TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              Text(
-                unlimited
-                    ? '$used / ${trText('Ilimitados')}'
-                    : '$used / $limit',
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 12),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: LinearProgressIndicator(
-              minHeight: 10,
-              value: progress,
-              backgroundColor: AppColors.background,
-              valueColor: AlwaysStoppedAnimation<Color>(accent),
-            ),
-          ),
-          if (footer != null) ...[
-            SizedBox(height: 10),
-            Text(
-              trText(footer!),
-              style: TextStyle(
-                color: AppColors.textMuted,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
         ],
       ),
     );
@@ -4759,64 +3833,7 @@ Color _hexToColor(String value, {required Color fallback}) {
   return Color(parsed);
 }
 
-({DateTime start, DateTime end}) _monthlyQuoteWindow(DateTime anchor) {
-  final now = DateTime.now();
-  var start = DateTime(anchor.year, anchor.month, anchor.day);
-
-  while (!_isSameOrBefore(now, _nextMonthlyAnchor(start))) {
-    start = _nextMonthlyAnchor(start);
-  }
-
-  return (start: start, end: _nextMonthlyAnchor(start));
-}
-
-DateTime _nextMonthlyAnchor(DateTime source) {
-  final targetMonthDate = DateTime(source.year, source.month + 2, 0);
-  final clampedDay = source.day.clamp(1, targetMonthDate.day);
-  return DateTime(source.year, source.month + 1, clampedDay);
-}
-
-bool _isSameOrBefore(DateTime left, DateTime right) {
-  return left.isAtSameMomentAs(right) || left.isBefore(right);
-}
-
-String _friendlyFutureDateLabel(DateTime value) {
-  final now = DateTime.now();
-  final startOfToday = DateTime(now.year, now.month, now.day);
-  final startOfTarget = DateTime(value.year, value.month, value.day);
-  final dayDiff = startOfTarget.difference(startOfToday).inDays;
-
-  if (dayDiff <= 0) return trText('hoy');
-  if (dayDiff == 1) return trText('mañana');
-  if (dayDiff < 7) return tr('en $dayDiff días', 'in $dayDiff days');
-  if (dayDiff < 30) {
-    final weeks = (dayDiff / 7).ceil();
-    return tr('en $weeks semanas', 'in $weeks weeks');
-  }
-  return trText('próximamente');
-}
-
 String _formatTaxRateValue(double value) {
   final decimalDigits = value == value.roundToDouble() ? 0 : 2;
   return value.toStringAsFixed(decimalDigits);
-}
-
-String _planPriceLabel(Plan plan) {
-  if (plan.billingMode == 'per_user_monthly') {
-    return '${formatMoney(plan.precioPorUsuario, decimalDigits: 0)}/${tr('usuario', 'user')}/${tr('mes', 'month')}';
-  }
-  if (plan.precioMensual <= 0) {
-    return trText('Gratis');
-  }
-  return '${formatMoney(plan.precioMensual, decimalDigits: 0)}/${tr('mes', 'month')}';
-}
-
-String _planUsersLabel(Plan plan) {
-  if (plan.usuariosMinimos > 0 && plan.usuariosMaximos > 0) {
-    return '${plan.usuariosMinimos}-${plan.usuariosMaximos}';
-  }
-  if (plan.limiteUsuarios < 0) {
-    return trText('Ilimitados');
-  }
-  return '${plan.limiteUsuarios}';
 }

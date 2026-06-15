@@ -7,11 +7,9 @@ import 'package:cotimax/core/routing/route_paths.dart';
 import 'package:cotimax/core/utils/delete_dependencies.dart';
 import 'package:cotimax/features/auth/application/auth_controller.dart';
 import 'package:cotimax/features/configuracion/application/configuracion_controller.dart';
-import 'package:cotimax/features/planes/application/plan_access.dart';
 import 'package:cotimax/features/workspace/application/workspace_controller.dart';
 import 'package:cotimax/features/workspace/presentation/team_invites_dialog.dart';
 import 'package:cotimax/shared/enums/app_enums.dart';
-import 'package:cotimax/shared/models/domain_models.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -20,55 +18,62 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 List<(String label, IconData icon, String path)> get appNavEntries => [
-  (tr('Inicio', 'Home'), FontAwesomeIcons.house, RoutePaths.dashboard),
-  (tr('Clientes', 'Clients'), FontAwesomeIcons.users, RoutePaths.clientes),
+  (tr('Inicio', 'Home'), FontAwesomeIcons.house.data, RoutePaths.dashboard),
+  (tr('Clientes', 'Clients'), FontAwesomeIcons.users.data, RoutePaths.clientes),
   (
     tr('Proveedores', 'Suppliers'),
-    FontAwesomeIcons.truckField,
+    FontAwesomeIcons.truckField.data,
     RoutePaths.proveedores,
   ),
-  (tr('Productos', 'Products'), FontAwesomeIcons.boxOpen, RoutePaths.productos),
+  (
+    tr('Productos', 'Products'),
+    FontAwesomeIcons.boxOpen.data,
+    RoutePaths.productos,
+  ),
   (
     tr('Materiales', 'Materials'),
-    FontAwesomeIcons.cubes,
+    FontAwesomeIcons.cubes.data,
     RoutePaths.materiales,
   ),
   (
     tr('Cotizaciones', 'Quotes'),
-    FontAwesomeIcons.fileInvoiceDollar,
+    FontAwesomeIcons.fileInvoiceDollar.data,
     RoutePaths.cotizaciones,
   ),
   (
     tr('Ingresos', 'Income'),
-    FontAwesomeIcons.arrowTrendUp,
+    FontAwesomeIcons.arrowTrendUp.data,
     RoutePaths.ingresos,
   ),
   (
     tr('Gastos', 'Expenses'),
-    FontAwesomeIcons.arrowTrendDown,
+    FontAwesomeIcons.arrowTrendDown.data,
     RoutePaths.gastos,
   ),
   (
     tr('Recordatorios', 'Reminders'),
-    FontAwesomeIcons.calendarDays,
+    FontAwesomeIcons.calendarDays.data,
     RoutePaths.recordatorios,
   ),
   (
     tr('Analítica', 'Analytics'),
-    FontAwesomeIcons.chartLine,
+    FontAwesomeIcons.chartLine.data,
     RoutePaths.analitica,
   ),
   (
     tr('Configuración', 'Settings'),
-    FontAwesomeIcons.gear,
+    FontAwesomeIcons.gear.data,
     RoutePaths.configuracion,
   ),
-  (tr('Usuarios', 'Users'), FontAwesomeIcons.userGroup, RoutePaths.usuarios),
-  (tr('Planes', 'Plans'), FontAwesomeIcons.crown, RoutePaths.planes),
+  (
+    tr('Usuarios', 'Users'),
+    FontAwesomeIcons.userGroup.data,
+    RoutePaths.usuarios,
+  ),
 ];
 
 const primaryNavIndexes = <int>[0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-const secondaryNavIndexes = <int>[10, 11, 12];
+const secondaryNavIndexes = <int>[10, 11];
 const creatablePaths = <String>{
   RoutePaths.clientes,
   RoutePaths.proveedores,
@@ -446,7 +451,7 @@ bool shouldShowChartLabel(int index, int total, {int maxLabels = 5}) {
 Widget rankingMedalIcon(int index, {double size = 14}) {
   if (index > 2) return SizedBox.shrink();
   final colors = [Color(0xFFD4AF37), Color(0xFFC0C0C0), Color(0xFFCD7F32)];
-  return FaIcon(FontAwesomeIcons.medal, size: size, color: colors[index]);
+  return Icon(FontAwesomeIcons.medal.data, size: size, color: colors[index]);
 }
 
 class AmountBadge extends StatelessWidget {
@@ -801,8 +806,8 @@ class SidebarNavigation extends ConsumerWidget {
                   ? Center(
                       child: IconButton(
                         onPressed: () => unawaited(logout()),
-                        icon: FaIcon(
-                          FontAwesomeIcons.arrowRightFromBracket,
+                        icon: Icon(
+                          FontAwesomeIcons.arrowRightFromBracket.data,
                           size: 14,
                         ),
                       ),
@@ -947,8 +952,8 @@ class SidebarNavigation extends ConsumerWidget {
                         ),
                         IconButton(
                           onPressed: () => unawaited(logout()),
-                          icon: FaIcon(
-                            FontAwesomeIcons.arrowRightFromBracket,
+                          icon: Icon(
+                            FontAwesomeIcons.arrowRightFromBracket.data,
                             size: 14,
                           ),
                         ),
@@ -975,7 +980,7 @@ class Topbar extends ConsumerWidget {
     final compact = width < 1180;
     final mobile = width < 900;
     final pendingInvitesCount =
-        ref.watch(pendingTeamInvitesCountProvider).valueOrNull ?? 0;
+        ref.watch(pendingTeamInvitesCountProvider).value ?? 0;
 
     return AnimatedContainer(
       duration: Duration(milliseconds: 220),
@@ -1039,8 +1044,8 @@ class Topbar extends ConsumerWidget {
               ),
               child: Row(
                 children: [
-                  FaIcon(
-                    FontAwesomeIcons.calendarDays,
+                  Icon(
+                    FontAwesomeIcons.calendarDays.data,
                     size: 13,
                     color: AppColors.textSecondary,
                   ),
@@ -1069,7 +1074,7 @@ class Topbar extends ConsumerWidget {
               icon: Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  FaIcon(FontAwesomeIcons.bell, size: 14),
+                  Icon(FontAwesomeIcons.bell.data, size: 14),
                   if (pendingInvitesCount > 0)
                     Positioned(
                       right: -6,
@@ -1102,16 +1107,6 @@ class Topbar extends ConsumerWidget {
                     ),
                 ],
               ),
-            ),
-            SizedBox(width: AppSpacing.sm),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.accent,
-                foregroundColor: AppColors.white,
-              ),
-              onPressed: () => context.go(RoutePaths.planes),
-              icon: FaIcon(FontAwesomeIcons.gem, size: 14),
-              label: Text(trText('Actualizar a Pro')),
             ),
           ],
         ],
@@ -1359,8 +1354,6 @@ String? resolveContainerHelpText(String title) {
         'Agrupa los ajustes de identidad visual y estructura del PDF para que la cotización mantenga consistencia en todos los folios.',
     'apariencia':
         'Configura el tema visual general de la plataforma, incluyendo estilo, contraste y comportamiento de la interfaz.',
-    'módulos habilitados':
-        'Activa o desactiva funcionalidades del sistema para adaptar la operación a los procesos reales de tu empresa.',
     'zona peligrosa':
         'Incluye acciones sensibles o irreversibles; revisa cuidadosamente antes de confirmar cualquier cambio en esta sección.',
     'detalles de empresa':
@@ -1372,13 +1365,9 @@ String? resolveContainerHelpText(String title) {
     'impuestos':
         'Administra tasas y comportamiento fiscal que se aplican en cálculos y totales de documentos comerciales.',
     'resumen de cuenta':
-        'Muestra el estado general de la suscripción, consumo y límites principales para tomar decisiones de capacidad.',
-    'capacidad actual':
-        'Describe el uso disponible vs utilizado en recursos clave para anticipar límites y evitar bloqueos operativos.',
-    'tu plan':
-        'Presenta beneficios y condiciones del plan activo para entender alcance, restricciones y opciones de mejora.',
-    'método de pago':
-        'Centraliza la configuración de cobro del plan, vencimientos y datos necesarios para mantener la suscripción al día.',
+        'Muestra la información principal de la cuenta y el estado operativo de la empresa.',
+    'actividad actual':
+        'Resume el volumen actual de clientes, productos, materiales y cotizaciones sin límites de uso.',
     'indicadores clave':
         'Resume señales de salud financiera y operativa en métricas de lectura rápida para seguimiento ejecutivo.',
     'impacto de gastos vinculados':
@@ -1682,8 +1671,8 @@ class SearchField extends StatelessWidget {
       decoration: InputDecoration(
         prefixIcon: Padding(
           padding: EdgeInsets.only(left: 14, right: 10),
-          child: FaIcon(
-            FontAwesomeIcons.magnifyingGlass,
+          child: Icon(
+            FontAwesomeIcons.magnifyingGlass.data,
             size: 14,
             color: AppColors.textMuted,
           ),
@@ -2623,67 +2612,6 @@ class StatusBadge extends StatelessWidget {
   }
 }
 
-class PlanBadge extends StatelessWidget {
-  PlanBadge({required this.planName, super.key});
-
-  final String planName;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppColors.accent),
-        color: AppColors.accent.withValues(alpha: 0.09),
-      ),
-      child: Text(
-        planName,
-        style: TextStyle(
-          color: AppColors.accent,
-          fontWeight: FontWeight.w700,
-          fontSize: 11,
-        ),
-      ),
-    );
-  }
-}
-
-class UsageProgressBar extends StatelessWidget {
-  UsageProgressBar({
-    required this.label,
-    required this.used,
-    required this.limit,
-    super.key,
-  });
-
-  final String label;
-  final int used;
-  final int limit;
-
-  @override
-  Widget build(BuildContext context) {
-    final ratio = limit <= 0 ? 0.0 : (used / limit).clamp(0.0, 1.0);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '${trText(label)}: $used/${limit <= 0 ? trText('Ilimitado') : limit}',
-          style: TextStyle(fontWeight: FontWeight.w600),
-        ),
-        SizedBox(height: 6),
-        LinearProgressIndicator(
-          value: limit <= 0 ? 0 : ratio,
-          minHeight: 9,
-          borderRadius: BorderRadius.circular(100),
-          color: ratio > 0.85 ? AppColors.warning : AppColors.primary,
-          backgroundColor: AppColors.border,
-        ),
-      ],
-    );
-  }
-}
-
 class PdfPreviewCard extends StatelessWidget {
   PdfPreviewCard({required this.folio, super.key});
 
@@ -3167,21 +3095,12 @@ class _NavItem extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final activePlan = ref.watch(activePlanAccessProvider).valueOrNull;
-    final analyticsLocked =
-        entry.$3 == RoutePaths.analitica &&
-        activePlan != null &&
-        !activePlan.plan.incluyeAnalitica;
     return Material(
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(AppSpacing.radius),
-        onTap: () async {
+        onTap: () {
           if (closeAfterTap) Navigator.of(context).pop();
-          if (analyticsLocked) {
-            await showAnalyticsUpgradeDialog(context);
-            return;
-          }
           if (!context.mounted) return;
           context.go(entry.$3);
         },
@@ -3204,7 +3123,7 @@ class _NavItem extends ConsumerWidget {
                 ? MainAxisAlignment.center
                 : MainAxisAlignment.start,
             children: [
-              FaIcon(
+              Icon(
                 entry.$2,
                 size: 14,
                 color: selected ? AppColors.white : AppColors.textSecondary,
@@ -3222,15 +3141,6 @@ class _NavItem extends ConsumerWidget {
                     ),
                   ),
                 ),
-                if (entry.$3 == RoutePaths.analitica)
-                  Padding(
-                    padding: EdgeInsets.only(right: showCreate ? 8 : 0),
-                    child: Icon(
-                      Icons.workspace_premium_rounded,
-                      size: 16,
-                      color: selected ? AppColors.white : AppColors.accent,
-                    ),
-                  ),
                 if (showCreate)
                   _HoverCircleButton(
                     onTap: () {
@@ -3267,7 +3177,6 @@ class _MobileBottomNavigation extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final activePlan = ref.watch(activePlanAccessProvider).valueOrNull;
     return AnimatedContainer(
       duration: Duration(milliseconds: 180),
       height: 78,
@@ -3287,15 +3196,7 @@ class _MobileBottomNavigation extends ConsumerWidget {
               padding: EdgeInsets.only(right: 8),
               child: InkWell(
                 borderRadius: BorderRadius.circular(10),
-                onTap: () async {
-                  final analyticsLocked =
-                      entry.$3 == RoutePaths.analitica &&
-                      activePlan != null &&
-                      !activePlan.plan.incluyeAnalitica;
-                  if (analyticsLocked) {
-                    await showAnalyticsUpgradeDialog(context);
-                    return;
-                  }
+                onTap: () {
                   if (!context.mounted) return;
                   context.go(entry.$3);
                 },
@@ -3313,7 +3214,7 @@ class _MobileBottomNavigation extends ConsumerWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      FaIcon(
+                      Icon(
                         entry.$2,
                         size: 14,
                         color: selected
@@ -3962,7 +3863,7 @@ List<_CommandPaletteEntry> _buildCommandPaletteEntries() {
       kind: _CommandPaletteKind.action,
       title: 'Nuevo cliente',
       subtitle: 'Crear un nuevo cliente desde cualquier vista',
-      icon: FontAwesomeIcons.users,
+      icon: FontAwesomeIcons.users.data,
       color: AppColors.accent,
       route: Uri(
         path: RoutePaths.clientes,
@@ -3977,7 +3878,7 @@ List<_CommandPaletteEntry> _buildCommandPaletteEntries() {
       kind: _CommandPaletteKind.action,
       title: 'Nueva cotización',
       subtitle: 'Ir directo al formulario comercial',
-      icon: FontAwesomeIcons.fileInvoiceDollar,
+      icon: FontAwesomeIcons.fileInvoiceDollar.data,
       color: AppColors.accent,
       route: Uri(
         path: RoutePaths.cotizaciones,
@@ -3992,7 +3893,7 @@ List<_CommandPaletteEntry> _buildCommandPaletteEntries() {
       kind: _CommandPaletteKind.action,
       title: 'Nuevo producto',
       subtitle: 'Agregar un producto o servicio',
-      icon: FontAwesomeIcons.boxOpen,
+      icon: FontAwesomeIcons.boxOpen.data,
       color: AppColors.accent,
       route: Uri(
         path: RoutePaths.productos,
@@ -4007,7 +3908,7 @@ List<_CommandPaletteEntry> _buildCommandPaletteEntries() {
       kind: _CommandPaletteKind.action,
       title: 'Registrar ingreso',
       subtitle: 'Capturar un cobro nuevo',
-      icon: FontAwesomeIcons.wallet,
+      icon: FontAwesomeIcons.wallet.data,
       color: AppColors.success,
       route: Uri(
         path: RoutePaths.ingresos,
@@ -4022,7 +3923,7 @@ List<_CommandPaletteEntry> _buildCommandPaletteEntries() {
       kind: _CommandPaletteKind.action,
       title: 'Registrar gasto',
       subtitle: 'Capturar un gasto nuevo',
-      icon: FontAwesomeIcons.receipt,
+      icon: FontAwesomeIcons.receipt.data,
       color: AppColors.warning,
       route: Uri(
         path: RoutePaths.gastos,
@@ -4173,53 +4074,6 @@ class SummaryCards extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-}
-
-class LimitUsageWidget extends StatelessWidget {
-  LimitUsageWidget({
-    required this.plan,
-    required this.clientes,
-    required this.productos,
-    super.key,
-  });
-
-  final Plan plan;
-  final int clientes;
-  final int productos;
-
-  @override
-  Widget build(BuildContext context) {
-    return SectionCard(
-      title: trText('Consumo del plan'),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          UsageProgressBar(
-            label: 'Clientes',
-            used: clientes,
-            limit: plan.limiteClientes,
-          ),
-          SizedBox(height: 12),
-          UsageProgressBar(
-            label: 'Productos',
-            used: productos,
-            limit: plan.limiteProductos,
-          ),
-          SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.accent,
-              ),
-              onPressed: () {},
-              child: Text(trText('Upgrade ahora')),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

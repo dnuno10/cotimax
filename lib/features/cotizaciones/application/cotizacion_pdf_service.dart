@@ -31,9 +31,14 @@ class CotizacionPdfService {
       <String, Future<_QuotePdfSourceData>>{};
   static Map<String, dynamic>? _empresaActualCache;
   static DateTime? _empresaActualCacheAt;
-  static String? _currentPlanIdCache;
-  static DateTime? _currentPlanIdCacheAt;
   static Future<pw.MemoryImage?>? _cotimaxWatermarkFuture;
+
+  static void invalidateCompanyCache() {
+    _empresaActualCache = null;
+    _empresaActualCacheAt = null;
+    _pdfCache.clear();
+    _quoteDataCache.clear();
+  }
 
   static void prewarmFonts([String preferredFamily = 'Arimo']) {
     unawaited(_loadFonts(preferredFamily));
@@ -114,7 +119,6 @@ class CotizacionPdfService {
         ? ((empresaJson!['diseno_quote'] as Map?)?.cast<String, dynamic>() ??
               const <String, dynamic>{})
         : _disenoQuoteFromEmpresa(empresaOverride);
-    final currentPlanId = await _getCurrentPlanIdCached(client);
     final disenoQuoteJson = <String, dynamic>{
       ...storedDisenoQuoteJson,
       ...?disenoQuoteOverride,
@@ -174,6 +178,12 @@ class CotizacionPdfService {
           nombreComercial: (empresaJson['nombre_comercial'] ?? '') as String,
           rfc: (empresaJson['rfc'] ?? '') as String,
           direccion: (empresaJson['direccion'] ?? '') as String,
+          calle: (empresaJson['calle'] ?? '') as String,
+          apartamentoSuite: (empresaJson['apartamento_suite'] ?? '') as String,
+          ciudad: (empresaJson['ciudad'] ?? '') as String,
+          estadoProvincia: (empresaJson['estado_provincia'] ?? '') as String,
+          codigoPostal: (empresaJson['codigo_postal'] ?? '') as String,
+          pais: (empresaJson['pais'] ?? '') as String,
           telefono: (empresaJson['telefono'] ?? '') as String,
           correo: (empresaJson['correo'] ?? '') as String,
           sitioWeb: (empresaJson['sitio_web'] ?? '') as String,
@@ -352,9 +362,7 @@ class CotizacionPdfService {
       final logoFuture = fastPreview
           ? _loadLogoProviderFast(empresa.logoUrl)
           : _loadLogoProvider(empresa.logoUrl);
-      final starterWatermarkFuture = currentPlanId == 'starter'
-          ? _loadCotimaxWatermarkLogo()
-          : Future<pw.MemoryImage?>.value(null);
+      final starterWatermarkFuture = Future<pw.MemoryImage?>.value(null);
 
       final parallelData = await Future.wait<dynamic>([
         quoteSourceFuture,
@@ -584,7 +592,7 @@ class CotizacionPdfService {
                             crossAxisAlignment: pw.CrossAxisAlignment.start,
                             children: [
                               pw.Text(
-                                empresa.direccion,
+                                empresa.direccionCompleta,
                                 style: pw.TextStyle(
                                   color: pdfTheme.textMuted,
                                   fontSize: 9 * fontScale,
@@ -854,21 +862,6 @@ class CotizacionPdfService {
     _empresaActualCache = parsed;
     _empresaActualCacheAt = now;
     return parsed;
-  }
-
-  static Future<String> _getCurrentPlanIdCached(SupabaseClient client) async {
-    final now = DateTime.now();
-    if (_currentPlanIdCache != null && _currentPlanIdCacheAt != null) {
-      if (now.difference(_currentPlanIdCacheAt!).inSeconds <= 10) {
-        return _currentPlanIdCache!;
-      }
-    }
-    final raw = await client.rpc('get_suscripcion_actual');
-    final parsed = (raw as Map).cast<String, dynamic>();
-    final planId = (parsed['plan_id'] ?? '').toString();
-    _currentPlanIdCache = planId;
-    _currentPlanIdCacheAt = now;
-    return planId;
   }
 
   static Map<String, dynamic> _disenoQuoteFromEmpresa(EmpresaPerfil empresa) {
@@ -1669,7 +1662,9 @@ class CotizacionPdfService {
               child: pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
-                  for (final line in _compactAddressLines(empresa.direccion))
+                  for (final line in _compactAddressLines(
+                    empresa.direccionCompleta,
+                  ))
                     _corpHeaderText(line, size: 10 * fontScale),
                 ],
               ),
@@ -1855,7 +1850,7 @@ class CotizacionPdfService {
       if (empresa.telefono.trim().isNotEmpty) empresa.telefono.trim(),
       if (empresa.correo.trim().isNotEmpty) empresa.correo.trim(),
       if (empresa.sitioWeb.trim().isNotEmpty) empresa.sitioWeb.trim(),
-      ..._compactAddressLines(empresa.direccion),
+      ..._compactAddressLines(empresa.direccionCompleta),
     ];
   }
 
@@ -2075,8 +2070,8 @@ class CotizacionPdfService {
         isEnglish
             ? 'Call us at ${empresa.telefono.trim()}'
             : 'Llámanos al ${empresa.telefono.trim()}',
-      if (empresa.direccion.trim().isNotEmpty)
-        ..._compactAddressLines(empresa.direccion),
+      if (empresa.direccionCompleta.trim().isNotEmpty)
+        ..._compactAddressLines(empresa.direccionCompleta),
     ];
 
     return [
@@ -3194,7 +3189,8 @@ class CotizacionPdfService {
     final leftContact = <String>[
       if (empresa.telefono.trim().isNotEmpty) empresa.telefono.trim(),
       if (empresa.correo.trim().isNotEmpty) empresa.correo.trim(),
-      if (empresa.direccion.trim().isNotEmpty) empresa.direccion.trim(),
+      if (empresa.direccionCompleta.trim().isNotEmpty)
+        empresa.direccionCompleta.trim(),
     ];
 
     return [
