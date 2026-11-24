@@ -11,6 +11,7 @@ import 'package:cotimax/features/workspace/application/workspace_controller.dart
 import 'package:cotimax/features/workspace/presentation/team_invites_dialog.dart';
 import 'package:cotimax/shared/enums/app_enums.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,56 +19,56 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 List<(String label, IconData icon, String path)> get appNavEntries => [
-  (tr('Inicio', 'Home'), FontAwesomeIcons.house.data, RoutePaths.dashboard),
-  (tr('Clientes', 'Clients'), FontAwesomeIcons.users.data, RoutePaths.clientes),
+  (tr('Inicio', 'Home'), Icons.home_outlined, RoutePaths.dashboard),
+  (tr('Clientes', 'Clients'), Icons.people_outline_rounded, RoutePaths.clientes),
   (
     tr('Proveedores', 'Suppliers'),
-    FontAwesomeIcons.truckField.data,
+    Icons.local_shipping_outlined,
     RoutePaths.proveedores,
   ),
   (
     tr('Productos', 'Products'),
-    FontAwesomeIcons.boxOpen.data,
+    Icons.inventory_2_outlined,
     RoutePaths.productos,
   ),
   (
     tr('Materiales', 'Materials'),
-    FontAwesomeIcons.cubes.data,
+    Icons.category_outlined,
     RoutePaths.materiales,
   ),
   (
     tr('Cotizaciones', 'Quotes'),
-    FontAwesomeIcons.fileInvoiceDollar.data,
+    Icons.request_quote_outlined,
     RoutePaths.cotizaciones,
   ),
   (
     tr('Ingresos', 'Income'),
-    FontAwesomeIcons.arrowTrendUp.data,
+    Icons.trending_up_rounded,
     RoutePaths.ingresos,
   ),
   (
     tr('Gastos', 'Expenses'),
-    FontAwesomeIcons.arrowTrendDown.data,
+    Icons.trending_down_rounded,
     RoutePaths.gastos,
   ),
   (
     tr('Recordatorios', 'Reminders'),
-    FontAwesomeIcons.calendarDays.data,
+    Icons.event_outlined,
     RoutePaths.recordatorios,
   ),
   (
     tr('Analítica', 'Analytics'),
-    FontAwesomeIcons.chartLine.data,
+    Icons.insights_outlined,
     RoutePaths.analitica,
   ),
   (
     tr('Configuración', 'Settings'),
-    FontAwesomeIcons.gear.data,
+    Icons.settings_outlined,
     RoutePaths.configuracion,
   ),
   (
     tr('Usuarios', 'Users'),
-    FontAwesomeIcons.userGroup.data,
+    Icons.group_outlined,
     RoutePaths.usuarios,
   ),
 ];
@@ -115,16 +116,14 @@ const _microInteractionCurve = Curves.easeOutCubic;
 TextStyle get cotimaxDropdownTextStyle => TextStyle(
   color: AppColors.textPrimary,
   fontSize: 13,
-  fontWeight: FontWeight.w700,
+  fontWeight: FontWeight.w600,
 );
 Icon get cotimaxDropdownIcon => Icon(
   Icons.keyboard_arrow_down_rounded,
   size: 18,
   color: AppColors.textSecondary,
 );
-final BorderRadius cotimaxMenuBorderRadius = BorderRadius.circular(
-  AppSpacing.radius + 4,
-);
+final BorderRadius cotimaxMenuBorderRadius = BorderRadius.circular(18);
 
 InputDecoration cotimaxDropdownDecoration({
   String? hintText,
@@ -464,17 +463,17 @@ class AmountBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = positive ? AppColors.success : AppColors.error;
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
+        color: positive ? AppColors.successSoft : AppColors.errorSoft,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         formatMxn(amount),
         style: TextStyle(
           color: color,
-          fontSize: 12,
-          fontWeight: FontWeight.w800,
+          fontSize: 12.5,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );
@@ -485,6 +484,8 @@ class _OpenCommandPaletteIntent extends Intent {
   const _OpenCommandPaletteIntent();
 }
 
+/// Muse-style shell: narrow icon rail on the left, floating pill top bar and a
+/// centered content column with generous whitespace.
 class AppShell extends StatefulWidget {
   AppShell({
     required this.child,
@@ -502,7 +503,7 @@ class AppShell extends StatefulWidget {
 }
 
 class _AppShellState extends State<AppShell> {
-  bool _sidebarCollapsed = false;
+  bool _sidebarExpanded = false;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   void _openCommandPalette() {
@@ -513,39 +514,46 @@ class _AppShellState extends State<AppShell> {
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
     final mobile = width < 900;
-    final compact = width < 1180;
+    final horizontalPadding = mobile ? AppSpacing.md : AppSpacing.xl;
 
-    final content = Padding(
-      padding: EdgeInsets.fromLTRB(
-        mobile
-            ? AppSpacing.md
-            : compact
-            ? AppSpacing.md
-            : AppSpacing.lg,
-        AppSpacing.md,
-        mobile
-            ? AppSpacing.md
-            : compact
-            ? AppSpacing.md
-            : AppSpacing.lg,
-        AppSpacing.md,
-      ),
-      child: TweenAnimationBuilder<double>(
-        key: ValueKey(widget.location),
-        tween: Tween(begin: 0.0, end: 1.0),
-        duration: Duration(milliseconds: 220),
-        curve: Curves.easeOutCubic,
-        builder: (context, value, child) {
-          return Opacity(
-            opacity: value,
-            child: Transform.translate(
-              offset: Offset(12 * (1 - value), 0),
-              child: child,
+    final content = LayoutBuilder(
+      builder: (context, constraints) {
+        final columnWidth = constraints.maxWidth.clamp(
+          0.0,
+          AppSpacing.contentMaxWidth + horizontalPadding * 2,
+        );
+        return Align(
+          alignment: Alignment.topCenter,
+          child: SizedBox(
+            width: columnWidth,
+            height: constraints.maxHeight,
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                horizontalPadding,
+                mobile ? AppSpacing.sm : AppSpacing.md,
+                horizontalPadding,
+                AppSpacing.md,
+              ),
+              child: TweenAnimationBuilder<double>(
+                key: ValueKey(widget.location),
+                tween: Tween(begin: 0.0, end: 1.0),
+                duration: Duration(milliseconds: 260),
+                curve: Curves.easeOutCubic,
+                builder: (context, value, child) {
+                  return Opacity(
+                    opacity: value,
+                    child: Transform.translate(
+                      offset: Offset(0, 8 * (1 - value)),
+                      child: child,
+                    ),
+                  );
+                },
+                child: widget.child,
+              ),
             ),
-          );
-        },
-        child: widget.child,
-      ),
+          ),
+        );
+      },
     );
 
     return Shortcuts(
@@ -571,7 +579,7 @@ class _AppShellState extends State<AppShell> {
             backgroundColor: AppColors.background,
             drawer: mobile
                 ? Drawer(
-                    width: 290,
+                    width: 300,
                     child: SidebarNavigation(
                       activePath: widget.location,
                       collapsed: false,
@@ -587,6 +595,7 @@ class _AppShellState extends State<AppShell> {
                     children: [
                       Topbar(
                         title: widget.title,
+                        activePath: widget.location,
                         onMenuTap: () =>
                             _scaffoldKey.currentState?.openDrawer(),
                         onSearchTap: _openCommandPalette,
@@ -598,18 +607,21 @@ class _AppShellState extends State<AppShell> {
                     children: [
                       SidebarNavigation(
                         activePath: widget.location,
-                        collapsed: _sidebarCollapsed,
-                        onToggleCollapsed: () {
-                          setState(
-                            () => _sidebarCollapsed = !_sidebarCollapsed,
-                          );
-                        },
+                        collapsed: !_sidebarExpanded,
+                        onToggleCollapsed: () => setState(
+                          () => _sidebarExpanded = !_sidebarExpanded,
+                        ),
                       ),
                       Expanded(
                         child: Column(
                           children: [
                             Topbar(
                               title: widget.title,
+                              activePath: widget.location,
+                              sidebarExpanded: _sidebarExpanded,
+                              onMenuTap: () => setState(
+                                () => _sidebarExpanded = !_sidebarExpanded,
+                              ),
                               onSearchTap: _openCommandPalette,
                             ),
                             Expanded(child: content),
@@ -619,6 +631,42 @@ class _AppShellState extends State<AppShell> {
                     ],
                   ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+String _navLabelForPath(String path) {
+  for (final entry in appNavEntries) {
+    if (path.startsWith(entry.$3)) return entry.$1;
+  }
+  return '';
+}
+
+
+/// Round brand orb shown at the top of the rail (Muse avatar style).
+class _BrandOrb extends StatelessWidget {
+  const _BrandOrb({this.size = 46});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      padding: EdgeInsets.all(size * 0.18),
+      decoration: BoxDecoration(
+        color: AppColors.container,
+        shape: BoxShape.circle,
+        border: Border.all(color: AppColors.border),
+        boxShadow: AppColors.softShadow,
+      ),
+      child: ClipOval(
+        child: Image.asset(
+          'assets/img/cotimax-favicon.png',
+          fit: BoxFit.contain,
         ),
       ),
     );
@@ -664,301 +712,124 @@ class SidebarNavigation extends ConsumerWidget {
       }
     }
 
+    final usuario = usuarioActualAsync.value;
+    final displayName = usuario == null
+        ? trText('Cuenta')
+        : (usuario.nombre.trim().isNotEmpty
+              ? usuario.nombre.trim()
+              : (usuario.correo.trim().isNotEmpty
+                    ? usuario.correo.trim()
+                    : trText('Cuenta')));
+    final roleLabel = usuario == null ? '' : userRoleLabel(usuario.rol);
+
+    Widget navItem(int index) {
+      final entry = appNavEntries[index];
+      return Padding(
+        padding: EdgeInsets.only(bottom: compact ? 6 : 2),
+        child: _NavItem(
+          entry: entry,
+          compact: compact,
+          selected: activePath.startsWith(entry.$3),
+          showCreate: creatablePaths.contains(entry.$3),
+          closeAfterTap: mobile,
+        ),
+      );
+    }
+
+    final accountMenu = _AccountMenuButton(
+      compact: compact,
+      displayName: displayName,
+      roleLabel: roleLabel,
+      onLogout: () => unawaited(logout()),
+      closeAfterTap: mobile,
+    );
+
     return AnimatedContainer(
-      duration: Duration(milliseconds: 220),
+      duration: Duration(milliseconds: 240),
       curve: Curves.easeOutCubic,
       width: mobile
           ? double.infinity
           : compact
-          ? 144
-          : 258,
+          ? 84
+          : 264,
       decoration: BoxDecoration(
-        color: AppColors.white.withValues(alpha: 0.96),
-        border: Border(right: BorderSide(color: AppColors.border)),
+        color: mobile ? AppColors.container : AppColors.rail,
+        border: mobile
+            ? null
+            : Border(right: BorderSide(color: AppColors.border)),
       ),
       child: SafeArea(
         child: Padding(
-          padding: EdgeInsets.all(AppSpacing.md),
+          padding: EdgeInsets.symmetric(
+            horizontal: compact ? 0 : 14,
+            vertical: 18,
+          ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: compact
+                ? CrossAxisAlignment.center
+                : CrossAxisAlignment.stretch,
             children: [
-              if (compact && !mobile)
-                Column(
-                  children: [
-                    Center(
-                      child: Image.asset(
-                        'assets/img/cotimax-logo.png',
-                        width: double.infinity,
-                        height: 64,
-                        fit: BoxFit.contain,
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    Center(
-                      child: IconButton(
-                        onPressed: onToggleCollapsed,
-                        icon: Icon(
-                          Icons.keyboard_double_arrow_right_rounded,
-                          size: 18,
-                        ),
-                      ),
-                    ),
-                  ],
+              if (compact)
+                Tooltip(
+                  message: 'Cotimax',
+                  child: InkWell(
+                    customBorder: CircleBorder(),
+                    onTap: onToggleCollapsed,
+                    child: _BrandOrb(),
+                  ),
                 )
               else
                 Row(
                   children: [
+                    _BrandOrb(size: 40),
+                    SizedBox(width: 12),
                     Expanded(
-                      child: AnimatedAlign(
-                        duration: Duration(milliseconds: 220),
-                        alignment: compact
-                            ? Alignment.center
-                            : Alignment.centerLeft,
-                        child: Image.asset(
-                          'assets/img/cotimax-logo.png',
-                          height: 38,
-                          fit: BoxFit.contain,
+                      child: Text(
+                        'Cotimax',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.3,
+                          color: AppColors.textPrimary,
                         ),
                       ),
                     ),
                     if (!mobile)
                       IconButton(
+                        tooltip: trText('Contraer menú'),
                         onPressed: onToggleCollapsed,
-                        icon: Icon(
-                          compact
-                              ? Icons.keyboard_double_arrow_right_rounded
-                              : Icons.keyboard_double_arrow_left_rounded,
-                          size: 18,
-                        ),
+                        icon: Icon(CupertinoIcons.sidebar_left, size: 20),
                       ),
                   ],
                 ),
-              SizedBox(height: AppSpacing.md),
-              Container(height: 1, color: AppColors.border),
-              SizedBox(height: AppSpacing.md),
-              if (!compact)
-                Text(
-                  trText('COMERCIAL'),
-                  style: TextStyle(
-                    color: AppColors.textMuted,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.2,
+              SizedBox(height: compact ? 28 : 24),
+              Expanded(
+                child: ScrollConfiguration(
+                  behavior: ScrollConfiguration.of(
+                    context,
+                  ).copyWith(scrollbars: false),
+                  child: ListView(
+                    padding: EdgeInsets.zero,
+                    children: [
+                      if (!compact) _SidebarSectionLabel('Comercial'),
+                      ...primaryNavIndexes.map(navItem),
+                      Padding(
+                        padding: EdgeInsets.symmetric(
+                          vertical: 10,
+                          horizontal: compact ? 22 : 8,
+                        ),
+                        child: Container(height: 1, color: AppColors.border),
+                      ),
+                      if (!compact) _SidebarSectionLabel('Administración'),
+                      ...secondaryNavIndexes.map(navItem),
+                      SizedBox(height: 6),
+                      _QuickCreateButton(compact: compact, closeAfterTap: mobile),
+                    ],
                   ),
                 ),
-              if (!compact) SizedBox(height: 10),
-              Expanded(
-                child: ListView(
-                  children: [
-                    ...primaryNavIndexes.map(
-                      (index) => Padding(
-                        padding: EdgeInsets.only(bottom: 4),
-                        child: _NavItem(
-                          entry: appNavEntries[index],
-                          compact: compact,
-                          selected: activePath.startsWith(
-                            appNavEntries[index].$3,
-                          ),
-                          showCreate: creatablePaths.contains(
-                            appNavEntries[index].$3,
-                          ),
-                          closeAfterTap: mobile,
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: 10),
-                    Container(height: 1, color: AppColors.border),
-                    if (!compact) ...[
-                      SizedBox(height: 12),
-                      Text(
-                        trText('ADMINISTRACION'),
-                        style: TextStyle(
-                          color: AppColors.textMuted,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1.2,
-                        ),
-                      ),
-                      SizedBox(height: 10),
-                    ],
-                    ...secondaryNavIndexes.map(
-                      (index) => Padding(
-                        padding: EdgeInsets.only(bottom: 4),
-                        child: _NavItem(
-                          entry: appNavEntries[index],
-                          compact: compact,
-                          selected: activePath.startsWith(
-                            appNavEntries[index].$3,
-                          ),
-                          showCreate: creatablePaths.contains(
-                            appNavEntries[index].$3,
-                          ),
-                          closeAfterTap: mobile,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
               ),
-              Container(height: 1, color: AppColors.border),
-              SizedBox(height: AppSpacing.md),
-              compact
-                  ? Center(
-                      child: IconButton(
-                        onPressed: () => unawaited(logout()),
-                        icon: Icon(
-                          FontAwesomeIcons.arrowRightFromBracket.data,
-                          size: 14,
-                        ),
-                      ),
-                    )
-                  : Row(
-                      children: [
-                        usuarioActualAsync.when(
-                          loading: () => Expanded(
-                            child: Row(
-                              children: [
-                                Container(
-                                  height: 34,
-                                  width: 34,
-                                  alignment: Alignment.center,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.primary.withValues(
-                                      alpha: 0.12,
-                                    ),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Text(
-                                    '…',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: AppColors.primary,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                ),
-                                SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(
-                                    trText('Cargando...'),
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      color: AppColors.textPrimary,
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          error: (_, __) => Expanded(
-                            child: Row(
-                              children: [
-                                Container(
-                                  height: 34,
-                                  width: 34,
-                                  alignment: Alignment.center,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.primary.withValues(
-                                      alpha: 0.12,
-                                    ),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Text(
-                                    'U',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: AppColors.primary,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                ),
-                                SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(
-                                    trText('Cuenta'),
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      color: AppColors.textPrimary,
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          data: (usuario) {
-                            final displayName = usuario.nombre.trim().isNotEmpty
-                                ? usuario.nombre.trim()
-                                : (usuario.correo.trim().isNotEmpty
-                                      ? usuario.correo.trim()
-                                      : trText('Cuenta'));
-                            return Expanded(
-                              child: Row(
-                                children: [
-                                  Container(
-                                    height: 34,
-                                    width: 34,
-                                    alignment: Alignment.center,
-                                    decoration: BoxDecoration(
-                                      color: AppColors.primary.withValues(
-                                        alpha: 0.12,
-                                      ),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Text(
-                                      initialsFromName(displayName),
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: AppColors.primary,
-                                        fontWeight: FontWeight.w800,
-                                      ),
-                                    ),
-                                  ),
-                                  SizedBox(width: 10),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          displayName,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                            color: AppColors.textPrimary,
-                                            fontWeight: FontWeight.w700,
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                        SizedBox(height: 2),
-                                        Text(
-                                          userRoleLabel(usuario.rol),
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                            color: AppColors.textSecondary,
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: 11,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                        IconButton(
-                          onPressed: () => unawaited(logout()),
-                          icon: Icon(
-                            FontAwesomeIcons.arrowRightFromBracket.data,
-                            size: 14,
-                          ),
-                        ),
-                      ],
-                    ),
+              SizedBox(height: 8),
+              accountMenu,
             ],
           ),
         ),
@@ -967,10 +838,403 @@ class SidebarNavigation extends ConsumerWidget {
   }
 }
 
+class _SidebarSectionLabel extends StatelessWidget {
+  const _SidebarSectionLabel(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(12, 4, 12, 8),
+      child: Text(
+        trText(label),
+        style: TextStyle(
+          color: AppColors.textMuted,
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
+}
+
+/// "+" square in the rail: opens a quick-create popover (Muse new-item button).
+class _QuickCreateButton extends StatelessWidget {
+  const _QuickCreateButton({required this.compact, this.closeAfterTap = false});
+
+  final bool compact;
+  final bool closeAfterTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final entries = appNavEntries
+        .where((entry) => creatablePaths.contains(entry.$3))
+        .toList(growable: false);
+
+    return PopupMenuButton<String>(
+      tooltip: trText('Crear nuevo'),
+      position: PopupMenuPosition.over,
+      offset: Offset(compact ? 64 : 0, 0),
+      onSelected: (path) {
+        if (closeAfterTap) Navigator.of(context).pop();
+        context.go('$path?create=1');
+      },
+      itemBuilder: (_) => [
+        for (final entry in entries)
+          PopupMenuItem<String>(
+            value: entry.$3,
+            height: 42,
+            child: Row(
+              children: [
+                Icon(entry.$2, size: 19, color: AppColors.textPrimary),
+                SizedBox(width: 12),
+                Text(entry.$1),
+              ],
+            ),
+          ),
+      ],
+      child: _RailIconSurface(
+        compact: compact,
+        icon: Icons.add_box_outlined,
+        label: trText('Crear nuevo'),
+        selected: false,
+      ),
+    );
+  }
+}
+
+/// Bottom "≡" button: account popover with profile, settings and logout.
+class _AccountMenuButton extends StatelessWidget {
+  const _AccountMenuButton({
+    required this.compact,
+    required this.displayName,
+    required this.roleLabel,
+    required this.onLogout,
+    this.closeAfterTap = false,
+  });
+
+  final bool compact;
+  final String displayName;
+  final String roleLabel;
+  final VoidCallback onLogout;
+  final bool closeAfterTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<String>(
+      tooltip: trText('Cuenta'),
+      position: PopupMenuPosition.over,
+      offset: Offset(compact ? 64 : 0, -8),
+      onSelected: (value) {
+        if (closeAfterTap) Navigator.of(context).pop();
+        switch (value) {
+          case 'settings':
+            context.go(RoutePaths.configuracion);
+          case 'users':
+            context.go(RoutePaths.usuarios);
+          case 'logout':
+            onLogout();
+        }
+      },
+      itemBuilder: (_) => [
+        PopupMenuItem<String>(
+          enabled: false,
+          height: 64,
+          child: Row(
+            children: [
+              _InitialsAvatar(name: displayName, size: 38),
+              SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      displayName,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                    if (roleLabel.isNotEmpty)
+                      Text(
+                        roleLabel,
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12.5,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        PopupMenuDivider(height: 8),
+        PopupMenuItem<String>(
+          value: 'settings',
+          height: 42,
+          child: _MenuRow(
+            icon: Icons.settings_outlined,
+            label: trText('Configuración'),
+          ),
+        ),
+        PopupMenuItem<String>(
+          value: 'users',
+          height: 42,
+          child: _MenuRow(
+            icon: Icons.group_outlined,
+            label: trText('Usuarios'),
+          ),
+        ),
+        PopupMenuDivider(height: 8),
+        PopupMenuItem<String>(
+          value: 'logout',
+          height: 42,
+          child: _MenuRow(
+            icon: Icons.logout_rounded,
+            label: trText('Cerrar sesión'),
+          ),
+        ),
+      ],
+      child: compact
+          ? _RailIconSurface(
+              compact: true,
+              icon: Icons.menu_rounded,
+              label: displayName,
+              selected: false,
+            )
+          : Container(
+              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                children: [
+                  _InitialsAvatar(name: displayName, size: 34),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          displayName,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13.5,
+                          ),
+                        ),
+                        if (roleLabel.isNotEmpty)
+                          Text(
+                            roleLabel,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 12,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    Icons.unfold_more_rounded,
+                    size: 18,
+                    color: AppColors.textMuted,
+                  ),
+                ],
+              ),
+            ),
+    );
+  }
+}
+
+class _MenuRow extends StatelessWidget {
+  const _MenuRow({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 19, color: AppColors.textPrimary),
+        SizedBox(width: 12),
+        Text(label),
+      ],
+    );
+  }
+}
+
+class _InitialsAvatar extends StatelessWidget {
+  const _InitialsAvatar({required this.name, this.size = 36});
+
+  final String name;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(color: AppColors.muted, shape: BoxShape.circle),
+      child: Text(
+        initialsFromName(name),
+        style: TextStyle(
+          fontSize: size * 0.34,
+          color: AppColors.textSecondary,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
+/// Shared visual for rail items: 48px circle, muted when selected/hovered.
+class _RailIconSurface extends StatefulWidget {
+  const _RailIconSurface({
+    required this.compact,
+    required this.icon,
+    required this.label,
+    required this.selected,
+  });
+
+  final bool compact;
+  final IconData icon;
+  final String label;
+  final bool selected;
+
+  @override
+  State<_RailIconSurface> createState() => _RailIconSurfaceState();
+}
+
+class _RailIconSurfaceState extends State<_RailIconSurface> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final background = widget.selected
+        ? AppColors.mutedStrong
+        : _hovered
+        ? AppColors.muted
+        : Colors.transparent;
+    final surface = MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: AnimatedContainer(
+        duration: _microInteractionDuration,
+        curve: _microInteractionCurve,
+        width: widget.compact ? 50 : double.infinity,
+        height: widget.compact ? 50 : 44,
+        padding: EdgeInsets.symmetric(horizontal: widget.compact ? 0 : 12),
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(widget.compact ? 999 : 14),
+        ),
+        child: widget.compact
+            ? Icon(widget.icon, size: 23, color: AppColors.textPrimary)
+            : Row(
+                children: [
+                  Icon(widget.icon, size: 21, color: AppColors.textPrimary),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      widget.label,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w500,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+      ),
+    );
+    return widget.compact ? Center(child: surface) : surface;
+  }
+}
+
+/// Floating white pill used in the top bar (Muse "☰ Chats" / "Invite").
+class _TopbarPill extends StatefulWidget {
+  const _TopbarPill({
+    required this.child,
+    this.onTap,
+    this.circular = false,
+    this.tooltip,
+  });
+
+  final Widget child;
+  final VoidCallback? onTap;
+  final bool circular;
+  final String? tooltip;
+
+  @override
+  State<_TopbarPill> createState() => _TopbarPillState();
+}
+
+class _TopbarPillState extends State<_TopbarPill> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget pill = MouseRegion(
+      cursor: widget.onTap == null
+          ? MouseCursor.defer
+          : SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: _microInteractionDuration,
+          curve: _microInteractionCurve,
+          height: 44,
+          width: widget.circular ? 44 : null,
+          padding: widget.circular
+              ? EdgeInsets.zero
+              : EdgeInsets.symmetric(horizontal: 16),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: _hovered
+                ? Color.alphaBlend(AppColors.muted, AppColors.container)
+                : AppColors.container,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: AppColors.border.withValues(alpha: 0.7)),
+            boxShadow: AppColors.softShadow,
+          ),
+          child: widget.child,
+        ),
+      ),
+    );
+    if (widget.tooltip != null) {
+      pill = Tooltip(message: widget.tooltip!, child: pill);
+    }
+    return pill;
+  }
+}
+
 class Topbar extends ConsumerWidget {
-  Topbar({required this.title, this.onMenuTap, this.onSearchTap, super.key});
+  Topbar({
+    required this.title,
+    this.activePath = '',
+    this.sidebarExpanded = false,
+    this.onMenuTap,
+    this.onSearchTap,
+    super.key,
+  });
 
   final String title;
+  final String activePath;
+  final bool sidebarExpanded;
   final VoidCallback? onMenuTap;
   final VoidCallback? onSearchTap;
 
@@ -981,134 +1245,139 @@ class Topbar extends ConsumerWidget {
     final mobile = width < 900;
     final pendingInvitesCount =
         ref.watch(pendingTeamInvitesCountProvider).value ?? 0;
+    final sectionLabel = _navLabelForPath(activePath).isNotEmpty
+        ? _navLabelForPath(activePath)
+        : title;
 
-    return AnimatedContainer(
-      duration: Duration(milliseconds: 220),
-      curve: Curves.easeOutCubic,
-      height: mobile ? 72 : 84,
-      decoration: BoxDecoration(
-        color: AppColors.white.withValues(alpha: 0.92),
-        border: Border(bottom: BorderSide(color: AppColors.border)),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.03),
-            blurRadius: 18,
-            offset: Offset(0, 6),
-          ),
-        ],
-      ),
-      padding: EdgeInsets.symmetric(
-        horizontal: mobile ? AppSpacing.md : AppSpacing.lg,
-      ),
+    return Container(
+      height: mobile ? 68 : 76,
+      color: AppColors.background,
+      padding: EdgeInsets.symmetric(horizontal: mobile ? 12 : 24),
       child: Row(
         children: [
-          if (mobile)
-            IconButton(onPressed: onMenuTap, icon: Icon(Icons.menu_rounded)),
-          if (mobile)
-            IconButton(
-              onPressed: onSearchTap,
-              icon: Icon(Icons.search_rounded),
-            ),
-          Expanded(
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                title,
-                style: TextStyle(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 22,
-                  height: 1,
+          _TopbarPill(
+            onTap: onMenuTap,
+            tooltip: mobile
+                ? null
+                : (sidebarExpanded
+                      ? trText('Contraer menú')
+                      : trText('Expandir menú')),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.menu_rounded,
+                  size: 20,
+                  color: AppColors.textPrimary,
                 ),
-              ),
-            ),
-          ),
-          if (!compact)
-            SizedBox(
-              width: 360,
-              child: SearchField(
-                hint: trText('Busca clientes, folios, productos o acciones'),
-                readOnly: true,
-                onTap: onSearchTap,
-                suffix: _CommandPaletteShortcutHint(),
-              ),
-            ),
-          SizedBox(width: AppSpacing.sm),
-          if (!compact)
-            AnimatedContainer(
-              duration: Duration(milliseconds: 220),
-              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(
-                border: Border.all(color: AppColors.border),
-                borderRadius: BorderRadius.circular(AppSpacing.radius),
-                color: AppColors.background,
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    FontAwesomeIcons.calendarDays.data,
-                    size: 13,
-                    color: AppColors.textSecondary,
-                  ),
-                  SizedBox(width: 8),
-                  Text(
-                    trText('Vista diaria'),
+                SizedBox(width: 10),
+                ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: mobile ? 150 : 260),
+                  child: Text(
+                    sectionLabel,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
                       color: AppColors.textPrimary,
-                      fontWeight: FontWeight.w700,
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          SizedBox(width: AppSpacing.sm),
-          if (!mobile) ...[
-            IconButton(
-              onPressed: () {
-                ref.invalidate(pendingTeamInvitesProvider);
-                showDialog(
-                  context: context,
-                  builder: (_) => TeamInvitesDialog(),
-                );
-              },
-              icon: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Icon(FontAwesomeIcons.bell.data, size: 14),
-                  if (pendingInvitesCount > 0)
-                    Positioned(
-                      right: -6,
-                      top: -6,
-                      child: Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.accent,
-                          borderRadius: BorderRadius.circular(999),
-                          border: Border.all(
-                            color: AppColors.white,
-                            width: 1.4,
-                          ),
-                        ),
-                        child: Text(
-                          pendingInvitesCount > 99
-                              ? '99+'
-                              : pendingInvitesCount.toString(),
-                          style: TextStyle(
-                            color: AppColors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w900,
-                            height: 1.1,
-                          ),
+          ),
+          Spacer(),
+          if (!compact)
+            _TopbarPill(
+              onTap: onSearchTap,
+              child: SizedBox(
+                width: 300,
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.search_rounded,
+                      size: 20,
+                      color: AppColors.textSecondary,
+                    ),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        trText('Buscar'),
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 14.5,
                         ),
                       ),
                     ),
-                ],
+                    _CommandPaletteShortcutHint(),
+                  ],
+                ),
+              ),
+            )
+          else
+            _TopbarPill(
+              circular: true,
+              onTap: onSearchTap,
+              tooltip: trText('Buscar'),
+              child: Icon(
+                Icons.search_rounded,
+                size: 20,
+                color: AppColors.textPrimary,
               ),
             ),
-          ],
+          SizedBox(width: 10),
+          _TopbarPill(
+            onTap: () {
+              ref.invalidate(pendingTeamInvitesProvider);
+              showDialog(context: context, builder: (_) => TeamInvitesDialog());
+            },
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Icon(
+                      Icons.notifications_none_rounded,
+                      size: 21,
+                      color: AppColors.textPrimary,
+                    ),
+                    if (pendingInvitesCount > 0)
+                      Positioned(
+                        right: -1,
+                        top: -1,
+                        child: Container(
+                          width: 9,
+                          height: 9,
+                          decoration: BoxDecoration(
+                            color: AppColors.error,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: AppColors.container,
+                              width: 1.5,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                if (!mobile) ...[
+                  SizedBox(width: 8),
+                  Text(
+                    pendingInvitesCount > 0
+                        ? '${trText('Invitaciones')} · ${pendingInvitesCount > 99 ? '99+' : pendingInvitesCount}'
+                        : trText('Invitaciones'),
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -1121,18 +1390,17 @@ class _CommandPaletteShortcutHint extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppColors.border),
+        color: AppColors.muted,
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
-        'Ctrl/Cmd + K',
+        '⌘K',
         style: TextStyle(
           color: AppColors.textSecondary,
-          fontSize: 11,
-          fontWeight: FontWeight.w800,
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
         ),
       ),
     );
@@ -1151,13 +1419,13 @@ class BreadCrumbs extends StatelessWidget {
       children: [
         for (var i = 0; i < items.length; i++)
           Text(
-            i == items.length - 1 ? trText(items[i]) : '${trText(items[i])} /',
+            i == items.length - 1 ? trText(items[i]) : '${trText(items[i])}  ›',
             style: TextStyle(
               color: i == items.length - 1
-                  ? AppColors.textPrimary
+                  ? AppColors.textSecondary
                   : AppColors.textMuted,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
             ),
           ),
       ],
@@ -1165,6 +1433,7 @@ class BreadCrumbs extends StatelessWidget {
   }
 }
 
+/// Muse page header: big bold title, calm gray subtitle, pill actions.
 class PageHeader extends StatelessWidget {
   PageHeader({
     required this.title,
@@ -1180,72 +1449,60 @@ class PageHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final mobile = MediaQuery.sizeOf(context).width < 900;
-    return mobile
-        ? Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              BreadCrumbs(items: [trText('Inicio'), trText(title)]),
-              SizedBox(height: 10),
-              Text(
-                trText(title),
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w800,
-                  height: 1,
-                ),
-              ),
-              if (subtitle.trim().isNotEmpty) ...[
-                SizedBox(height: 6),
-                Text(
-                  trText(subtitle),
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                  ),
-                ),
-              ],
-              if (actions != null) ...[
-                SizedBox(height: 12),
-                Wrap(spacing: 8, runSpacing: 8, children: actions!),
-              ],
-            ],
-          )
-        : Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    BreadCrumbs(items: [trText('Inicio'), trText(title)]),
-                    SizedBox(height: 10),
-                    Text(
-                      trText(title),
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w800,
-                        height: 1,
-                      ),
-                    ),
-                    if (subtitle.trim().isNotEmpty) ...[
-                      SizedBox(height: 6),
-                      Text(
-                        trText(subtitle),
-                        style: TextStyle(
-                          color: AppColors.textSecondary,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              if (actions != null)
-                Wrap(spacing: 8, runSpacing: 8, children: actions!),
-            ],
+    final titleText = Text(
+      trText(title),
+      style: TextStyle(
+        fontSize: mobile ? 30 : 40,
+        fontWeight: FontWeight.w700,
+        letterSpacing: mobile ? -0.6 : -0.9,
+        height: 1.05,
+        color: AppColors.textPrimary,
+      ),
+    );
+    final subtitleText = subtitle.trim().isEmpty
+        ? null
+        : Text(
+            trText(subtitle),
+            style: TextStyle(
+              color: AppColors.textSecondary,
+              fontWeight: FontWeight.w400,
+              fontSize: mobile ? 15 : 17,
+              height: 1.4,
+            ),
           );
+
+    final heading = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        titleText,
+        if (subtitleText != null) ...[SizedBox(height: 10), subtitleText],
+      ],
+    );
+
+    return Padding(
+      padding: EdgeInsets.only(top: mobile ? 4 : 8, bottom: 12),
+      child: mobile
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                heading,
+                if (actions != null) ...[
+                  SizedBox(height: 16),
+                  Wrap(spacing: 8, runSpacing: 8, children: actions!),
+                ],
+              ],
+            )
+          : Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(child: heading),
+                if (actions != null) ...[
+                  SizedBox(width: 16),
+                  Wrap(spacing: 8, runSpacing: 8, children: actions!),
+                ],
+              ],
+            ),
+    );
   }
 }
 
@@ -1304,38 +1561,49 @@ class KpiStatCard extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              color: AppColors.textMuted,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
+              color: AppColors.textSecondary,
+              fontSize: 13.5,
+              fontWeight: FontWeight.w500,
             ),
           ),
           Spacer(),
           Text(
             value,
             style: TextStyle(
-              fontWeight: FontWeight.w800,
-              fontSize: 24,
+              fontWeight: FontWeight.w700,
+              fontSize: 28,
+              letterSpacing: -0.6,
               color: AppColors.textPrimary,
             ),
           ),
-          SizedBox(height: 6),
-          Row(
-            children: [
-              Icon(
-                positive ? Icons.north_east : Icons.south_east,
-                size: 14,
-                color: color,
-              ),
-              SizedBox(width: 4),
-              Text(
-                delta,
-                style: TextStyle(
+          SizedBox(height: 8),
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: positive ? AppColors.successSoft : AppColors.errorSoft,
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  positive
+                      ? Icons.arrow_outward_rounded
+                      : Icons.south_east_rounded,
+                  size: 13,
                   color: color,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
                 ),
-              ),
-            ],
+                SizedBox(width: 4),
+                Text(
+                  delta,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -1436,15 +1704,14 @@ class ContainerHelpTooltip extends StatelessWidget {
     return Tooltip(
       message: trText(message),
       child: Container(
-        width: 22,
-        height: 22,
+        width: 26,
+        height: 26,
         decoration: BoxDecoration(
-          color: AppColors.background,
+          color: AppColors.muted,
           shape: BoxShape.circle,
-          border: Border.all(color: AppColors.border),
         ),
         child: Icon(
-          Icons.help_outline_rounded,
+          Icons.question_mark_rounded,
           size: 14,
           color: AppColors.textSecondary,
         ),
@@ -1453,6 +1720,8 @@ class ContainerHelpTooltip extends StatelessWidget {
   }
 }
 
+/// Muse / call-card surface: white, large radius, hairline border and a soft
+/// diffuse shadow. Titled cards get a header row separated by a hairline.
 class SectionCard extends StatelessWidget {
   SectionCard({
     required this.child,
@@ -1472,100 +1741,69 @@ class SectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final helpText = title == null ? null : resolveContainerHelpText(title!);
-    final showColoredHeader = title != null && headerBackgroundColor != null;
+    final hasHeaderDivider = title != null && headerBackgroundColor != null;
 
-    return _MotionSurface(
-      hoverOffset: 0,
-      enablePress: false,
-      child: Card(
-        clipBehavior: Clip.antiAlias,
-        child: showColoredHeader
+    Widget header() => Row(
+      children: [
+        if (titleIcon != null) ...[
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: AppColors.muted,
+              borderRadius: BorderRadius.circular(11),
+              border: Border.all(color: AppColors.border.withValues(alpha: 0.6)),
+            ),
+            child: Icon(titleIcon, size: 15, color: AppColors.textPrimary),
+          ),
+          SizedBox(width: 12),
+        ],
+        Expanded(
+          child: Text(
+            trText(title!),
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 17,
+              letterSpacing: -0.2,
+              color: AppColors.textPrimary,
+            ),
+          ),
+        ),
+        if (trailing != null) ...[
+          trailing!,
+          if (helpText != null) SizedBox(width: 8),
+        ],
+        if (helpText != null) ContainerHelpTooltip(message: helpText),
+      ],
+    );
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.container,
+        borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+        border: Border.all(color: AppColors.border),
+        boxShadow: AppColors.softShadow,
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+        child: hasHeaderDivider
             ? Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    color: headerBackgroundColor,
-                    padding: EdgeInsets.all(AppSpacing.md),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Row(
-                            children: [
-                              if (titleIcon != null) ...[
-                                Icon(
-                                  titleIcon,
-                                  size: 16,
-                                  color: AppColors.textPrimary,
-                                ),
-                                SizedBox(width: 8),
-                              ],
-                              Expanded(
-                                child: Text(
-                                  trText(title!),
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 17,
-                                    color: AppColors.textPrimary,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (trailing != null) ...[
-                          trailing!,
-                          if (helpText != null) SizedBox(width: 8),
-                        ],
-                        if (helpText != null)
-                          ContainerHelpTooltip(message: helpText),
-                      ],
-                    ),
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(20, 16, 20, 16),
+                    child: header(),
                   ),
                   Container(height: 1, color: AppColors.border),
-                  Padding(padding: EdgeInsets.all(AppSpacing.md), child: child),
+                  Padding(padding: EdgeInsets.all(20), child: child),
                 ],
               )
             : Padding(
-                padding: EdgeInsets.all(AppSpacing.md),
+                padding: EdgeInsets.all(20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (title != null)
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Row(
-                              children: [
-                                if (titleIcon != null) ...[
-                                  Icon(
-                                    titleIcon,
-                                    size: 16,
-                                    color: AppColors.textPrimary,
-                                  ),
-                                  SizedBox(width: 8),
-                                ],
-                                Expanded(
-                                  child: Text(
-                                    trText(title!),
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w800,
-                                      fontSize: 17,
-                                      color: AppColors.textPrimary,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          if (trailing != null) ...[
-                            trailing!,
-                            if (helpText != null) SizedBox(width: 8),
-                          ],
-                          if (helpText != null)
-                            ContainerHelpTooltip(message: helpText),
-                        ],
-                      ),
-                    if (title != null) SizedBox(height: 14),
+                    if (title != null) ...[header(), SizedBox(height: 16)],
                     child,
                   ],
                 ),
@@ -1575,66 +1813,143 @@ class SectionCard extends StatelessWidget {
   }
 }
 
-class _MotionSurface extends StatefulWidget {
-  _MotionSurface({
+/// Soft inner panel (call-card transcript / player area).
+class MusePanel extends StatelessWidget {
+  const MusePanel({
     required this.child,
-    this.hoverOffset = -1.5,
-    this.pressedScale = 0.992,
-    this.enablePress = true,
+    this.padding = const EdgeInsets.all(16),
+    this.tone = MusePanelTone.neutral,
+    super.key,
   });
 
   final Widget child;
-  final double hoverOffset;
-  final double pressedScale;
-  final bool enablePress;
-
-  @override
-  State<_MotionSurface> createState() => _MotionSurfaceState();
-}
-
-class _MotionSurfaceState extends State<_MotionSurface> {
-  bool _hovered = false;
-  bool _pressed = false;
+  final EdgeInsetsGeometry padding;
+  final MusePanelTone tone;
 
   @override
   Widget build(BuildContext context) {
-    final translateY = _hovered
-        ? (_pressed ? widget.hoverOffset / 2 : widget.hoverOffset)
-        : 0.0;
-    final scale = widget.enablePress && _pressed ? widget.pressedScale : 1.0;
+    final (background, borderColor) = switch (tone) {
+      MusePanelTone.neutral => (AppColors.muted, AppColors.border),
+      MusePanelTone.success => (
+        AppColors.successSoft,
+        AppColors.success.withValues(alpha: 0.18),
+      ),
+      MusePanelTone.error => (
+        AppColors.errorSoft,
+        AppColors.error.withValues(alpha: 0.18),
+      ),
+    };
+    return Container(
+      width: double.infinity,
+      padding: padding,
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderColor),
+      ),
+      child: child,
+    );
+  }
+}
 
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) {
-        if (!_hovered && !_pressed) return;
-        setState(() {
-          _hovered = false;
-          _pressed = false;
-        });
-      },
-      child: Listener(
-        onPointerDown: widget.enablePress
-            ? (_) => setState(() => _pressed = true)
-            : null,
-        onPointerUp: widget.enablePress
-            ? (_) => setState(() => _pressed = false)
-            : null,
-        onPointerCancel: widget.enablePress
-            ? (_) => setState(() => _pressed = false)
-            : null,
+enum MusePanelTone { neutral, success, error }
+
+/// Pill-shaped tab (Muse settings list / segmented selection).
+class CotimaxTabPill extends StatelessWidget {
+  const CotimaxTabPill({
+    required this.label,
+    required this.selected,
+    this.onTap,
+    this.icon,
+    super.key,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback? onTap;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
         child: AnimatedContainer(
           duration: _microInteractionDuration,
           curve: _microInteractionCurve,
-          transformAlignment: Alignment.center,
-          transform: Matrix4.identity()
-            ..translateByDouble(0, translateY, 0, 1)
-            ..scaleByDouble(scale, scale, 1, 1),
-          child: widget.child,
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+          decoration: BoxDecoration(
+            color: selected ? AppColors.container : Colors.transparent,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: selected ? AppColors.border : Colors.transparent,
+            ),
+            boxShadow: selected
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.06),
+                      blurRadius: 8,
+                      offset: Offset(0, 2),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (icon != null) ...[
+                Icon(
+                  icon,
+                  size: 17,
+                  color: selected
+                      ? AppColors.textPrimary
+                      : AppColors.textSecondary,
+                ),
+                SizedBox(width: 8),
+              ],
+              Text(
+                trText(label),
+                style: TextStyle(
+                  color: selected
+                      ? AppColors.textPrimary
+                      : AppColors.textSecondary,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
+
+/// Muted track that hosts [CotimaxTabPill]s (Muse "Available / Connected").
+class CotimaxTabTrack extends StatelessWidget {
+  const CotimaxTabTrack({required this.children, super.key});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: AppColors.muted,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(mainAxisSize: MainAxisSize.min, children: children),
+      ),
+    );
+  }
+}
+
+
 
 class SearchField extends StatelessWidget {
   SearchField({
@@ -1660,6 +1975,10 @@ class SearchField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final pill = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(999),
+      borderSide: BorderSide.none,
+    );
     final field = TextField(
       controller: controller,
       focusNode: focusNode,
@@ -1668,28 +1987,38 @@ class SearchField extends StatelessWidget {
       readOnly: readOnly,
       onTap: onTap,
       showCursor: !readOnly,
+      style: TextStyle(fontSize: 14.5, color: AppColors.textPrimary),
       decoration: InputDecoration(
         prefixIcon: Padding(
-          padding: EdgeInsets.only(left: 14, right: 10),
+          padding: EdgeInsets.only(left: 16, right: 8),
           child: Icon(
-            FontAwesomeIcons.magnifyingGlass.data,
-            size: 14,
-            color: AppColors.textMuted,
+            Icons.search_rounded,
+            size: 20,
+            color: AppColors.textSecondary,
           ),
         ),
         hintText: trText(hint),
-        prefixIconConstraints: BoxConstraints(minWidth: 42),
+        prefixIconConstraints: BoxConstraints(minWidth: 44),
         suffixIcon: suffix == null
             ? null
             : Padding(padding: EdgeInsets.only(right: 12), child: suffix),
         suffixIconConstraints: BoxConstraints(minWidth: 0, minHeight: 0),
         contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        border: pill,
+        enabledBorder: pill,
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(999),
+          borderSide: BorderSide(
+            color: AppColors.primary.withValues(alpha: 0.5),
+            width: 1.4,
+          ),
+        ),
       ),
     );
 
     if (!readOnly) return field;
 
-    return _MotionSurface(hoverOffset: -1, pressedScale: 0.995, child: field);
+    return MouseRegion(cursor: SystemMouseCursors.click, child: field);
   }
 }
 
@@ -1700,18 +2029,11 @@ class FilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SectionCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: children,
-          ),
-        ],
-      ),
+    return Wrap(
+      spacing: AppSpacing.sm,
+      runSpacing: AppSpacing.sm,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: children,
     );
   }
 }
@@ -1732,7 +2054,7 @@ class InlineEmptyMessage extends StatelessWidget {
           textAlign: TextAlign.center,
           style: TextStyle(
             color: AppColors.textSecondary,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w600,
             fontSize: 13,
             height: 1.45,
           ),
@@ -1795,47 +2117,64 @@ class EmptyStateWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
-      child: SectionCard(
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: 56, horizontal: 16),
         child: Center(
           child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: 560),
+            constraints: BoxConstraints(maxWidth: 460),
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Container(
-                  height: 64,
-                  width: 64,
-                  decoration: BoxDecoration(
-                    color: AppColors.background,
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Icon(
-                    Icons.inbox_outlined,
-                    size: 28,
-                    color: AppColors.textMuted,
-                  ),
-                ),
-                SizedBox(height: 10),
+                _MuseEmptyIcon(icon: Icons.inbox_outlined),
+                SizedBox(height: 20),
                 Text(
                   trText(title),
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 19,
+                    letterSpacing: -0.2,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
-                SizedBox(height: 4),
+                SizedBox(height: 6),
                 Text(
                   trText(subtitle),
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: AppColors.textSecondary),
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 14.5,
+                    height: 1.45,
+                  ),
                 ),
-                if (action != null) SizedBox(height: 12),
-                if (action != null) Center(child: action!),
+                if (action != null) ...[SizedBox(height: 20), action!],
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class _MuseEmptyIcon extends StatelessWidget {
+  const _MuseEmptyIcon({required this.icon, this.color});
+
+  final IconData icon;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 76,
+      height: 76,
+      decoration: BoxDecoration(
+        color: AppColors.container,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.border),
+        boxShadow: AppColors.softShadow,
+      ),
+      child: Icon(icon, size: 32, color: color ?? AppColors.textSecondary),
     );
   }
 }
@@ -1856,65 +2195,56 @@ class ErrorStateWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
-      child: SectionCard(
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: 48, horizontal: 16),
         child: Center(
           child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: 640),
+            constraints: BoxConstraints(maxWidth: 560),
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Container(
-                  height: 64,
-                  width: 64,
-                  decoration: BoxDecoration(
-                    color: AppColors.background,
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Icon(
-                    Icons.inbox_outlined,
-                    size: 28,
-                    color: AppColors.textMuted,
-                  ),
+                _MuseEmptyIcon(
+                  icon: Icons.error_outline_rounded,
+                  color: AppColors.error,
                 ),
-                SizedBox(height: 10),
+                SizedBox(height: 20),
                 Text(
                   trText('Ocurrio un error'),
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 19,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
-                SizedBox(height: 4),
+                SizedBox(height: 6),
                 Text(
                   trText(message),
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: AppColors.textSecondary),
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 14.5,
+                    height: 1.45,
+                  ),
                 ),
                 if (details != null && details!.trim().isNotEmpty) ...[
-                  SizedBox(height: 12),
-                  Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppColors.background,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppColors.border),
-                    ),
+                  SizedBox(height: 16),
+                  MusePanel(
+                    padding: EdgeInsets.all(14),
                     child: SelectableText(
                       details!,
-                      textAlign: TextAlign.left,
                       style: TextStyle(
                         color: AppColors.textSecondary,
-                        fontSize: 12,
+                        fontSize: 12.5,
                         height: 1.4,
                       ),
                     ),
                   ),
                 ],
-                SizedBox(height: 12),
+                SizedBox(height: 20),
                 OutlinedButton.icon(
                   onPressed: onRetry,
-                  icon: Icon(Icons.refresh),
+                  icon: Icon(Icons.refresh_rounded, size: 18),
                   label: Text(trText('Reintentar')),
                 ),
               ],
@@ -1933,31 +2263,28 @@ class LoadingStateWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SectionCard(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(minHeight: 120),
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SizedBox(
-                width: 28,
-                height: 28,
-                child: CircularProgressIndicator(strokeWidth: 2.4),
+    return ConstrainedBox(
+      constraints: BoxConstraints(minHeight: 160),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.2,
+                color: AppColors.textSecondary,
               ),
-              if (message != null) ...[
-                SizedBox(height: 12),
-                Text(
-                  trText(message!),
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
+            ),
+            if (message != null) ...[
+              SizedBox(height: 14),
+              Text(
+                trText(message!),
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+              ),
             ],
-          ),
+          ],
         ),
       ),
     );
@@ -2142,14 +2469,8 @@ class _ConfirmDialogState extends State<ConfirmDialog> {
           Text(trText(widget.message)),
           if (_isLoadingDependencies || hasDependencyMessage) ...[
             SizedBox(height: 12),
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.background,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.border),
-              ),
+            MusePanel(
+              padding: EdgeInsets.all(14),
               child: _isLoadingDependencies
                   ? Row(
                       mainAxisSize: MainAxisSize.min,
@@ -2238,70 +2559,71 @@ class ModalBase extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
-    final maxHeight = size.height * 0.955;
+    final maxHeight = size.height * 0.94;
     final minHeight = size.height < 760
         ? size.height * 0.86
         : size.height * 0.82;
-    final maxWidth = size.width * 0.965;
-    final minWidth = size.width < 1200 ? size.width * 0.92 : size.width * 0.88;
+    final maxWidth = size.width * 0.94;
+    final minWidth = size.width < 1200 ? size.width * 0.9 : size.width * 0.84;
     return Dialog(
-      insetPadding: EdgeInsets.all(12),
-      backgroundColor: AppColors.white,
+      insetPadding: EdgeInsets.all(16),
+      backgroundColor: AppColors.container,
       surfaceTintColor: Colors.transparent,
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppSpacing.dialogRadius),
+      ),
       clipBehavior: Clip.antiAlias,
       child: ConstrainedBox(
         constraints: BoxConstraints(
-          minWidth: minWidth.clamp(340.0, 1280.0).toDouble(),
-          maxWidth: maxWidth.clamp(980.0, 1560.0).toDouble(),
+          minWidth: minWidth.clamp(340.0, 1240.0).toDouble(),
+          maxWidth: maxWidth.clamp(980.0, 1480.0).toDouble(),
           minHeight: minHeight.clamp(420.0, 980.0).toDouble(),
           maxHeight: maxHeight,
         ),
-        child: ColoredBox(
-          color: AppColors.white,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: EdgeInsets.fromLTRB(14, 14, 14, 12),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        trText(title),
-                        style: TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 18,
-                          color: AppColors.textPrimary,
-                        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: EdgeInsets.fromLTRB(28, 22, 18, 16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      trText(title),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 24,
+                        letterSpacing: -0.4,
+                        color: AppColors.textPrimary,
                       ),
                     ),
-                    if (showCloseButton)
-                      _HoverCircleButton(
-                        onTap: () => Navigator.of(context).pop(),
-                        icon: Icons.close,
-                        baseColor: AppColors.background,
-                        hoverColor: AppColors.accent,
-                        baseIconColor: AppColors.textPrimary,
-                        hoverIconColor: AppColors.white,
-                      ),
-                  ],
-                ),
-              ),
-              Container(height: 1, color: AppColors.border),
-              Expanded(
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(14, 12, 14, 14),
-                  child: FocusTraversalGroup(
-                    policy: WidgetOrderTraversalPolicy(),
-                    child: SizedBox.expand(child: child),
                   ),
+                  if (showCloseButton)
+                    _HoverCircleButton(
+                      onTap: () => Navigator.of(context).pop(),
+                      icon: Icons.close_rounded,
+                      size: 38,
+                      iconSize: 19,
+                      baseColor: AppColors.muted,
+                      hoverColor: AppColors.mutedStrong,
+                      baseIconColor: AppColors.textPrimary,
+                      hoverIconColor: AppColors.textPrimary,
+                    ),
+                ],
+              ),
+            ),
+            Container(height: 1, color: AppColors.border),
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(28, 20, 28, 24),
+                child: FocusTraversalGroup(
+                  policy: WidgetOrderTraversalPolicy(),
+                  child: SizedBox.expand(child: child),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -2342,7 +2664,7 @@ class FormFieldWrapper extends StatelessWidget {
         Text(
           trText(label),
           style: TextStyle(
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w600,
             fontSize: 12,
             color: AppColors.textSecondary,
           ),
@@ -2455,7 +2777,7 @@ Future<DateTime?> showCotimaxDatePicker({
           backgroundColor: scheme.surface,
           surfaceTintColor: Colors.transparent,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(20),
             side: BorderSide(color: scheme.outline.withValues(alpha: 0.65)),
           ),
           headerBackgroundColor: scheme.primary.withValues(alpha: 0.10),
@@ -2585,28 +2907,40 @@ class StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final map = {
-      QuoteStatus.borrador: (AppColors.textMuted, 'Borrador'),
+      QuoteStatus.borrador: (AppColors.textSecondary, 'Borrador'),
       QuoteStatus.enviada: (AppColors.primary, 'Enviada'),
       QuoteStatus.aprobada: (AppColors.success, 'Aprobada'),
-      QuoteStatus.pagada: (AppColors.error, 'Pagada'),
+      QuoteStatus.pagada: (AppColors.success, 'Pagada'),
       QuoteStatus.rechazada: (AppColors.error, 'Rechazada'),
     };
     final style = map[status]!;
 
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: style.$1.withValues(alpha: 0.09),
+        color: status == QuoteStatus.borrador
+            ? AppColors.muted
+            : style.$1.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: style.$1.withValues(alpha: 0.2)),
       ),
-      child: Text(
-        trText(style.$2),
-        style: TextStyle(
-          color: style.$1,
-          fontWeight: FontWeight.w700,
-          fontSize: 11,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(color: style.$1, shape: BoxShape.circle),
+          ),
+          SizedBox(width: 6),
+          Text(
+            trText(style.$2),
+            style: TextStyle(
+              color: style.$1,
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -2621,19 +2955,14 @@ class PdfPreviewCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return SectionCard(
       title: 'Previsualizacion PDF',
-      child: Container(
+      child: SizedBox(
         height: 230,
-        decoration: BoxDecoration(
-          border: Border.all(color: AppColors.border),
-          borderRadius: BorderRadius.circular(AppSpacing.radius),
-          color: AppColors.background,
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          'Documento $folio',
-          style: TextStyle(
-            color: AppColors.textSecondary,
-            fontWeight: FontWeight.w600,
+        child: MusePanel(
+          child: Center(
+            child: Text(
+              'Documento $folio',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+            ),
           ),
         ),
       ),
@@ -2670,29 +2999,16 @@ class RowActionMenu extends StatelessWidget {
       tooltip: 'Más acciones',
       padding: EdgeInsets.zero,
       position: PopupMenuPosition.under,
-      offset: Offset(0, 8),
-      color: AppColors.white,
-      surfaceTintColor: Colors.transparent,
-      elevation: 0,
-      shadowColor: Colors.transparent,
-      shape: RoundedRectangleBorder(
-        borderRadius: cotimaxMenuBorderRadius,
-        side: BorderSide(color: AppColors.border),
-      ),
-      child: Container(
-        width: 34,
-        height: 34,
-        decoration: BoxDecoration(
-          color: AppColors.background,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.border),
-        ),
-        alignment: Alignment.center,
-        child: Icon(
-          Icons.more_horiz_rounded,
-          size: 18,
-          color: AppColors.textSecondary,
-        ),
+      offset: Offset(0, 6),
+      child: _HoverCircleButton(
+        onTap: null,
+        icon: Icons.more_horiz_rounded,
+        size: 34,
+        iconSize: 20,
+        baseColor: Colors.transparent,
+        hoverColor: AppColors.muted,
+        baseIconColor: AppColors.textSecondary,
+        hoverIconColor: AppColors.textPrimary,
       ),
     );
   }
@@ -2716,33 +3032,36 @@ class PaginationWidget extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
         IconButton(
-          onPressed: page <= 1 ? null : () => onChanged(page - 1),
-          icon: Icon(Icons.first_page, size: 18),
+          onPressed: page <= 1 ? null : () => onChanged(1),
+          icon: Icon(Icons.first_page_rounded, size: 20),
         ),
         IconButton(
           onPressed: page <= 1 ? null : () => onChanged(page - 1),
-          icon: Icon(Icons.chevron_left, size: 18),
+          icon: Icon(Icons.chevron_left_rounded, size: 20),
         ),
         Container(
-          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          margin: EdgeInsets.symmetric(horizontal: 8),
+          padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          margin: EdgeInsets.symmetric(horizontal: 6),
           decoration: BoxDecoration(
-            border: Border.all(color: AppColors.border),
-            borderRadius: BorderRadius.circular(AppSpacing.radius),
-            color: AppColors.white,
+            color: AppColors.muted,
+            borderRadius: BorderRadius.circular(999),
           ),
           child: Text(
-            'Pagina $page / $totalPages',
-            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+            '${trText('Página')} $page / $totalPages',
+            style: TextStyle(
+              fontWeight: FontWeight.w500,
+              fontSize: 13,
+              color: AppColors.textPrimary,
+            ),
           ),
         ),
         IconButton(
           onPressed: page >= totalPages ? null : () => onChanged(page + 1),
-          icon: Icon(Icons.chevron_right, size: 18),
+          icon: Icon(Icons.chevron_right_rounded, size: 20),
         ),
         IconButton(
           onPressed: page >= totalPages ? null : () => onChanged(totalPages),
-          icon: Icon(Icons.last_page, size: 18),
+          icon: Icon(Icons.last_page_rounded, size: 20),
         ),
       ],
     );
@@ -2985,38 +3304,86 @@ class TableSelectionToolbar extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(AppSpacing.radius),
-        border: Border.all(color: AppColors.border),
+        color: AppColors.ink,
+        borderRadius: BorderRadius.circular(999),
       ),
       child: Wrap(
-        spacing: 10,
-        runSpacing: 10,
+        spacing: 6,
+        runSpacing: 6,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          Text(
-            label,
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 13,
-              fontWeight: FontWeight.w800,
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 12),
+            child: Text(
+              label,
+              style: TextStyle(
+                color: AppColors.onInk,
+                fontSize: 13.5,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
           if (onEdit != null)
-            OutlinedButton.icon(
-              onPressed: onEdit,
-              icon: Icon(Icons.edit_rounded, size: 16),
-              label: Text(trText('Editar')),
+            _InkToolbarButton(
+              onTap: onEdit!,
+              icon: Icons.edit_outlined,
+              label: trText('Editar'),
             ),
-          OutlinedButton.icon(
-            onPressed: onDelete,
-            icon: Icon(Icons.delete_outline_rounded, size: 16),
-            label: Text(trText('Eliminar')),
+          _InkToolbarButton(
+            onTap: onDelete,
+            icon: Icons.delete_outline_rounded,
+            label: trText('Eliminar'),
           ),
-          TextButton(onPressed: onClear, child: Text(trText('Limpiar'))),
+          _InkToolbarButton(
+            onTap: onClear,
+            icon: Icons.close_rounded,
+            label: trText('Limpiar'),
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class _InkToolbarButton extends StatelessWidget {
+  const _InkToolbarButton({
+    required this.onTap,
+    required this.icon,
+    required this.label,
+  });
+
+  final VoidCallback onTap;
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.onInk.withValues(alpha: 0.10),
+      shape: StadiumBorder(),
+      child: InkWell(
+        onTap: onTap,
+        customBorder: StadiumBorder(),
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 16, color: AppColors.onInk),
+              SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  color: AppColors.onInk,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -3032,43 +3399,39 @@ class _InlineEmptyTableState extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.symmetric(horizontal: 18, vertical: 24),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppSpacing.radius),
-        border: Border.all(color: AppColors.border),
-      ),
+      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 36),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 42,
-            height: 42,
+            width: 52,
+            height: 52,
             decoration: BoxDecoration(
-              color: AppColors.white,
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: AppColors.border),
+              color: AppColors.muted,
+              borderRadius: BorderRadius.circular(18),
             ),
             child: Icon(
               Icons.insights_outlined,
+              size: 24,
               color: AppColors.textSecondary,
             ),
           ),
-          SizedBox(height: 12),
+          SizedBox(height: 14),
           Text(
             trText(title),
+            textAlign: TextAlign.center,
             style: TextStyle(
               color: AppColors.textPrimary,
-              fontWeight: FontWeight.w800,
-              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              fontSize: 15.5,
             ),
           ),
           SizedBox(height: 4),
           Text(
             trText(subtitle),
+            textAlign: TextAlign.center,
             style: TextStyle(
               color: AppColors.textSecondary,
-              fontWeight: FontWeight.w600,
-              fontSize: 12,
+              fontSize: 13.5,
               height: 1.45,
             ),
           ),
@@ -3095,77 +3458,55 @@ class _NavItem extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppSpacing.radius),
-        onTap: () {
-          if (closeAfterTap) Navigator.of(context).pop();
-          if (!context.mounted) return;
-          context.go(entry.$3);
-        },
-        child: AnimatedContainer(
-          duration: _microInteractionDuration,
-          curve: _microInteractionCurve,
-          height: compact ? 48 : 50,
-          padding: EdgeInsets.symmetric(horizontal: compact ? 12 : 14),
-          decoration: BoxDecoration(
-            color: selected
-                ? AppColors.primary
-                : AppColors.white.withValues(alpha: 0.001),
-            borderRadius: BorderRadius.circular(AppSpacing.radius),
-            border: Border.all(
-              color: selected ? AppColors.primary : Colors.transparent,
-            ),
-          ),
-          child: Row(
-            mainAxisAlignment: compact
-                ? MainAxisAlignment.center
-                : MainAxisAlignment.start,
-            children: [
-              Icon(
-                entry.$2,
-                size: 14,
-                color: selected ? AppColors.white : AppColors.textSecondary,
-              ),
-              if (!compact) ...[
-                SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    entry.$1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: selected ? AppColors.white : AppColors.textPrimary,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13,
-                    ),
-                  ),
-                ),
-                if (showCreate)
-                  _HoverCircleButton(
-                    onTap: () {
-                      if (closeAfterTap) Navigator.of(context).pop();
-                      context.go('${entry.$3}?create=1');
-                    },
-                    icon: Icons.add,
-                    size: 24,
-                    iconSize: 14,
-                    baseColor: selected
-                        ? AppColors.white.withValues(alpha: 0.16)
-                        : AppColors.background,
-                    hoverColor: selected
-                        ? AppColors.white.withValues(alpha: 0.28)
-                        : AppColors.primary,
-                    baseIconColor: selected
-                        ? AppColors.white
-                        : AppColors.textSecondary,
-                    hoverIconColor: AppColors.white,
-                  ),
-              ],
-            ],
+    void go() {
+      if (closeAfterTap) Navigator.of(context).pop();
+      if (!context.mounted) return;
+      context.go(entry.$3);
+    }
+
+    final surface = GestureDetector(
+      onTap: go,
+      child: _RailIconSurface(
+        compact: compact,
+        icon: entry.$2,
+        label: entry.$1,
+        selected: selected,
+      ),
+    );
+
+    if (compact) {
+      return Tooltip(
+        message: entry.$1,
+        preferBelow: false,
+        verticalOffset: 0,
+        margin: EdgeInsets.only(left: 70),
+        child: surface,
+      );
+    }
+
+    if (!showCreate) return surface;
+
+    return Stack(
+      alignment: Alignment.centerRight,
+      children: [
+        surface,
+        Padding(
+          padding: EdgeInsets.only(right: 8),
+          child: _HoverCircleButton(
+            onTap: () {
+              if (closeAfterTap) Navigator.of(context).pop();
+              context.go('${entry.$3}?create=1');
+            },
+            icon: Icons.add_rounded,
+            size: 26,
+            iconSize: 16,
+            baseColor: Colors.transparent,
+            hoverColor: AppColors.container,
+            baseIconColor: AppColors.textMuted,
+            hoverIconColor: AppColors.textPrimary,
           ),
         ),
-      ),
+      ],
     );
   }
 }
@@ -3177,67 +3518,59 @@ class _MobileBottomNavigation extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return AnimatedContainer(
-      duration: Duration(milliseconds: 180),
-      height: 78,
+    return Container(
       decoration: BoxDecoration(
-        color: AppColors.white.withValues(alpha: 0.96),
+        color: AppColors.container,
         border: Border(top: BorderSide(color: AppColors.border)),
       ),
       child: SafeArea(
         top: false,
-        child: ListView(
-          scrollDirection: Axis.horizontal,
-          padding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-          children: primaryNavIndexes.map((index) {
-            final entry = appNavEntries[index];
-            final selected = activePath.startsWith(entry.$3);
-            return Padding(
-              padding: EdgeInsets.only(right: 8),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(10),
-                onTap: () {
-                  if (!context.mounted) return;
-                  context.go(entry.$3);
-                },
-                child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: selected
-                        ? AppColors.primary.withValues(alpha: 0.10)
-                        : AppColors.background,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: selected ? AppColors.primary : AppColors.border,
+        child: SizedBox(
+          height: 64,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            children: primaryNavIndexes.map((index) {
+              final entry = appNavEntries[index];
+              final selected = activePath.startsWith(entry.$3);
+              return Padding(
+                padding: EdgeInsets.only(right: 4),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(999),
+                  onTap: () {
+                    if (!context.mounted) return;
+                    context.go(entry.$3);
+                  },
+                  child: AnimatedContainer(
+                    duration: _microInteractionDuration,
+                    padding: EdgeInsets.symmetric(horizontal: 14),
+                    decoration: BoxDecoration(
+                      color: selected
+                          ? AppColors.mutedStrong
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(entry.$2, size: 21, color: AppColors.textPrimary),
+                        if (selected) ...[
+                          SizedBox(width: 8),
+                          Text(
+                            entry.$1,
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        entry.$2,
-                        size: 14,
-                        color: selected
-                            ? AppColors.primary
-                            : AppColors.textSecondary,
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        entry.$1,
-                        style: TextStyle(
-                          color: selected
-                              ? AppColors.primary
-                              : AppColors.textPrimary,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
                 ),
-              ),
-            );
-          }).toList(),
+              );
+            }).toList(),
+          ),
         ),
       ),
     );
@@ -3256,7 +3589,7 @@ class _HoverCircleButton extends StatefulWidget {
     this.iconSize = 18,
   });
 
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final IconData icon;
   final Color baseColor;
   final Color hoverColor;
@@ -3274,36 +3607,33 @@ class _HoverCircleButtonState extends State<_HoverCircleButton> {
 
   @override
   Widget build(BuildContext context) {
+    final surface = AnimatedContainer(
+      duration: Duration(milliseconds: 140),
+      curve: _microInteractionCurve,
+      width: widget.size,
+      height: widget.size,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: _hovered ? widget.hoverColor : widget.baseColor,
+        shape: BoxShape.circle,
+      ),
+      child: Icon(
+        widget.icon,
+        size: widget.iconSize,
+        color: _hovered ? widget.hoverIconColor : widget.baseIconColor,
+      ),
+    );
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
       cursor: SystemMouseCursors.click,
-      child: _MotionSurface(
-        hoverOffset: -1.5,
-        pressedScale: 0.94,
-        child: GestureDetector(
-          onTap: widget.onTap,
-          child: AnimatedContainer(
-            duration: Duration(milliseconds: 140),
-            curve: _microInteractionCurve,
-            width: widget.size,
-            height: widget.size,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: _hovered ? widget.hoverColor : widget.baseColor,
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: Icon(
-              widget.icon,
-              size: widget.iconSize,
-              color: _hovered ? widget.hoverIconColor : widget.baseIconColor,
-            ),
-          ),
-        ),
-      ),
+      child: widget.onTap == null
+          ? surface
+          : GestureDetector(onTap: widget.onTap, child: surface),
     );
   }
 }
+
 
 class ToastHelper {
   static void show(
@@ -3455,12 +3785,12 @@ class _ToastCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (background, iconData) = switch (variant) {
+    final (accent, iconData) = switch (variant) {
       ToastVariant.exito => (AppColors.success, Icons.check_rounded),
       ToastVariant.error => (AppColors.error, Icons.close_rounded),
       ToastVariant.advertencia => (
         AppColors.warning,
-        Icons.warning_amber_rounded,
+        Icons.priority_high_rounded,
       ),
     };
 
@@ -3470,48 +3800,46 @@ class _ToastCard extends StatelessWidget {
         width: width,
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: background,
-            borderRadius: BorderRadius.circular(AppSpacing.radius),
+            color: AppColors.ink,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: AppColors.floatingShadow,
           ),
           child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            padding: EdgeInsets.fromLTRB(12, 10, 10, 10),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Container(
                   width: 28,
                   height: 28,
                   decoration: BoxDecoration(
-                    color: AppColors.white.withValues(alpha: 0.18),
+                    color: accent,
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(iconData, color: AppColors.white, size: 18),
+                  child: Icon(iconData, color: Colors.white, size: 17),
                 ),
                 SizedBox(width: 12),
                 Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.only(top: 4),
-                    child: Text(
-                      message,
-                      style: TextStyle(
-                        color: AppColors.white,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13,
-                        height: 1.35,
-                      ),
+                  child: Text(
+                    message,
+                    style: TextStyle(
+                      color: AppColors.onInk,
+                      fontWeight: FontWeight.w500,
+                      fontSize: 14,
+                      height: 1.35,
                     ),
                   ),
                 ),
                 SizedBox(width: 8),
                 InkWell(
                   onTap: onClose,
-                  borderRadius: BorderRadius.circular(999),
+                  customBorder: CircleBorder(),
                   child: Padding(
-                    padding: EdgeInsets.all(4),
+                    padding: EdgeInsets.all(6),
                     child: Icon(
-                      Icons.close,
-                      size: 16,
-                      color: AppColors.white.withValues(alpha: 0.92),
+                      Icons.close_rounded,
+                      size: 17,
+                      color: AppColors.onInk.withValues(alpha: 0.7),
                     ),
                   ),
                 ),
@@ -3568,56 +3896,33 @@ class _CommandPaletteDialogState extends State<_CommandPaletteDialog> {
   @override
   Widget build(BuildContext context) {
     final matches = _filterCommandPaletteEntries(_entries, _query);
+    final noBorder = InputBorder.none;
     return Dialog(
+      alignment: Alignment(0, -0.45),
       insetPadding: EdgeInsets.symmetric(horizontal: 18, vertical: 28),
-      backgroundColor: AppColors.white,
+      backgroundColor: AppColors.container,
       surfaceTintColor: Colors.transparent,
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppSpacing.dialogRadius),
+      ),
       clipBehavior: Clip.antiAlias,
       child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: 760, maxHeight: 680),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: AppColors.white,
-            border: Border.all(color: AppColors.border),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.textPrimary.withValues(alpha: 0.12),
-                blurRadius: 34,
-                offset: Offset(0, 20),
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              Padding(
-                padding: EdgeInsets.fromLTRB(20, 18, 20, 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            trText('Búsqueda global'),
-                            style: TextStyle(
-                              color: AppColors.textPrimary,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 20,
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          icon: Icon(Icons.close_rounded),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 8),
-                    SearchField(
-                      hint:
-                          'Busca clientes, cotizaciones, productos, módulos o acciones',
+        constraints: BoxConstraints(maxWidth: 660, maxHeight: 560),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: EdgeInsets.fromLTRB(26, 12, 20, 12),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.search_rounded,
+                    size: 22,
+                    color: AppColors.textSecondary,
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: TextField(
                       controller: _controller,
                       focusNode: _focusNode,
                       onChanged: (value) => setState(() => _query = value),
@@ -3625,67 +3930,74 @@ class _CommandPaletteDialogState extends State<_CommandPaletteDialog> {
                         if (matches.isEmpty) return;
                         _selectEntry(matches.first);
                       },
-                      suffix: _CommandPaletteShortcutHint(),
+                      style: TextStyle(
+                        fontSize: 19,
+                        color: AppColors.textPrimary,
+                      ),
+                      decoration: InputDecoration(
+                        filled: false,
+                        hintText: trText('Buscar'),
+                        hintStyle: TextStyle(
+                          fontSize: 19,
+                          color: AppColors.textMuted,
+                        ),
+                        border: noBorder,
+                        enabledBorder: noBorder,
+                        focusedBorder: noBorder,
+                        contentPadding: EdgeInsets.symmetric(vertical: 18),
+                      ),
                     ),
-                    SizedBox(height: 12),
-                    Row(
+                  ),
+                  _CommandPaletteShortcutHint(),
+                ],
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20),
+              child: Container(height: 1, color: AppColors.border),
+            ),
+            Flexible(
+              child: matches.isEmpty
+                  ? Padding(
+                      padding: EdgeInsets.all(18),
+                      child: _InlineEmptyTableState(
+                        title: 'No encontramos coincidencias.',
+                        subtitle:
+                            'Prueba con un cliente, un folio, un producto o una acción rápida.',
+                      ),
+                    )
+                  : ListView(
+                      shrinkWrap: true,
+                      padding: EdgeInsets.fromLTRB(12, 14, 12, 14),
                       children: [
-                        Text(
-                          tr(
-                            _query.trim().isEmpty
-                                ? 'Sugerencias listas para navegar'
-                                : '${matches.length} resultados relevantes',
-                            _query.trim().isEmpty
-                                ? 'Suggestions ready to navigate'
-                                : '${matches.length} relevant results',
-                          ),
-                          style: TextStyle(
-                            color: AppColors.textSecondary,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 12,
-                          ),
-                        ),
-                        Spacer(),
-                        Text(
-                          trText('Enter abre el primero'),
-                          style: TextStyle(
-                            color: AppColors.textMuted,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 11,
+                        Padding(
+                          padding: EdgeInsets.fromLTRB(14, 0, 14, 8),
+                          child: Text(
+                            tr(
+                              _query.trim().isEmpty
+                                  ? 'Sugerencias'
+                                  : '${matches.length} resultados',
+                              _query.trim().isEmpty
+                                  ? 'Suggestions'
+                                  : '${matches.length} results',
+                            ),
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontWeight: FontWeight.w500,
+                              fontSize: 13.5,
+                            ),
                           ),
                         ),
+                        for (var i = 0; i < matches.length; i++)
+                          _CommandPaletteTile(
+                            entry: matches[i],
+                            highlighted: i == 0,
+                            onTap: () => _selectEntry(matches[i]),
+                          ),
                       ],
                     ),
-                  ],
-                ),
-              ),
-              Container(height: 1, color: AppColors.border),
-              Expanded(
-                child: matches.isEmpty
-                    ? Padding(
-                        padding: EdgeInsets.all(18),
-                        child: _InlineEmptyTableState(
-                          title: 'No encontramos coincidencias.',
-                          subtitle:
-                              'Prueba con un cliente, un folio, un producto o una acción rápida.',
-                        ),
-                      )
-                    : ListView.separated(
-                        padding: EdgeInsets.symmetric(vertical: 6),
-                        itemCount: matches.length,
-                        separatorBuilder: (_, __) =>
-                            Container(height: 1, color: AppColors.border),
-                        itemBuilder: (context, index) {
-                          final item = matches[index];
-                          return _CommandPaletteTile(
-                            entry: item,
-                            onTap: () => _selectEntry(item),
-                          );
-                        },
-                      ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -3703,32 +4015,46 @@ class _CommandPaletteDialogState extends State<_CommandPaletteDialog> {
   }
 }
 
-class _CommandPaletteTile extends StatelessWidget {
-  _CommandPaletteTile({required this.entry, required this.onTap});
+class _CommandPaletteTile extends StatefulWidget {
+  _CommandPaletteTile({
+    required this.entry,
+    required this.onTap,
+    this.highlighted = false,
+  });
 
   final _CommandPaletteEntry entry;
   final VoidCallback onTap;
+  final bool highlighted;
+
+  @override
+  State<_CommandPaletteTile> createState() => _CommandPaletteTileState();
+}
+
+class _CommandPaletteTileState extends State<_CommandPaletteTile> {
+  bool _hovered = false;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(18, 14, 18, 14),
+    final entry = widget.entry;
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: _microInteractionDuration,
+          padding: EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+          decoration: BoxDecoration(
+            color: (_hovered || widget.highlighted)
+                ? AppColors.muted
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(16),
+          ),
           child: Row(
             children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: entry.color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(entry.icon, color: entry.color, size: 18),
-              ),
-              SizedBox(width: 12),
+              Icon(entry.icon, size: 20, color: AppColors.textPrimary),
+              SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -3739,40 +4065,31 @@ class _CommandPaletteTile extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        fontSize: 15,
                       ),
                     ),
-                    SizedBox(height: 3),
-                    Row(
-                      children: [
-                        _CommandPaletteScopeBadge(entry: entry),
-                        if (entry.subtitle.isNotEmpty) ...[
-                          SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              trText(entry.subtitle),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: AppColors.textSecondary,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
+                    SizedBox(height: 2),
+                    Text(
+                      entry.subtitle.isEmpty
+                          ? trText(entry.kind.label)
+                          : '${trText(entry.subtitle)} · ${trText(entry.kind.label)}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 13,
+                      ),
                     ),
                   ],
                 ),
               ),
-              SizedBox(width: 10),
-              Icon(
-                Icons.arrow_outward_rounded,
-                size: 16,
-                color: AppColors.textMuted,
-              ),
+              if (widget.highlighted || _hovered)
+                Icon(
+                  Icons.keyboard_return_rounded,
+                  size: 16,
+                  color: AppColors.textMuted,
+                ),
             ],
           ),
         ),
@@ -3781,23 +4098,6 @@ class _CommandPaletteTile extends StatelessWidget {
   }
 }
 
-class _CommandPaletteScopeBadge extends StatelessWidget {
-  _CommandPaletteScopeBadge({required this.entry});
-
-  final _CommandPaletteEntry entry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      entry.kind.label,
-      style: TextStyle(
-        color: entry.color,
-        fontSize: 11,
-        fontWeight: FontWeight.w800,
-      ),
-    );
-  }
-}
 
 enum _CommandPaletteKind { action, module, cliente, cotizacion, producto }
 
@@ -4019,7 +4319,7 @@ class ColorPickerSimple extends StatelessWidget {
           SizedBox(width: 8),
           Text(
             '#${value.toARGB32().toRadixString(16).substring(2).toUpperCase()}',
-            style: TextStyle(fontWeight: FontWeight.w700),
+            style: TextStyle(fontWeight: FontWeight.w600),
           ),
         ],
       ),
@@ -4046,9 +4346,9 @@ class SummaryCards extends StatelessWidget {
       itemCount: items.length,
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: columns,
-        mainAxisExtent: 104,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
+        mainAxisExtent: 116,
+        crossAxisSpacing: 14,
+        mainAxisSpacing: 14,
       ),
       itemBuilder: (context, index) {
         final item = items[index];
@@ -4061,14 +4361,19 @@ class SummaryCards extends StatelessWidget {
                 item.$1,
                 style: TextStyle(
                   color: AppColors.textSecondary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
-              SizedBox(height: 16),
+              SizedBox(height: 12),
               Text(
                 item.$2,
-                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 22),
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 26,
+                  letterSpacing: -0.5,
+                  color: AppColors.textPrimary,
+                ),
               ),
             ],
           ),

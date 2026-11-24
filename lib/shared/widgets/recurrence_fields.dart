@@ -68,7 +68,7 @@ class RecurrenceConfigurationCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.border),
       ),
       child: Column(
@@ -96,7 +96,7 @@ class RecurrenceConfigurationCard extends StatelessWidget {
                           trText(title),
                           style: TextStyle(
                             color: AppColors.textPrimary,
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w700,
                             fontSize: 15,
                           ),
                         ),
@@ -123,7 +123,7 @@ class RecurrenceConfigurationCard extends StatelessWidget {
                   style: TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 12,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w500,
                     height: 1.4,
                   ),
                 ),
@@ -151,7 +151,7 @@ class RecurrenceConfigurationCard extends StatelessWidget {
                         style: TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 12,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w500,
                           height: 1.4,
                         ),
                       ),
@@ -211,7 +211,7 @@ class RecurrenceConfigurationCard extends StatelessWidget {
                       style: TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 12,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],

@@ -701,26 +701,24 @@ class _ClienteFormState extends ConsumerState<_ClienteForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Wrap(
-          spacing: 18,
-          runSpacing: 8,
-          children: [
+        Align(
+          alignment: Alignment.centerLeft,
+          child: CotimaxTabTrack(
+            children: [
             _ClientTabButton(
               label: 'Crear',
               selected: _tabIndex == 0,
               onTap: () => setState(() => _tabIndex = 0),
             ),
-            SizedBox(width: 18),
             _ClientTabButton(
               label: 'Configuración',
               selected: _tabIndex == 1,
               onTap: () => setState(() => _tabIndex = 1),
             ),
-          ],
+            ],
+          ),
         ),
-        SizedBox(height: 8),
-        Container(height: 1, color: AppColors.border),
-        SizedBox(height: 10),
+        SizedBox(height: 16),
         Expanded(
           child: FocusTraversalGroup(
             policy: WidgetOrderTraversalPolicy(),
@@ -1246,27 +1244,10 @@ class _ClientTabButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    return CotimaxTabPill(
+      label: label,
+      selected: selected,
       onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.only(bottom: 10),
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(
-              color: selected ? AppColors.textPrimary : Colors.transparent,
-              width: 2,
-            ),
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: selected ? AppColors.textPrimary : AppColors.textSecondary,
-            fontWeight: FontWeight.w700,
-            fontSize: 14,
-          ),
-        ),
-      ),
     );
   }
 }
@@ -1289,7 +1270,7 @@ class _ClientSection extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.border),
       ),
       child: Column(
@@ -1313,7 +1294,7 @@ class _ClientSection extends StatelessWidget {
                           style: TextStyle(
                             color: AppColors.textPrimary,
                             fontSize: 16,
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),
@@ -1364,7 +1345,7 @@ class _ClientFieldRow extends StatelessWidget {
                 style: TextStyle(
                   color: AppColors.textSecondary,
                   fontSize: 13,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),
@@ -1418,7 +1399,7 @@ class _ClientDropdownRow extends StatelessWidget {
               style: TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 13,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
@@ -1476,7 +1457,7 @@ class _ClientSwitchRow extends StatelessWidget {
               style: TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 13,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),

@@ -94,8 +94,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    AppColors.background.withValues(alpha: 0.78),
-                    AppColors.background.withValues(alpha: 0.90),
+                    AppColors.background.withValues(alpha: 0.97),
+                    AppColors.background.withValues(alpha: 0.97),
                   ],
                 ),
               ),
@@ -106,7 +106,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             left: -80,
             child: _Glow(
               size: 220,
-              color: AppColors.primary.withValues(alpha: 0.08),
+              color: Colors.transparent,
             ),
           ),
           Positioned(
@@ -114,7 +114,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             bottom: -40,
             child: _Glow(
               size: 240,
-              color: AppColors.accent.withValues(alpha: 0.08),
+              color: Colors.transparent,
             ),
           ),
           SafeArea(
@@ -126,18 +126,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   child: Container(
                     padding: EdgeInsets.all(28),
                     decoration: BoxDecoration(
-                      color: AppColors.white.withValues(alpha: 0.92),
-                      borderRadius: BorderRadius.circular(
-                        AppSpacing.radius + 2,
-                      ),
+                      color: AppColors.container,
+                      borderRadius: BorderRadius.circular(AppSpacing.dialogRadius),
                       border: Border.all(color: AppColors.border),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.textPrimary.withValues(alpha: 0.10),
-                          blurRadius: 30,
-                          offset: Offset(0, 16),
-                        ),
-                      ],
+                      boxShadow: AppColors.floatingShadow,
                     ),
                     child: Form(
                       key: _formKey,
@@ -159,7 +151,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
                                     color: AppColors.textSecondary,
-                                    fontWeight: FontWeight.w700,
+                                    fontWeight: FontWeight.w600,
                                     fontSize: 12,
                                   ),
                                 ),
@@ -173,7 +165,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 28,
-                                fontWeight: FontWeight.w800,
+                                fontWeight: FontWeight.w700,
                                 color: AppColors.textPrimary,
                                 height: 1,
                               ),
@@ -188,7 +180,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 color: AppColors.textSecondary,
-                                fontWeight: FontWeight.w600,
+                                fontWeight: FontWeight.w500,
                                 fontSize: 13,
                               ),
                             ),
@@ -229,7 +221,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                               'Correo',
                               style: TextStyle(
                                 color: AppColors.textSecondary,
-                                fontWeight: FontWeight.w700,
+                                fontWeight: FontWeight.w600,
                                 fontSize: 12,
                               ),
                             ),
@@ -242,7 +234,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                               ),
                               decoration: BoxDecoration(
                                 color: AppColors.background,
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(14),
                                 border: Border.all(color: AppColors.border),
                               ),
                               child: Row(
@@ -258,7 +250,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                       auth.otpEmail ?? '',
                                       style: TextStyle(
                                         color: AppColors.textPrimary,
-                                        fontWeight: FontWeight.w700,
+                                        fontWeight: FontWeight.w600,
                                         fontSize: 14,
                                       ),
                                     ),
@@ -297,18 +289,18 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                   textStyle: TextStyle(
                                     color: AppColors.textPrimary,
                                     fontSize: fontSize,
-                                    fontWeight: FontWeight.w800,
+                                    fontWeight: FontWeight.w700,
                                   ),
                                   cursorColor: AppColors.primary,
                                   pastedTextStyle: TextStyle(
                                     color: AppColors.textPrimary,
-                                    fontWeight: FontWeight.w700,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceBetween,
                                   pinTheme: PinTheme(
                                     shape: PinCodeFieldShape.box,
-                                    borderRadius: BorderRadius.circular(10),
+                                    borderRadius: BorderRadius.circular(14),
                                     fieldHeight: fieldHeight,
                                     fieldWidth: fieldWidth,
                                     inactiveColor: AppColors.border,
@@ -393,7 +385,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
                                     color: AppColors.textSecondary,
-                                    fontWeight: FontWeight.w600,
+                                    fontWeight: FontWeight.w500,
                                     fontSize: 12,
                                   ),
                                 ),
@@ -411,7 +403,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                   trText('y'),
                                   style: TextStyle(
                                     color: AppColors.textSecondary,
-                                    fontWeight: FontWeight.w600,
+                                    fontWeight: FontWeight.w500,
                                     fontSize: 12,
                                   ),
                                 ),

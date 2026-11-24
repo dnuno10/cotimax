@@ -141,7 +141,7 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
   Widget build(BuildContext context) {
     final statusAsync = ref.watch(workspaceStatusProvider);
     final isCreateMode = _tabIndex == 0;
-    final shellRadius = BorderRadius.circular(AppSpacing.radius + 4);
+    final shellRadius = BorderRadius.circular(AppSpacing.dialogRadius);
 
     return PopScope(
       canPop: false,
@@ -159,8 +159,8 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      AppColors.background.withValues(alpha: 0.78),
-                      AppColors.background.withValues(alpha: 0.90),
+                      AppColors.background.withValues(alpha: 0.97),
+                      AppColors.background.withValues(alpha: 0.97),
                     ],
                   ),
                 ),
@@ -171,7 +171,7 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
               left: -80,
               child: _WorkspaceGlow(
                 size: 220,
-                color: AppColors.primary.withValues(alpha: 0.08),
+                color: Colors.transparent,
               ),
             ),
             Positioned(
@@ -179,7 +179,7 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
               bottom: -40,
               child: _WorkspaceGlow(
                 size: 240,
-                color: AppColors.accent.withValues(alpha: 0.08),
+                color: Colors.transparent,
               ),
             ),
             SafeArea(
@@ -192,18 +192,10 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
                       borderRadius: shellRadius,
                       child: Container(
                         decoration: BoxDecoration(
-                          color: AppColors.white.withValues(alpha: 0.93),
+                          color: AppColors.container,
                           borderRadius: shellRadius,
                           border: Border.all(color: AppColors.border),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.textPrimary.withValues(
-                                alpha: 0.10,
-                              ),
-                              blurRadius: 30,
-                              offset: Offset(0, 16),
-                            ),
-                          ],
+                          boxShadow: AppColors.floatingShadow,
                         ),
                         child: statusAsync.when(
                           loading: () => Padding(
@@ -224,7 +216,7 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
                                   style: TextStyle(
                                     color: AppColors.textPrimary,
                                     fontSize: 28,
-                                    fontWeight: FontWeight.w800,
+                                    fontWeight: FontWeight.w700,
                                   ),
                                 ),
                                 SizedBox(height: 12),
@@ -235,7 +227,7 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
                                   ),
                                   style: TextStyle(
                                     color: AppColors.textSecondary,
-                                    fontWeight: FontWeight.w600,
+                                    fontWeight: FontWeight.w500,
                                   ),
                                 ),
                                 SizedBox(height: 20),
@@ -311,7 +303,7 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
       padding: EdgeInsets.all(28),
       decoration: BoxDecoration(
         borderRadius: stacked
-            ? BorderRadius.circular(14)
+            ? BorderRadius.circular(18)
             : BorderRadius.only(
                 topLeft: Radius.circular(18),
                 bottomLeft: Radius.circular(18),
@@ -339,7 +331,7 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
             style: TextStyle(
               color: AppColors.textPrimary,
               fontSize: 30,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w700,
               height: 1.05,
             ),
           ),
@@ -351,7 +343,7 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
             ),
             style: TextStyle(
               color: AppColors.textSecondary,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w500,
               height: 1.5,
             ),
           ),
@@ -395,7 +387,7 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
             style: TextStyle(
               color: AppColors.textPrimary,
               fontSize: 20,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w700,
             ),
           ),
           SizedBox(height: 14),
@@ -440,7 +432,7 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
       padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppColors.background,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: AppColors.border),
       ),
       child: Column(
@@ -451,7 +443,7 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
             style: TextStyle(
               color: AppColors.textPrimary,
               fontSize: 18,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w700,
             ),
           ),
           SizedBox(height: 14),
@@ -461,8 +453,9 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
                 padding: EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: AppColors.white,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: AppColors.border),
+                  boxShadow: AppColors.softShadow,
                 ),
                 child: SizedBox(
                   width: 96,
@@ -498,7 +491,7 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
             tr('Nombre de la empresa', 'Company name'),
             style: TextStyle(
               color: AppColors.textSecondary,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
               fontSize: 13,
             ),
           ),
@@ -549,7 +542,7 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
       padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppColors.background,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: AppColors.border),
       ),
       child: Column(
@@ -560,7 +553,7 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
             style: TextStyle(
               color: AppColors.textPrimary,
               fontSize: 18,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w700,
             ),
           ),
           SizedBox(height: 14),
@@ -568,7 +561,7 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
             tr('Código único del equipo', 'Team invitation code'),
             style: TextStyle(
               color: AppColors.textSecondary,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
               fontSize: 13,
             ),
           ),
@@ -636,7 +629,7 @@ class _WorkspaceModeButton extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(18),
       child: AnimatedContainer(
         duration: Duration(milliseconds: 180),
         curve: Curves.easeOutCubic,
@@ -644,7 +637,7 @@ class _WorkspaceModeButton extends StatelessWidget {
         padding: EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: background,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(18),
           border: Border.all(
             color: selected ? fillColor : fillColor.withValues(alpha: 0.18),
           ),
@@ -662,7 +655,7 @@ class _WorkspaceModeButton extends StatelessWidget {
                     label,
                     style: TextStyle(
                       color: foreground,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w700,
                       fontSize: 15,
                     ),
                   ),
@@ -673,7 +666,7 @@ class _WorkspaceModeButton extends StatelessWidget {
                       color: selected
                           ? AppColors.white.withValues(alpha: 0.92)
                           : AppColors.textSecondary,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w500,
                       height: 1.4,
                     ),
                   ),
@@ -705,7 +698,7 @@ class _WorkspaceBullet extends StatelessWidget {
             text,
             style: TextStyle(
               color: AppColors.textPrimary,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w500,
               height: 1.45,
             ),
           ),

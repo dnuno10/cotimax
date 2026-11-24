@@ -703,7 +703,7 @@ class _IngresosPanel extends StatelessWidget {
               style: TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 13,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w500,
               ),
               children: [
                 TextSpan(text: '${trText('Total del rango')} '),
@@ -712,7 +712,7 @@ class _IngresosPanel extends StatelessWidget {
                   style: TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 24,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 TextSpan(text: '  |  '),
@@ -722,7 +722,7 @@ class _IngresosPanel extends StatelessWidget {
                   style: TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 20,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ],
@@ -755,7 +755,7 @@ class _IngresosPanel extends StatelessWidget {
                   ),
                   style: TextStyle(
                     color: AppColors.primary,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                     fontSize: 15,
                   ),
                 ),
@@ -766,7 +766,7 @@ class _IngresosPanel extends StatelessWidget {
                   ),
                   style: TextStyle(
                     color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w500,
                     fontSize: 12,
                     height: 1.5,
                   ),
@@ -817,7 +817,7 @@ class _GastosImpactPanel extends StatelessWidget {
               style: TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 13,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w500,
               ),
               children: [
                 TextSpan(text: '${trText('Total del rango')} '),
@@ -826,7 +826,7 @@ class _GastosImpactPanel extends StatelessWidget {
                   style: TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 24,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ],
@@ -857,7 +857,7 @@ class _GastosImpactPanel extends StatelessWidget {
                   '${trText('Estado financiero')}: ${trText(saludFinanciera)}',
                   style: TextStyle(
                     color: impactColor,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                     fontSize: 15,
                   ),
                 ),
@@ -866,7 +866,7 @@ class _GastosImpactPanel extends StatelessWidget {
                   '${trText('Margen actual')}: ${margen.toStringAsFixed(1)}%. ${trText(margen >= 20 ? 'El gasto se mantiene bajo control.' : 'Conviene revisar gastos para recuperar margen.')}',
                   style: TextStyle(
                     color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w500,
                     fontSize: 12,
                     height: 1.5,
                   ),
@@ -1104,7 +1104,7 @@ class _PipelinePanel extends StatelessWidget {
             style: TextStyle(
               color: AppColors.textSecondary,
               fontSize: 12,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w500,
               height: 1.45,
             ),
           ),
@@ -1115,7 +1115,7 @@ class _PipelinePanel extends StatelessWidget {
             LayoutBuilder(
               builder: (context, constraints) {
                 return ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(14),
                   child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: ConstrainedBox(
@@ -1234,7 +1234,7 @@ class _CompactMetricPill extends StatelessWidget {
       padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.border),
       ),
       child: Column(
@@ -1246,7 +1246,7 @@ class _CompactMetricPill extends StatelessWidget {
             style: TextStyle(
               color: accent,
               fontSize: 11,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w700,
             ),
           ),
           SizedBox(height: 4),
@@ -1255,7 +1255,7 @@ class _CompactMetricPill extends StatelessWidget {
             style: TextStyle(
               color: AppColors.textPrimary,
               fontSize: 14,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ],
@@ -1285,7 +1285,7 @@ class _ProbabilityIndicator extends StatelessWidget {
           '${(clamped * 100).toStringAsFixed(0)}%',
           style: TextStyle(
             color: color,
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.w700,
             fontSize: 12,
           ),
         ),
@@ -1350,7 +1350,7 @@ class _KpiCard extends StatelessWidget {
                   style: TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 12,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
@@ -1374,7 +1374,7 @@ class _KpiCard extends StatelessWidget {
               style: TextStyle(
                 color: AppColors.textMuted,
                 fontSize: 11,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ],
@@ -1384,7 +1384,7 @@ class _KpiCard extends StatelessWidget {
             style: TextStyle(
               color: AppColors.textPrimary,
               fontSize: 26,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w700,
               height: 1,
             ),
           ),
@@ -1398,7 +1398,7 @@ class _KpiCard extends StatelessWidget {
                   ? AppColors.error
                   : AppColors.textSecondary,
               fontSize: compact ? 10 : 11,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w700,
             ),
           ),
           SizedBox(height: 6),
@@ -1456,7 +1456,7 @@ class _KpiCard extends StatelessWidget {
                                         : formatMxn(spot.y),
                                     TextStyle(
                                       color: AppColors.white,
-                                      fontWeight: FontWeight.w800,
+                                      fontWeight: FontWeight.w700,
                                     ),
                                   ),
                                 )
@@ -1490,7 +1490,7 @@ class _TopChip extends StatelessWidget {
           trText(label),
           style: TextStyle(
             color: AppColors.textPrimary,
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.w700,
             fontSize: 11,
           ),
         ),
@@ -1990,7 +1990,7 @@ class _TimelineShell extends StatelessWidget {
                     ),
               style: TextStyle(
                 color: AppColors.textSecondary,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
               ),
             ),
           )
@@ -2055,7 +2055,7 @@ class _TimelineShell extends StatelessWidget {
               trText(summaryLabel),
               style: TextStyle(
                 color: AppColors.textSecondary,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
                 fontSize: 12,
               ),
             ),
@@ -2127,7 +2127,7 @@ class _TimelineRow extends StatelessWidget {
                             trText(title),
                             style: TextStyle(
                               color: AppColors.textPrimary,
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w700,
                               fontSize: 15,
                             ),
                           ),
@@ -2136,7 +2136,7 @@ class _TimelineRow extends StatelessWidget {
                             trText(operationLabel),
                             style: TextStyle(
                               color: color,
-                              fontWeight: FontWeight.w700,
+                              fontWeight: FontWeight.w600,
                               fontSize: 12,
                             ),
                           ),
@@ -2145,7 +2145,7 @@ class _TimelineRow extends StatelessWidget {
                             trText(timestampLabel),
                             style: TextStyle(
                               color: AppColors.textSecondary,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.w500,
                               fontSize: 12,
                             ),
                           ),
@@ -2166,7 +2166,7 @@ class _TimelineRow extends StatelessWidget {
                         amount,
                         style: TextStyle(
                           color: color,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                           fontSize: 12,
                         ),
                       ),
@@ -2183,7 +2183,7 @@ class _TimelineRow extends StatelessWidget {
                           trText(line),
                           style: TextStyle(
                             color: AppColors.textPrimary,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w500,
                             fontSize: 13,
                             height: 1.35,
                           ),
@@ -2245,7 +2245,7 @@ class _TopProductsUtilityPanel extends StatelessWidget {
                           style: TextStyle(
                             color: AppColors.textMuted,
                             fontSize: 11,
-                            fontWeight: FontWeight.w700,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
@@ -2265,7 +2265,7 @@ class _TopProductsUtilityPanel extends StatelessWidget {
                               style: TextStyle(
                                 color: AppColors.textMuted,
                                 fontSize: 11,
-                                fontWeight: FontWeight.w700,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           );
@@ -2282,7 +2282,7 @@ class _TopProductsUtilityPanel extends StatelessWidget {
                           toY: visible[index].utility,
                           color: AppColors.primary,
                           width: 20,
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(10),
                         ),
                       ],
                     ),
@@ -2296,7 +2296,7 @@ class _TopProductsUtilityPanel extends StatelessWidget {
                           formatMxn(rod.toY),
                           TextStyle(
                             color: AppColors.white,
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w700,
                           ),
                         );
                       },
@@ -2337,7 +2337,7 @@ class _ClientProfitabilityPanel extends StatelessWidget {
                   style: TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 12,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w500,
                     height: 1.45,
                   ),
                 ),
@@ -2364,7 +2364,7 @@ class _ClientProfitabilityTile extends StatelessWidget {
       padding: EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.border),
       ),
       child: Column(
@@ -2379,7 +2379,7 @@ class _ClientProfitabilityTile extends StatelessWidget {
                   item.clientName,
                   style: TextStyle(
                     color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                     fontSize: 14,
                   ),
                 ),
@@ -2397,7 +2397,7 @@ class _ClientProfitabilityTile extends StatelessWidget {
                   ),
                   style: TextStyle(
                     color: item.marginColor,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                     fontSize: 11,
                   ),
                 ),
@@ -2432,7 +2432,7 @@ class _ClientProfitabilityTile extends StatelessWidget {
             ),
             style: TextStyle(
               color: AppColors.textSecondary,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w500,
               fontSize: 12,
               height: 1.45,
             ),
@@ -2456,7 +2456,7 @@ class _ClientMetricTag extends StatelessWidget {
       padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.border),
       ),
       child: Column(
@@ -2467,7 +2467,7 @@ class _ClientMetricTag extends StatelessWidget {
             trText(label),
             style: TextStyle(
               color: AppColors.textMuted,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
               fontSize: 10,
             ),
           ),
@@ -2476,7 +2476,7 @@ class _ClientMetricTag extends StatelessWidget {
             value,
             style: TextStyle(
               color: accent ?? AppColors.textPrimary,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w700,
               fontSize: 12,
             ),
           ),
@@ -2511,7 +2511,7 @@ class _IncomeConcentrationPanel extends StatelessWidget {
                   style: TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 12,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w500,
                     height: 1.45,
                   ),
                 ),
@@ -2534,7 +2534,7 @@ class _IncomeConcentrationPanel extends StatelessWidget {
                   ),
                   style: TextStyle(
                     color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                     fontSize: 12,
                     height: 1.5,
                   ),
@@ -2579,7 +2579,7 @@ class _ShareIndicator extends StatelessWidget {
                 trText(label),
                 style: TextStyle(
                   color: AppColors.textPrimary,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w600,
                   fontSize: 12,
                 ),
               ),
@@ -2588,7 +2588,7 @@ class _ShareIndicator extends StatelessWidget {
               '${(clamped * 100).toStringAsFixed(0)}%',
               style: TextStyle(
                 color: accent,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w700,
                 fontSize: 12,
               ),
             ),
@@ -2627,7 +2627,7 @@ class _IncomeShareRow extends StatelessWidget {
       padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: AppColors.background,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.border),
       ),
       child: Row(
@@ -2637,7 +2637,7 @@ class _IncomeShareRow extends StatelessWidget {
               item.clientName,
               style: TextStyle(
                 color: AppColors.textPrimary,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
                 fontSize: 12,
               ),
             ),
@@ -2647,7 +2647,7 @@ class _IncomeShareRow extends StatelessWidget {
             formatMxn(item.amount),
             style: TextStyle(
               color: AppColors.textSecondary,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
               fontSize: 12,
             ),
           ),
@@ -2656,7 +2656,7 @@ class _IncomeShareRow extends StatelessWidget {
             '${(item.share * 100).toStringAsFixed(0)}%',
             style: TextStyle(
               color: AppColors.textPrimary,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w700,
               fontSize: 12,
             ),
           ),
@@ -2696,7 +2696,7 @@ LineChartData _lineChartData({
             style: TextStyle(
               color: AppColors.textMuted,
               fontSize: 11,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ),
@@ -2719,7 +2719,7 @@ LineChartData _lineChartData({
                 style: TextStyle(
                   color: AppColors.textMuted,
                   fontSize: 10,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             );
@@ -2751,7 +2751,7 @@ LineChartData _lineChartData({
             .map(
               (spot) => LineTooltipItem(
                 currency ? formatMxn(spot.y) : spot.y.toStringAsFixed(1),
-                TextStyle(color: AppColors.white, fontWeight: FontWeight.w800),
+                TextStyle(color: AppColors.white, fontWeight: FontWeight.w700),
               ),
             )
             .toList(),

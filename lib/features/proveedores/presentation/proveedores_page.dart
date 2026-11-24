@@ -440,12 +440,13 @@ class _ProveedorFormState extends ConsumerState<_ProveedorForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          children: const [_ProviderTabButton(label: 'Crear', selected: true)],
+        Align(
+          alignment: Alignment.centerLeft,
+          child: CotimaxTabTrack(
+            children: const [_ProviderTabButton(label: 'Crear', selected: true)],
+          ),
         ),
-        SizedBox(height: 8),
-        Container(height: 1, color: AppColors.border),
-        SizedBox(height: 10),
+        SizedBox(height: 16),
         Expanded(
           child: FocusTraversalGroup(
             policy: WidgetOrderTraversalPolicy(),
@@ -683,24 +684,9 @@ class _ProviderTabButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color: selected ? AppColors.textPrimary : Colors.transparent,
-            width: 2,
-          ),
-        ),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: selected ? AppColors.textPrimary : AppColors.textSecondary,
-          fontWeight: FontWeight.w700,
-          fontSize: 14,
-        ),
-      ),
+    return CotimaxTabPill(
+      label: label,
+      selected: selected,
     );
   }
 }
@@ -723,7 +709,7 @@ class _ProviderSection extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.border),
       ),
       child: Column(
@@ -747,7 +733,7 @@ class _ProviderSection extends StatelessWidget {
                           style: TextStyle(
                             color: AppColors.textPrimary,
                             fontSize: 16,
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),
@@ -792,7 +778,7 @@ class _ProviderFieldRow extends StatelessWidget {
               style: TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 13,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
@@ -837,7 +823,7 @@ class _ProviderSwitchRow extends StatelessWidget {
               style: TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 13,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),

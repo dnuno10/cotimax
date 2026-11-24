@@ -536,13 +536,13 @@ class _FinanceIconPickerState extends State<FinanceIconPicker> {
       alignment: Alignment.centerLeft,
       child: IntrinsicWidth(
         child: InkWell(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(14),
           onTap: () => _openPickerDialog(context),
           child: Container(
             padding: EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: AppColors.white,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(14),
               border: Border.all(color: AppColors.border),
             ),
             child: Row(
@@ -563,7 +563,7 @@ class _FinanceIconPickerState extends State<FinanceIconPicker> {
                         _displayFinanceIconLabel(selected),
                         style: TextStyle(
                           color: AppColors.textPrimary,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                       Text(
@@ -571,7 +571,7 @@ class _FinanceIconPickerState extends State<FinanceIconPicker> {
                         style: TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 12,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
@@ -642,7 +642,7 @@ class _FinanceIconDialogState extends State<_FinanceIconDialog> {
       insetPadding: const EdgeInsets.all(24),
       backgroundColor: AppColors.white,
       surfaceTintColor: Colors.transparent,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: SizedBox(
         width: 560,
         height: 560,
@@ -674,7 +674,7 @@ class _FinanceIconDialogState extends State<_FinanceIconDialog> {
                                       style: TextStyle(
                                         color: AppColors.textPrimary,
                                         fontSize: 18,
-                                        fontWeight: FontWeight.w800,
+                                        fontWeight: FontWeight.w700,
                                       ),
                                     ),
                                     Text(
@@ -685,7 +685,7 @@ class _FinanceIconDialogState extends State<_FinanceIconDialog> {
                                       style: TextStyle(
                                         color: AppColors.textSecondary,
                                         fontSize: 12,
-                                        fontWeight: FontWeight.w600,
+                                        fontWeight: FontWeight.w500,
                                       ),
                                     ),
                                   ],
@@ -702,7 +702,7 @@ class _FinanceIconDialogState extends State<_FinanceIconDialog> {
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
                               color: AppColors.white,
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(14),
                               border: Border.all(color: AppColors.border),
                             ),
                             child: Row(
@@ -722,7 +722,7 @@ class _FinanceIconDialogState extends State<_FinanceIconDialog> {
                                         _displayFinanceIconLabel(selected),
                                         style: TextStyle(
                                           color: AppColors.textPrimary,
-                                          fontWeight: FontWeight.w800,
+                                          fontWeight: FontWeight.w700,
                                         ),
                                       ),
                                       Text(
@@ -732,7 +732,7 @@ class _FinanceIconDialogState extends State<_FinanceIconDialog> {
                                         style: TextStyle(
                                           color: AppColors.textSecondary,
                                           fontSize: 12,
-                                          fontWeight: FontWeight.w600,
+                                          fontWeight: FontWeight.w500,
                                         ),
                                       ),
                                     ],
@@ -760,7 +760,7 @@ class _FinanceIconDialogState extends State<_FinanceIconDialog> {
                     child: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(14),
                         border: Border.all(color: AppColors.border),
                       ),
                       child: GridView.builder(
@@ -778,7 +778,7 @@ class _FinanceIconDialogState extends State<_FinanceIconDialog> {
                           return Tooltip(
                             message: _displayFinanceIconLabel(option),
                             child: InkWell(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(14),
                               onTap: () =>
                                   Navigator.of(context).pop(option.key),
                               child: Container(
@@ -788,7 +788,7 @@ class _FinanceIconDialogState extends State<_FinanceIconDialog> {
                                           alpha: 0.08,
                                         )
                                       : AppColors.background,
-                                  borderRadius: BorderRadius.circular(10),
+                                  borderRadius: BorderRadius.circular(14),
                                   border: Border.all(
                                     color: isSelected
                                         ? AppColors.primary

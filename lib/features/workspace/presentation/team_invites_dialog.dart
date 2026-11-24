@@ -80,7 +80,7 @@ class _TeamInvitesDialogState extends ConsumerState<TeamInvitesDialog> {
               ),
               style: TextStyle(
                 color: AppColors.textSecondary,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ),
@@ -103,7 +103,7 @@ class _TeamInvitesDialogState extends ConsumerState<TeamInvitesDialog> {
                         ),
                         style: TextStyle(
                           color: AppColors.textSecondary,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ),
@@ -129,7 +129,7 @@ class _TeamInvitesDialogState extends ConsumerState<TeamInvitesDialog> {
                       height: 34,
                       decoration: BoxDecoration(
                         color: AppColors.primary.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(14),
                       ),
                       child: Icon(
                         Icons.group_add_rounded,
@@ -148,7 +148,7 @@ class _TeamInvitesDialogState extends ConsumerState<TeamInvitesDialog> {
                               'Invite to ${invite.empresaNombre}',
                             ),
                             style: TextStyle(
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w700,
                               color: AppColors.textPrimary,
                             ),
                           ),
@@ -159,7 +159,7 @@ class _TeamInvitesDialogState extends ConsumerState<TeamInvitesDialog> {
                               'From ${invite.invitedByNombre}',
                             ),
                             style: TextStyle(
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.w500,
                               color: AppColors.textSecondary,
                             ),
                           ),

@@ -207,7 +207,7 @@ class _ReminderCalendarSection extends StatelessWidget {
                 style: TextStyle(
                   color: AppColors.textPrimary,
                   fontSize: 18,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ),
@@ -231,7 +231,7 @@ class _ReminderCalendarSection extends StatelessWidget {
                       style: TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 12,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
@@ -270,7 +270,7 @@ class _ReminderCalendarSection extends StatelessWidget {
                 DateUtils.isSameDay(normalizedDate, DateTime.now());
 
             return InkWell(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(16),
               onTap: normalizedDate == null
                   ? null
                   : () => onDaySelected(normalizedDate),
@@ -284,7 +284,7 @@ class _ReminderCalendarSection extends StatelessWidget {
                       : reminderCount > 0
                       ? AppColors.accent.withValues(alpha: 0.12)
                       : AppColors.white,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: isSelected
                         ? AppColors.primary
@@ -305,7 +305,7 @@ class _ReminderCalendarSection extends StatelessWidget {
                             ? AppColors.primary
                             : AppColors.textPrimary,
                         fontSize: 14,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                     const Spacer(),
@@ -328,7 +328,7 @@ class _ReminderCalendarSection extends StatelessWidget {
                             style: TextStyle(
                               color: AppColors.white,
                               fontSize: 11,
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         ),
@@ -351,7 +351,7 @@ class _ReminderCalendarSection extends StatelessWidget {
                     style: TextStyle(
                       color: AppColors.textPrimary,
                       fontSize: 16,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -360,7 +360,7 @@ class _ReminderCalendarSection extends StatelessWidget {
                     style: TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 12,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ],
@@ -391,8 +391,9 @@ class _ReminderCalendarSection extends StatelessWidget {
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: AppColors.white,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: AppColors.border),
+                      boxShadow: AppColors.softShadow,
                     ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -408,7 +409,7 @@ class _ReminderCalendarSection extends StatelessWidget {
                                 style: TextStyle(
                                   color: AppColors.textPrimary,
                                   fontSize: 14,
-                                  fontWeight: FontWeight.w800,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
                               if (item.descripcion.trim().isNotEmpty) ...[
@@ -418,7 +419,7 @@ class _ReminderCalendarSection extends StatelessWidget {
                                   style: TextStyle(
                                     color: AppColors.textSecondary,
                                     fontSize: 12,
-                                    fontWeight: FontWeight.w600,
+                                    fontWeight: FontWeight.w500,
                                     height: 1.4,
                                   ),
                                 ),
@@ -1038,7 +1039,7 @@ class _ReminderMetaItem extends StatelessWidget {
               style: TextStyle(
                 color: accent,
                 fontSize: 12,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),

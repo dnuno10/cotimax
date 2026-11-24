@@ -62,7 +62,7 @@ class UsuariosPage extends ConsumerWidget {
                       style: TextStyle(
                         color: AppColors.textPrimary,
                         fontSize: 15,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w700,
                         letterSpacing: 0.8,
                       ),
                     ),
@@ -285,7 +285,7 @@ class _InviteMemberByEmailCardState
             ),
             style: TextStyle(
               color: AppColors.textSecondary,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w500,
               height: 1.45,
             ),
           ),
@@ -351,7 +351,7 @@ class _InviteMemberByEmailCardState
                     ),
                     style: TextStyle(
                       color: AppColors.textSecondary,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ),
@@ -365,7 +365,7 @@ class _InviteMemberByEmailCardState
               padding: EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: AppColors.background,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: AppColors.border),
               ),
               child: Row(
@@ -381,7 +381,7 @@ class _InviteMemberByEmailCardState
                               ? _candidate!.correo
                               : _candidate!.nombre,
                           style: TextStyle(
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w700,
                             color: AppColors.textPrimary,
                           ),
                         ),
@@ -390,7 +390,7 @@ class _InviteMemberByEmailCardState
                           _candidate!.correo,
                           style: TextStyle(
                             color: AppColors.textSecondary,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ],

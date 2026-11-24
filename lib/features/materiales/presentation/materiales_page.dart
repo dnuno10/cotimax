@@ -358,7 +358,7 @@ class _MaterialesPageState extends ConsumerState<MaterialesPage> {
                                 style: TextStyle(
                                   color: AppColors.textSecondary,
                                   fontSize: 12,
-                                  fontWeight: FontWeight.w600,
+                                  fontWeight: FontWeight.w500,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -608,26 +608,24 @@ class _MaterialFormState extends ConsumerState<_MaterialForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Wrap(
-          spacing: 18,
-          runSpacing: 8,
-          children: [
+        Align(
+          alignment: Alignment.centerLeft,
+          child: CotimaxTabTrack(
+            children: [
             _MaterialTabButton(
               label: 'Crear',
               selected: _tabIndex == 0,
               onTap: () => setState(() => _tabIndex = 0),
             ),
-            SizedBox(width: 18),
             _MaterialTabButton(
               label: 'Productos relacionados',
               selected: _tabIndex == 1,
               onTap: () => setState(() => _tabIndex = 1),
             ),
-          ],
+            ],
+          ),
         ),
-        SizedBox(height: 8),
-        Container(height: 1, color: AppColors.border),
-        SizedBox(height: 10),
+        SizedBox(height: 16),
         Expanded(
           child: Scrollbar(
             controller: _scrollController,
@@ -901,7 +899,7 @@ class _MaterialFormState extends ConsumerState<_MaterialForm> {
             style: TextStyle(
               color: AppColors.textSecondary,
               fontSize: 12,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w500,
             ),
           ),
           SizedBox(height: 12),
@@ -922,7 +920,7 @@ class _MaterialFormState extends ConsumerState<_MaterialForm> {
                       style: TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 12,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ]
@@ -951,7 +949,7 @@ class _MaterialFormState extends ConsumerState<_MaterialForm> {
             style: TextStyle(
               color: AppColors.textPrimary,
               fontSize: 13,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
@@ -1091,27 +1089,10 @@ class _MaterialTabButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    return CotimaxTabPill(
+      label: label,
+      selected: selected,
       onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.only(bottom: 10),
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(
-              color: selected ? AppColors.textPrimary : Colors.transparent,
-              width: 2,
-            ),
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: selected ? AppColors.textPrimary : AppColors.textSecondary,
-            fontWeight: FontWeight.w700,
-            fontSize: 14,
-          ),
-        ),
-      ),
     );
   }
 }
@@ -1132,7 +1113,7 @@ class _MaterialSection extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.border),
       ),
       child: Column(
@@ -1156,7 +1137,7 @@ class _MaterialSection extends StatelessWidget {
                           style: TextStyle(
                             color: AppColors.textPrimary,
                             fontSize: 16,
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),
@@ -1213,7 +1194,7 @@ class _MaterialFieldRow extends StatelessWidget {
                 style: TextStyle(
                   color: AppColors.textSecondary,
                   fontSize: 13,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),
@@ -1265,7 +1246,7 @@ class _MaterialSwitchRow extends StatelessWidget {
               style: TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 13,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),

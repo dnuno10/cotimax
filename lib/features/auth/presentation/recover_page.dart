@@ -40,8 +40,8 @@ class _RecoverPageState extends ConsumerState<RecoverPage> {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    AppColors.background.withValues(alpha: 0.78),
-                    AppColors.background.withValues(alpha: 0.90),
+                    AppColors.background.withValues(alpha: 0.97),
+                    AppColors.background.withValues(alpha: 0.97),
                   ],
                 ),
               ),
@@ -52,7 +52,7 @@ class _RecoverPageState extends ConsumerState<RecoverPage> {
             right: -80,
             child: _Glow(
               size: 220,
-              color: AppColors.primary.withValues(alpha: 0.08),
+              color: Colors.transparent,
             ),
           ),
           Positioned(
@@ -60,7 +60,7 @@ class _RecoverPageState extends ConsumerState<RecoverPage> {
             bottom: -40,
             child: _Glow(
               size: 240,
-              color: AppColors.accent.withValues(alpha: 0.08),
+              color: Colors.transparent,
             ),
           ),
           SafeArea(
@@ -72,18 +72,10 @@ class _RecoverPageState extends ConsumerState<RecoverPage> {
                   child: Container(
                     padding: EdgeInsets.all(28),
                     decoration: BoxDecoration(
-                      color: AppColors.white.withValues(alpha: 0.92),
-                      borderRadius: BorderRadius.circular(
-                        AppSpacing.radius + 2,
-                      ),
+                      color: AppColors.container,
+                      borderRadius: BorderRadius.circular(AppSpacing.dialogRadius),
                       border: Border.all(color: AppColors.border),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.textPrimary.withValues(alpha: 0.10),
-                          blurRadius: 30,
-                          offset: Offset(0, 16),
-                        ),
-                      ],
+                      boxShadow: AppColors.floatingShadow,
                     ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -98,7 +90,7 @@ class _RecoverPageState extends ConsumerState<RecoverPage> {
                         Text(
                           'Recuperar acceso',
                           style: TextStyle(
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w700,
                             fontSize: 28,
                             color: AppColors.textPrimary,
                             height: 1,
@@ -109,7 +101,7 @@ class _RecoverPageState extends ConsumerState<RecoverPage> {
                           'Te enviaremos un enlace para restablecer tu contrasena.',
                           style: TextStyle(
                             color: AppColors.textSecondary,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w500,
                             fontSize: 13,
                           ),
                         ),
@@ -148,7 +140,7 @@ class _RecoverPageState extends ConsumerState<RecoverPage> {
                             auth.error!,
                             style: TextStyle(
                               color: AppColors.error,
-                              fontWeight: FontWeight.w700,
+                              fontWeight: FontWeight.w600,
                               fontSize: 12,
                             ),
                           ),

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:cotimax/core/constants/app_colors.dart';
+import 'package:cotimax/core/constants/app_spacing.dart';
 import 'package:cotimax/core/localization/app_localization.dart';
 import 'package:cotimax/core/platform/logo_picker.dart';
 import 'package:cotimax/features/configuracion/application/configuracion_controller.dart';
@@ -154,6 +155,15 @@ class _ConfiguracionPageState extends ConsumerState<ConfiguracionPage> {
     'Localización',
     'Diseño de cotización',
     'Impuestos',
+  ];
+
+  static const _mainTabIcons = <IconData>[
+    Icons.manage_accounts_outlined,
+    Icons.person_outline_rounded,
+    Icons.apartment_outlined,
+    Icons.language_outlined,
+    Icons.design_services_outlined,
+    Icons.percent_rounded,
   ];
 
   static const _accountTabs = [
@@ -361,32 +371,48 @@ class _ConfiguracionPageState extends ConsumerState<ConfiguracionPage> {
             ),
             data: (usuario) {
               _seedDesignStateFromEmpresa(empresa);
-              return SectionCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: List.generate(
-                          _mainTabs.length,
-                          (index) => Padding(
-                            padding: EdgeInsets.only(
-                              right: index == _mainTabs.length - 1 ? 0 : 26,
-                            ),
-                            child: _TopConfigTab(
-                              label: _mainTabs[index],
-                              selected: _mainTabIndex == index,
-                              onTap: () =>
-                                  setState(() => _mainTabIndex = index),
-                            ),
+              final wideSettings = MediaQuery.sizeOf(context).width >= 1100;
+              final settingsNav = wideSettings
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: List.generate(
+                        _mainTabs.length,
+                        (index) => Padding(
+                          padding: EdgeInsets.only(bottom: 2),
+                          child: _SettingsNavTile(
+                            label: _mainTabs[index],
+                            icon: _mainTabIcons[index],
+                            selected: _mainTabIndex == index,
+                            onTap: () => setState(() => _mainTabIndex = index),
                           ),
                         ),
                       ),
-                    ),
-                    SizedBox(height: 16),
-                    Container(height: 1, color: AppColors.border),
-                    SizedBox(height: 18),
+                    )
+                  : CotimaxTabTrack(
+                      children: List.generate(
+                        _mainTabs.length,
+                        (index) => _TopConfigTab(
+                          label: _mainTabs[index],
+                          selected: _mainTabIndex == index,
+                          onTap: () => setState(() => _mainTabIndex = index),
+                        ),
+                      ),
+                    );
+              final settingsBody = Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (wideSettings) ...[
+                      Text(
+                        trText(_mainTabs[_mainTabIndex]),
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.4,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      SizedBox(height: 20),
+                    ],
                     if (_mainTabIndex == 0)
                       _AccountManagementSection(
                         empresa: empresa,
@@ -473,12 +499,98 @@ class _ConfiguracionPageState extends ConsumerState<ConfiguracionPage> {
                         empresa: empresa,
                       ),
                   ],
-                ),
+                );
+              return SectionCard(
+                child: wideSettings
+                    ? Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(width: 248, child: settingsNav),
+                          Container(
+                            width: 1,
+                            height: 520,
+                            margin: EdgeInsets.symmetric(horizontal: 24),
+                            color: AppColors.border,
+                          ),
+                          Expanded(child: settingsBody),
+                        ],
+                      )
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          settingsNav,
+                          SizedBox(height: 20),
+                          settingsBody,
+                        ],
+                      ),
               );
             },
           ),
         ),
       ],
+    );
+  }
+}
+
+class _SettingsNavTile extends StatefulWidget {
+  const _SettingsNavTile({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  State<_SettingsNavTile> createState() => _SettingsNavTileState();
+}
+
+class _SettingsNavTileState extends State<_SettingsNavTile> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: Duration(milliseconds: 160),
+          height: 46,
+          padding: EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(
+            color: widget.selected
+                ? AppColors.muted
+                : _hovered
+                ? AppColors.muted.withValues(alpha: 0.6)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Row(
+            children: [
+              Icon(widget.icon, size: 20, color: AppColors.textPrimary),
+              SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  trText(widget.label),
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -496,27 +608,10 @@ class _TopConfigTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    return CotimaxTabPill(
+      label: label,
+      selected: selected,
       onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.only(bottom: 12),
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(
-              color: selected ? AppColors.textPrimary : Colors.transparent,
-              width: 2,
-            ),
-          ),
-        ),
-        child: Text(
-          trText(label),
-          style: TextStyle(
-            color: selected ? AppColors.textPrimary : AppColors.textMuted,
-            fontSize: 15,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-      ),
     );
   }
 }
@@ -541,36 +636,17 @@ class _AccountManagementSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          trText('Gestión de cuenta'),
-          style: TextStyle(
-            color: AppColors.textPrimary,
-            fontSize: 18,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        SizedBox(height: 14),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: List.generate(
-              tabs.length,
-              (index) => Padding(
-                padding: EdgeInsets.only(
-                  right: index == tabs.length - 1 ? 0 : 18,
-                ),
-                child: _TopConfigTab(
-                  label: tabs[index],
-                  selected: tabIndex == index,
-                  onTap: () => onTabChanged(index),
-                ),
-              ),
+        CotimaxTabTrack(
+          children: List.generate(
+            tabs.length,
+            (index) => _TopConfigTab(
+              label: tabs[index],
+              selected: tabIndex == index,
+              onTap: () => onTabChanged(index),
             ),
           ),
         ),
-        SizedBox(height: 4),
-        Container(height: 1, color: AppColors.border),
-        SizedBox(height: 18),
+        SizedBox(height: 20),
         if (tabIndex == 0) _GeneralAccountPanel(empresa: empresa),
         if (tabIndex == 1)
           _AppearanceAccountPanel(initialDarkMode: usuario.modoOscuro),
@@ -750,7 +826,7 @@ class _UserProfileSectionState extends ConsumerState<_UserProfileSection> {
                       '${trText('Rol')}: ${userRoleLabel(widget.usuario.rol)}',
                       style: TextStyle(
                         color: AppColors.textSecondary,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
@@ -839,7 +915,7 @@ class _GeneralAccountPanel extends ConsumerWidget {
                         style: TextStyle(
                           color: AppColors.textPrimary,
                           fontSize: 22,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                       SizedBox(height: 6),
@@ -848,7 +924,7 @@ class _GeneralAccountPanel extends ConsumerWidget {
                         style: TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 13,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                       SizedBox(height: 16),
@@ -901,7 +977,7 @@ class _GeneralAccountPanel extends ConsumerWidget {
                 style: TextStyle(
                   color: AppColors.textSecondary,
                   fontSize: 13,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
               SizedBox(height: 16),
@@ -1278,8 +1354,9 @@ class _CompanySettingsSectionState
       padding: EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.border),
+        boxShadow: AppColors.softShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1289,7 +1366,7 @@ class _CompanySettingsSectionState
             style: TextStyle(
               color: AppColors.textPrimary,
               fontSize: 16,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w700,
             ),
           ),
           SizedBox(height: 6),
@@ -1300,7 +1377,7 @@ class _CompanySettingsSectionState
             style: TextStyle(
               color: AppColors.textSecondary,
               fontSize: 12,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w500,
             ),
           ),
           SizedBox(height: 14),
@@ -1343,14 +1420,14 @@ class _CompanySettingsSectionState
               padding: EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: AppColors.background,
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(14),
                 border: Border.all(color: AppColors.border),
               ),
               child: Text(
                 trText('No has cargado un logo todavía.'),
                 style: TextStyle(
                   color: AppColors.textSecondary,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ),
@@ -1377,7 +1454,7 @@ class _CompanySettingsSectionState
             style: TextStyle(
               color: AppColors.textSecondary,
               fontSize: 13,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w500,
             ),
           ),
           SizedBox(height: 16),
@@ -1421,32 +1498,24 @@ class _CompanySettingsSectionState
           style: TextStyle(
             color: AppColors.textPrimary,
             fontSize: 18,
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.w700,
           ),
         ),
         SizedBox(height: 14),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: List.generate(
-              _tabs.length,
-              (index) => Padding(
-                padding: EdgeInsets.only(
-                  right: index == _tabs.length - 1 ? 0 : 18,
-                ),
-                child: _TopConfigTab(
-                  label: _tabs[index],
-                  selected: _tabIndex == index,
-                  onTap: () {
-                    setState(() => _tabIndex = index);
-                    widget.onTabChanged(index);
-                  },
-                ),
-              ),
+        CotimaxTabTrack(
+          children: List.generate(
+            _tabs.length,
+            (index) => _TopConfigTab(
+              label: _tabs[index],
+              selected: _tabIndex == index,
+              onTap: () {
+                setState(() => _tabIndex = index);
+                widget.onTabChanged(index);
+              },
             ),
           ),
         ),
-        SizedBox(height: 18),
+        SizedBox(height: 20),
         if (_tabIndex == 0) _buildCompanyDetailsTab(),
         if (_tabIndex == 1) _buildLogoTab(),
         if (_tabIndex == 2) _buildQuoteDefaultsTab(),
@@ -1684,25 +1753,17 @@ class _InvoiceDesignSection extends ConsumerWidget {
           icon: Icons.palette_rounded,
         ),
         SizedBox(height: 14),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: List.generate(
-              tabs.length,
-              (index) => Padding(
-                padding: EdgeInsets.only(
-                  right: index == tabs.length - 1 ? 0 : 18,
-                ),
-                child: _TopConfigTab(
-                  label: tabs[index],
-                  selected: tabIndex == index,
-                  onTap: () => onTabChanged(index),
-                ),
-              ),
+        CotimaxTabTrack(
+          children: List.generate(
+            tabs.length,
+            (index) => _TopConfigTab(
+              label: tabs[index],
+              selected: tabIndex == index,
+              onTap: () => onTabChanged(index),
             ),
           ),
         ),
-        SizedBox(height: 18),
+        SizedBox(height: 20),
         LayoutBuilder(
           builder: (context, constraints) {
             final stacked = constraints.maxWidth < 1240;
@@ -2297,7 +2358,7 @@ class _InvoicePreviewPanelState extends State<_InvoicePreviewPanel> {
       padding: EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppColors.background,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.border),
       ),
       child: FutureBuilder<Uint8List>(
@@ -2353,7 +2414,7 @@ class _InvoicePreviewPanelState extends State<_InvoicePreviewPanel> {
                               margin: EdgeInsets.only(bottom: 12),
                               decoration: BoxDecoration(
                                 color: AppColors.white,
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(10),
                                 border: Border.all(color: AppColors.border),
                                 boxShadow: const [
                                   BoxShadow(
@@ -2577,7 +2638,7 @@ class _TaxSettingsSectionState extends ConsumerState<_TaxSettingsSection> {
             style: TextStyle(
               color: AppColors.textSecondary,
               fontSize: 13,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w500,
             ),
           ),
           SizedBox(height: 16),
@@ -2683,7 +2744,7 @@ class _TaxDefaultSelector extends StatelessWidget {
             style: TextStyle(
               color: AppColors.textSecondary,
               fontSize: 14,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ),
@@ -2738,8 +2799,9 @@ class _TaxRateEditorCard extends StatelessWidget {
       padding: EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.border),
+        boxShadow: AppColors.softShadow,
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -2814,7 +2876,7 @@ class _ConfigSectionTitle extends StatelessWidget {
         style: TextStyle(
           color: AppColors.textPrimary,
           fontSize: 18,
-          fontWeight: FontWeight.w800,
+          fontWeight: FontWeight.w700,
         ),
       );
     }
@@ -2828,7 +2890,7 @@ class _ConfigSectionTitle extends StatelessWidget {
           style: TextStyle(
             color: AppColors.textPrimary,
             fontSize: 18,
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.w700,
           ),
         ),
       ],
@@ -2861,7 +2923,7 @@ class _AccountMetricCard extends StatelessWidget {
             style: TextStyle(
               color: AppColors.textSecondary,
               fontSize: 12,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
             ),
           ),
           SizedBox(height: 6),
@@ -2870,7 +2932,7 @@ class _AccountMetricCard extends StatelessWidget {
             style: TextStyle(
               color: AppColors.textPrimary,
               fontSize: 16,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ],
@@ -2911,7 +2973,7 @@ class _AccountDetailLine extends StatelessWidget {
                   style: TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 12,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
                 SizedBox(height: 2),
@@ -2919,7 +2981,7 @@ class _AccountDetailLine extends StatelessWidget {
                   value.trim().isEmpty ? '-' : value,
                   style: TextStyle(
                     color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
@@ -2946,14 +3008,15 @@ class _DangerActionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(16),
       child: Container(
         width: double.infinity,
         padding: EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: AppColors.white,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(color: AppColors.border),
+          boxShadow: AppColors.softShadow,
         ),
         child: Row(
           children: [
@@ -2964,7 +3027,7 @@ class _DangerActionCard extends StatelessWidget {
               style: TextStyle(
                 color: AppColors.error,
                 fontSize: 16,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ],
@@ -2986,20 +3049,18 @@ class _FormShellCard extends StatelessWidget {
     final helpText = resolveContainerHelpText(title);
 
     return Container(
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.container,
+        borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
         border: Border.all(color: AppColors.border),
+        boxShadow: AppColors.softShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            decoration: BoxDecoration(
-              color: AppColors.background,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-            ),
-            padding: EdgeInsets.fromLTRB(18, 18, 18, 14),
+            padding: EdgeInsets.fromLTRB(20, 16, 20, 16),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
@@ -3014,7 +3075,7 @@ class _FormShellCard extends StatelessWidget {
             ),
           ),
           Container(height: 1, color: AppColors.border),
-          Padding(padding: EdgeInsets.all(18), child: child),
+          Padding(padding: EdgeInsets.all(20), child: child),
         ],
       ),
     );
@@ -3057,7 +3118,7 @@ class _EditableFieldRow extends StatelessWidget {
                   style: TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 14,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
                 SizedBox(height: 8),
@@ -3078,7 +3139,7 @@ class _EditableFieldRow extends StatelessWidget {
                     style: TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 14,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
@@ -3125,7 +3186,7 @@ class _RichEditableFieldRow extends StatelessWidget {
                   style: TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 14,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
                 SizedBox(height: 8),
@@ -3146,7 +3207,7 @@ class _RichEditableFieldRow extends StatelessWidget {
                     style: TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 14,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
@@ -3216,7 +3277,7 @@ class _SelectableFieldRow extends StatelessWidget {
                   style: TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 14,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
                 SizedBox(height: 8),
@@ -3237,7 +3298,7 @@ class _SelectableFieldRow extends StatelessWidget {
                     style: TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 14,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
@@ -3349,7 +3410,7 @@ class _DesignSelectRow extends StatelessWidget {
               style: TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 14,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
@@ -3420,7 +3481,7 @@ class _DesignDoubleInputRow extends StatelessWidget {
               style: TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 14,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
@@ -3503,13 +3564,13 @@ class _DesignColorRow extends StatelessWidget {
               style: TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 14,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
           Expanded(
             child: InkWell(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(14),
               onTap: () async {
                 final nextValue = await showDialog<String>(
                   context: context,
@@ -3614,7 +3675,7 @@ class _DesignColorDialogState extends State<_DesignColorDialog> {
             height: 64,
             decoration: BoxDecoration(
               color: previewColor,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(14),
               border: Border.all(color: AppColors.border),
             ),
           ),
@@ -3623,7 +3684,7 @@ class _DesignColorDialogState extends State<_DesignColorDialog> {
             trText('Seleccionar color'),
             style: TextStyle(
               color: AppColors.textSecondary,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
               fontSize: 13,
             ),
           ),
@@ -3711,7 +3772,7 @@ class _DesignToggleRow extends StatelessWidget {
                   style: TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 14,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
                 if (helper != null) ...[
@@ -3721,7 +3782,7 @@ class _DesignToggleRow extends StatelessWidget {
                     style: TextStyle(
                       color: AppColors.textMuted,
                       fontSize: 12,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w500,
                       height: 1.4,
                     ),
                   ),
@@ -3769,7 +3830,7 @@ class _LogoPreviewCard extends StatelessWidget {
       padding: EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: background,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(14),
       ),
       child: hasImage
           ? _OptionalAssetImage(

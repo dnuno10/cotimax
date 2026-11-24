@@ -636,26 +636,24 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Wrap(
-          spacing: 18,
-          runSpacing: 8,
-          children: [
+        Align(
+          alignment: Alignment.centerLeft,
+          child: CotimaxTabTrack(
+            children: [
             _ProductTabButton(
               label: 'Crear',
               selected: _tabIndex == 0,
               onTap: () => setState(() => _tabIndex = 0),
             ),
-            SizedBox(width: 18),
             _ProductTabButton(
               label: 'Materiales y consumibles',
               selected: _tabIndex == 1,
               onTap: () => setState(() => _tabIndex = 1),
             ),
-          ],
+            ],
+          ),
         ),
-        SizedBox(height: 8),
-        Container(height: 1, color: AppColors.border),
-        SizedBox(height: 10),
+        SizedBox(height: 16),
         Expanded(
           child: _isHydrating
               ? LoadingStateWidget(message: 'Cargando producto...')
@@ -736,7 +734,7 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
                   builder: (context) {
                     if (_pendingImage != null) {
                       return ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(14),
                         child: Image.memory(
                           _pendingImage!.bytes,
                           width: 120,
@@ -750,7 +748,7 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
                         existingUrl.isNotEmpty && !_removeImage;
                     if (showExisting) {
                       return ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(14),
                         child: Image.network(
                           existingUrl,
                           width: 120,
@@ -762,7 +760,7 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
                             alignment: Alignment.center,
                             decoration: BoxDecoration(
                               color: AppColors.background,
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(14),
                               border: Border.all(color: AppColors.border),
                             ),
                             child: Text(
@@ -770,7 +768,7 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 color: AppColors.textSecondary,
-                                fontWeight: FontWeight.w600,
+                                fontWeight: FontWeight.w500,
                                 fontSize: 12,
                               ),
                             ),
@@ -783,14 +781,14 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
                       padding: EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: AppColors.background,
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(14),
                         border: Border.all(color: AppColors.border),
                       ),
                       child: Text(
                         'Sin imagen. Máximo 5MB.',
                         style: TextStyle(
                           color: AppColors.textSecondary,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     );
@@ -1009,7 +1007,7 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
                 style: TextStyle(
                   color: AppColors.textSecondary,
                   fontSize: 12,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
               SizedBox(height: 10),
@@ -1644,27 +1642,10 @@ class _ProductTabButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    return CotimaxTabPill(
+      label: label,
+      selected: selected,
       onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.only(bottom: 10),
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(
-              color: selected ? AppColors.textPrimary : Colors.transparent,
-              width: 2,
-            ),
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: selected ? AppColors.textPrimary : AppColors.textSecondary,
-            fontWeight: FontWeight.w700,
-            fontSize: 14,
-          ),
-        ),
-      ),
     );
   }
 }
@@ -1681,7 +1662,7 @@ class _ProductoSection extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.border),
       ),
       child: Column(
@@ -1700,7 +1681,7 @@ class _ProductoSection extends StatelessWidget {
                     style: TextStyle(
                       color: AppColors.textPrimary,
                       fontSize: 16,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
@@ -1788,7 +1769,7 @@ class _ProductoFieldRow extends StatelessWidget {
                       style: TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 13,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                     SizedBox(height: 6),
@@ -1809,7 +1790,7 @@ class _ProductoFieldRow extends StatelessWidget {
                           style: TextStyle(
                             color: AppColors.textSecondary,
                             fontSize: 13,
-                            fontWeight: FontWeight.w700,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
@@ -1870,7 +1851,7 @@ class _ProductoTypeFieldRow extends StatelessWidget {
                       style: TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 13,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                     SizedBox(height: 6),
@@ -1886,7 +1867,7 @@ class _ProductoTypeFieldRow extends StatelessWidget {
                         style: TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 13,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
@@ -1956,7 +1937,7 @@ class _ProductoDropdownFieldRow extends StatelessWidget {
                       style: TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 13,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                     SizedBox(height: 6),
@@ -1972,7 +1953,7 @@ class _ProductoDropdownFieldRow extends StatelessWidget {
                         style: TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 13,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
@@ -2015,7 +1996,7 @@ class _ProductoSwitchRow extends StatelessWidget {
                       style: TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 13,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                     if (helper != null) ...[
@@ -2025,7 +2006,7 @@ class _ProductoSwitchRow extends StatelessWidget {
                         style: TextStyle(
                           color: AppColors.textMuted,
                           fontSize: 12,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w500,
                           height: 1.4,
                         ),
                       ),
@@ -2047,7 +2028,7 @@ class _ProductoSwitchRow extends StatelessWidget {
                             style: TextStyle(
                               color: AppColors.textSecondary,
                               fontSize: 13,
-                              fontWeight: FontWeight.w700,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                           if (helper != null) ...[
@@ -2057,7 +2038,7 @@ class _ProductoSwitchRow extends StatelessWidget {
                               style: TextStyle(
                                 color: AppColors.textMuted,
                                 fontSize: 12,
-                                fontWeight: FontWeight.w600,
+                                fontWeight: FontWeight.w500,
                                 height: 1.4,
                               ),
                             ),
@@ -2103,7 +2084,7 @@ class _ProductoPriceRangesSection extends StatelessWidget {
             style: TextStyle(
               color: AppColors.textSecondary,
               fontSize: 12,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w500,
             ),
           ),
           SizedBox(height: 10),
@@ -2155,7 +2136,7 @@ class _ProductoCustomFieldRow extends StatelessWidget {
         final labelStyle = TextStyle(
           color: AppColors.textSecondary,
           fontSize: 13,
-          fontWeight: FontWeight.w700,
+          fontWeight: FontWeight.w600,
         );
 
         return Padding(
@@ -2241,7 +2222,7 @@ class _ProfitMetric extends StatelessWidget {
           style: TextStyle(
             color: AppColors.textSecondary,
             fontSize: 12,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w600,
           ),
         ),
         SizedBox(height: 4),
@@ -2250,7 +2231,7 @@ class _ProfitMetric extends StatelessWidget {
           style: TextStyle(
             color: valueColor ?? AppColors.textPrimary,
             fontSize: 16,
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.w700,
           ),
         ),
       ],
@@ -2277,7 +2258,7 @@ class _CompactFieldRow extends StatelessWidget {
               style: TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 12,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
@@ -2319,7 +2300,7 @@ class _CompactDropdownRow extends StatelessWidget {
               style: TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 12,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
@@ -2393,7 +2374,7 @@ class _CompactSelectRow extends StatelessWidget {
                 style: TextStyle(
                   color: AppColors.textSecondary,
                   fontSize: 12,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),
@@ -2478,7 +2459,7 @@ class _MaterialRow extends StatelessWidget {
       padding: EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.border),
       ),
       child: Column(
@@ -2491,7 +2472,7 @@ class _MaterialRow extends StatelessWidget {
                   style: TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 13,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
@@ -2590,7 +2571,7 @@ class _PrecioRangoRow extends StatelessWidget {
       padding: EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.border),
       ),
       child: Column(
@@ -2603,7 +2584,7 @@ class _PrecioRangoRow extends StatelessWidget {
                   style: TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 13,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
@@ -2689,7 +2670,7 @@ class _CompactFieldColumn extends StatelessWidget {
           style: TextStyle(
             color: AppColors.textSecondary,
             fontSize: 12,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w600,
           ),
         ),
         SizedBox(height: 6),

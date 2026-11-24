@@ -192,7 +192,7 @@ class _CotimaxRichTextEditorState extends State<CotimaxRichTextEditor> {
         backgroundColor: surfaceColor,
         titleTextStyle: theme.textTheme.titleLarge?.copyWith(
           color: editorTextColor,
-          fontWeight: FontWeight.w800,
+          fontWeight: FontWeight.w700,
         ),
         contentTextStyle: theme.textTheme.bodyMedium?.copyWith(
           color: editorTextColor,
@@ -202,7 +202,7 @@ class _CotimaxRichTextEditorState extends State<CotimaxRichTextEditor> {
         style: TextButton.styleFrom(
           foregroundColor: theme.colorScheme.primary,
           textStyle: theme.textTheme.labelLarge?.copyWith(
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w600,
           ),
         ),
       ),

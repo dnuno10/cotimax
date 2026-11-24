@@ -14,6 +14,13 @@ class AppColorPalette {
     required this.success,
     required this.error,
     required this.warning,
+    required this.muted,
+    required this.mutedStrong,
+    required this.ink,
+    required this.onInk,
+    required this.rail,
+    required this.successSoft,
+    required this.errorSoft,
   });
 
   final Color primary;
@@ -28,37 +35,74 @@ class AppColorPalette {
   final Color success;
   final Color error;
   final Color warning;
+
+  /// Soft gray fill: pills, chips, inner panels, inputs, selected nav items.
+  final Color muted;
+
+  /// Slightly darker gray for hover / pressed states on [muted] surfaces.
+  final Color mutedStrong;
+
+  /// Near-black for strong buttons (play / send), toasts and tooltips.
+  final Color ink;
+
+  /// Foreground on top of [ink].
+  final Color onInk;
+
+  /// Background of the narrow navigation rail.
+  final Color rail;
+
+  /// Mint tint used for positive panels (e.g. "Recording" strip).
+  final Color successSoft;
+
+  /// Rose tint used for destructive panels.
+  final Color errorSoft;
 }
 
+/// Muse-inspired palette: near-white surfaces, ink text, soft gray pills,
+/// a calm blue for primary actions and mint / rose status tints.
 class AppColors {
   static const AppColorPalette lightPalette = AppColorPalette(
-    primary: Color(0xFF1E5BB8),
-    accent: Color(0xFFF04A2A),
+    primary: Color(0xFF2257C9),
+    accent: Color(0xFFD6516A),
     white: Color(0xFFFFFFFF),
-    background: Color(0xFFF7F9FC),
+    background: Color(0xFFFAFAFA),
     container: Color(0xFFFFFFFF),
-    border: Color(0xFFE6EAF0),
-    textPrimary: Color(0xFF1F2937),
-    textSecondary: Color(0xFF6B7280),
-    textMuted: Color(0xFF9CA3AF),
-    success: Color(0xFF16A34A),
-    error: Color(0xFFDC2626),
-    warning: Color(0xFFD97706),
+    border: Color(0xFFE8E8EA),
+    textPrimary: Color(0xFF1C1C1E),
+    textSecondary: Color(0xFF6B6B70),
+    textMuted: Color(0xFFA1A1A6),
+    success: Color(0xFF3B8C5E),
+    error: Color(0xFFD6516A),
+    warning: Color(0xFFD48A1A),
+    muted: Color(0xFFF4F4F6),
+    mutedStrong: Color(0xFFEAEAED),
+    ink: Color(0xFF1A1A1C),
+    onInk: Color(0xFFFFFFFF),
+    rail: Color(0xFFF6F6F7),
+    successSoft: Color(0xFFEFF7F2),
+    errorSoft: Color(0xFFFBEEF1),
   );
 
   static const AppColorPalette darkPalette = AppColorPalette(
-    primary: Color(0xFF6EA8FF),
-    accent: Color(0xFFFF8A65),
-    white: Color(0xFF0F172A),
-    background: Color(0xFF08111F),
-    container: Color(0xFF0F172A),
-    border: Color(0xFF233043),
-    textPrimary: Color(0xFFF3F6FB),
-    textSecondary: Color(0xFFB5C0CF),
-    textMuted: Color(0xFF7B8798),
-    success: Color(0xFF34D399),
-    error: Color(0xFFF87171),
-    warning: Color(0xFFFBBF24),
+    primary: Color(0xFF5B8DEF),
+    accent: Color(0xFFF07A8E),
+    white: Color(0xFF1C1C1F),
+    background: Color(0xFF141416),
+    container: Color(0xFF1C1C1F),
+    border: Color(0xFF2E2E33),
+    textPrimary: Color(0xFFF5F5F7),
+    textSecondary: Color(0xFFA1A1A8),
+    textMuted: Color(0xFF6E6E76),
+    success: Color(0xFF5CC18A),
+    error: Color(0xFFF07A8E),
+    warning: Color(0xFFF5B640),
+    muted: Color(0xFF26262A),
+    mutedStrong: Color(0xFF313136),
+    ink: Color(0xFFF5F5F7),
+    onInk: Color(0xFF111113),
+    rail: Color(0xFF18181B),
+    successSoft: Color(0xFF1C2C23),
+    errorSoft: Color(0xFF2E1D22),
   );
 
   static AppColorPalette _currentPalette = lightPalette;
@@ -66,6 +110,8 @@ class AppColors {
   static void syncThemeMode(ThemeMode mode) {
     _currentPalette = mode == ThemeMode.dark ? darkPalette : lightPalette;
   }
+
+  static bool get isDark => identical(_currentPalette, darkPalette);
 
   static Color get primary => _currentPalette.primary;
   static Color get accent => _currentPalette.accent;
@@ -79,4 +125,39 @@ class AppColors {
   static Color get success => _currentPalette.success;
   static Color get error => _currentPalette.error;
   static Color get warning => _currentPalette.warning;
+  static Color get muted => _currentPalette.muted;
+  static Color get mutedStrong => _currentPalette.mutedStrong;
+  static Color get ink => _currentPalette.ink;
+  static Color get onInk => _currentPalette.onInk;
+  static Color get rail => _currentPalette.rail;
+  static Color get successSoft => _currentPalette.successSoft;
+  static Color get errorSoft => _currentPalette.errorSoft;
+
+  /// Soft, diffuse shadow for cards (Muse / call-card style).
+  static List<BoxShadow> get softShadow => [
+    BoxShadow(
+      color: Colors.black.withValues(alpha: isDark ? 0.30 : 0.05),
+      blurRadius: 28,
+      offset: const Offset(0, 10),
+    ),
+    BoxShadow(
+      color: Colors.black.withValues(alpha: isDark ? 0.20 : 0.03),
+      blurRadius: 2,
+      offset: const Offset(0, 1),
+    ),
+  ];
+
+  /// Deeper shadow for popovers, dialogs and the command palette.
+  static List<BoxShadow> get floatingShadow => [
+    BoxShadow(
+      color: Colors.black.withValues(alpha: isDark ? 0.45 : 0.13),
+      blurRadius: 48,
+      offset: const Offset(0, 18),
+    ),
+    BoxShadow(
+      color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
+      blurRadius: 4,
+      offset: const Offset(0, 1),
+    ),
+  ];
 }

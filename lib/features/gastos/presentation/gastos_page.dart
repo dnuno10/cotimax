@@ -315,7 +315,7 @@ class _GastosPageState extends ConsumerState<GastosPage> {
                             style: TextStyle(
                               color: AppColors.textSecondary,
                               fontSize: 11,
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w700,
                               letterSpacing: 0.4,
                             ),
                           ),
@@ -324,7 +324,7 @@ class _GastosPageState extends ConsumerState<GastosPage> {
                             formatMxn(chartTotal),
                             style: TextStyle(
                               color: AppColors.textPrimary,
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w700,
                               fontSize: 30,
                               height: 1,
                             ),
@@ -356,7 +356,7 @@ class _GastosPageState extends ConsumerState<GastosPage> {
                             style: TextStyle(
                               color: AppColors.textSecondary,
                               fontSize: 12,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.w500,
                               height: 1.45,
                             ),
                           ),
@@ -441,7 +441,7 @@ class _GastosPageState extends ConsumerState<GastosPage> {
                       ),
                       style: TextStyle(
                         color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w500,
                         fontSize: 12,
                         height: 1.5,
                       ),
@@ -455,7 +455,7 @@ class _GastosPageState extends ConsumerState<GastosPage> {
                             : margen >= 20
                             ? AppColors.warning
                             : AppColors.error,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w700,
                         fontSize: 15,
                       ),
                     ),
@@ -464,7 +464,7 @@ class _GastosPageState extends ConsumerState<GastosPage> {
                       '${trText('Margen actual')}: ${margen.toStringAsFixed(1)}%. ${trText(margen >= 20 ? 'El gasto se mantiene bajo control.' : 'Conviene revisar gastos para recuperar margen.')}',
                       style: TextStyle(
                         color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w500,
                         fontSize: 12,
                         height: 1.5,
                       ),
@@ -754,7 +754,7 @@ class _GastosPageState extends ConsumerState<GastosPage> {
                                           0
                                       ? AppColors.success
                                       : AppColors.error,
-                                  fontWeight: FontWeight.w700,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
                             ),
@@ -1952,7 +1952,7 @@ class _CategoryLookupEmptyState extends StatelessWidget {
       padding: EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppColors.background,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.border),
       ),
       child: Column(
@@ -1963,7 +1963,7 @@ class _CategoryLookupEmptyState extends StatelessWidget {
             style: TextStyle(
               color: AppColors.textSecondary,
               fontSize: 12,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w500,
               height: 1.4,
             ),
           ),
@@ -1995,7 +1995,7 @@ class _RangeLabel extends StatelessWidget {
       style: TextStyle(
         color: AppColors.textSecondary,
         fontSize: 11,
-        fontWeight: FontWeight.w800,
+        fontWeight: FontWeight.w700,
       ),
     );
   }
@@ -2024,7 +2024,7 @@ class _ChartMetaItem extends StatelessWidget {
           style: TextStyle(
             color: AppColors.textPrimary,
             fontSize: 12,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w600,
           ),
         ),
       ],
@@ -2136,7 +2136,7 @@ class _DateRangeButton extends StatelessWidget {
       icon: Icon(Icons.date_range_rounded, size: 16, color: accent),
       label: Text(
         trText(label),
-        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -2172,7 +2172,7 @@ class _ProjectionModeButton extends StatelessWidget {
         trText(label),
         style: TextStyle(
           fontSize: 13,
-          fontWeight: active ? FontWeight.w800 : FontWeight.w700,
+          fontWeight: active ? FontWeight.w700 : FontWeight.w600,
         ),
       ),
     );
@@ -2202,7 +2202,7 @@ class _ProjectionResetButton extends StatelessWidget {
       ),
       child: Text(
         trText(label),
-        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -2223,7 +2223,7 @@ class _ProjectionOptionButton extends StatelessWidget {
           trText(label),
           style: TextStyle(
             color: accent,
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.w700,
             fontSize: 13,
           ),
         ),
@@ -2298,7 +2298,7 @@ class _CategoryDistributionCard extends StatelessWidget {
                       style: TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 13,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   )
@@ -2344,7 +2344,7 @@ class _CategoryDistributionCard extends StatelessWidget {
                       style: TextStyle(
                         color: AppColors.textPrimary,
                         fontSize: 12,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
@@ -2353,7 +2353,7 @@ class _CategoryDistributionCard extends StatelessWidget {
                     style: TextStyle(
                       color: AppColors.textPrimary,
                       fontSize: 12,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ],
@@ -2458,7 +2458,7 @@ LineChartData _expenseLineChartData({
             style: TextStyle(
               color: AppColors.textMuted,
               fontSize: 11,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ),
@@ -2481,7 +2481,7 @@ LineChartData _expenseLineChartData({
                 style: TextStyle(
                   color: AppColors.textMuted,
                   fontSize: 10,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             );
@@ -2518,7 +2518,7 @@ LineChartData _expenseLineChartData({
             .map(
               (spot) => LineTooltipItem(
                 formatMxn(spot.y),
-                TextStyle(color: AppColors.white, fontWeight: FontWeight.w800),
+                TextStyle(color: AppColors.white, fontWeight: FontWeight.w700),
               ),
             )
             .toList(),

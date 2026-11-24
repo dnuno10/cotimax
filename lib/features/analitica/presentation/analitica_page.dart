@@ -350,7 +350,7 @@ class _AnalyticsSummaryEntry extends StatelessWidget {
           style: TextStyle(
             color: AppColors.textSecondary,
             fontSize: 12,
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.w700,
           ),
         ),
         SizedBox(height: 8),
@@ -359,7 +359,7 @@ class _AnalyticsSummaryEntry extends StatelessWidget {
           style: TextStyle(
             color: item.accent,
             fontSize: 24,
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.w700,
             height: 1,
           ),
         ),
@@ -369,7 +369,7 @@ class _AnalyticsSummaryEntry extends StatelessWidget {
           style: TextStyle(
             color: AppColors.textPrimary,
             fontSize: 12,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w500,
             height: 1.35,
           ),
         ),
@@ -429,7 +429,7 @@ class _WeeklyPulseCard extends StatelessWidget {
             style: TextStyle(
               color: AppColors.textSecondary,
               fontSize: 12,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w500,
               height: 1.45,
             ),
           ),
@@ -463,7 +463,7 @@ class _WeeklyPulseCard extends StatelessWidget {
                         style: TextStyle(
                           color: AppColors.textMuted,
                           fontSize: 11,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
@@ -483,7 +483,7 @@ class _WeeklyPulseCard extends StatelessWidget {
                             style: TextStyle(
                               color: AppColors.textMuted,
                               fontSize: 10,
-                              fontWeight: FontWeight.w700,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         );
@@ -521,7 +521,7 @@ class _WeeklyPulseCard extends StatelessWidget {
                             formatMxn(spot.y),
                             TextStyle(
                               color: AppColors.white,
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         )
@@ -582,7 +582,7 @@ class _MonthlyBarCard extends StatelessWidget {
             style: TextStyle(
               color: AppColors.textSecondary,
               fontSize: 12,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w500,
               height: 1.45,
             ),
           ),
@@ -615,7 +615,7 @@ class _MonthlyBarCard extends StatelessWidget {
                         style: TextStyle(
                           color: AppColors.textMuted,
                           fontSize: 11,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
@@ -635,7 +635,7 @@ class _MonthlyBarCard extends StatelessWidget {
                             style: TextStyle(
                               color: AppColors.textMuted,
                               fontSize: 10,
-                              fontWeight: FontWeight.w700,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         );
@@ -668,7 +668,7 @@ class _MonthlyBarCard extends StatelessWidget {
                         '${labels[rodIndex]} ${formatMxn(rod.toY)}',
                         TextStyle(
                           color: AppColors.white,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                         ),
                       );
                     },
@@ -793,7 +793,7 @@ class _ProjectionCard extends StatelessWidget {
                         style: TextStyle(
                           color: AppColors.textMuted,
                           fontSize: 11,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
@@ -820,7 +820,7 @@ class _ProjectionCard extends StatelessWidget {
                             style: TextStyle(
                               color: AppColors.textMuted,
                               fontSize: 10,
-                              fontWeight: FontWeight.w700,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         );
@@ -857,7 +857,7 @@ class _ProjectionCard extends StatelessWidget {
                             formatMxn(spot.y),
                             TextStyle(
                               color: AppColors.white,
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         )
@@ -902,7 +902,7 @@ class _AnalyticsLegend extends StatelessWidget {
                   style: TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 11,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
@@ -1001,7 +1001,7 @@ class _ResultsBreakdownList extends StatelessWidget {
                     trText('Periodo'),
                     style: TextStyle(
                       color: AppColors.textSecondary,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w700,
                       fontSize: 12,
                     ),
                   ),
@@ -1011,7 +1011,7 @@ class _ResultsBreakdownList extends StatelessWidget {
                     trText('Ingresos'),
                     style: TextStyle(
                       color: AppColors.textSecondary,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w700,
                       fontSize: 12,
                     ),
                   ),
@@ -1021,7 +1021,7 @@ class _ResultsBreakdownList extends StatelessWidget {
                     trText('Gastos'),
                     style: TextStyle(
                       color: AppColors.textSecondary,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w700,
                       fontSize: 12,
                     ),
                   ),
@@ -1031,7 +1031,7 @@ class _ResultsBreakdownList extends StatelessWidget {
                     trText('Libre'),
                     style: TextStyle(
                       color: AppColors.textSecondary,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w700,
                       fontSize: 12,
                     ),
                   ),
@@ -1094,7 +1094,7 @@ class _ResultsExpansionRow extends StatelessWidget {
                       trText(row.label),
                       style: TextStyle(
                         color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w700,
                         fontSize: 14,
                       ),
                     ),
@@ -1105,7 +1105,7 @@ class _ResultsExpansionRow extends StatelessWidget {
                         color: row.isProjected
                             ? AppColors.primary
                             : AppColors.textSecondary,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w600,
                         fontSize: 11,
                       ),
                     ),
@@ -1117,7 +1117,7 @@ class _ResultsExpansionRow extends StatelessWidget {
                   formatMxn(row.ingresos),
                   style: TextStyle(
                     color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                     fontSize: 12,
                   ),
                 ),
@@ -1127,7 +1127,7 @@ class _ResultsExpansionRow extends StatelessWidget {
                   formatMxn(row.gastos),
                   style: TextStyle(
                     color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                     fontSize: 12,
                   ),
                 ),
@@ -1139,7 +1139,7 @@ class _ResultsExpansionRow extends StatelessWidget {
                     color: row.dineroLibre >= 0
                         ? AppColors.success
                         : AppColors.error,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                     fontSize: 12,
                   ),
                 ),
@@ -1156,7 +1156,7 @@ class _ResultsExpansionRow extends StatelessWidget {
               style: TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 11,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
@@ -1253,14 +1253,14 @@ class _PeriodMetricLine extends StatelessWidget {
       padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.09),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(14),
       ),
       child: RichText(
         text: TextSpan(
           style: TextStyle(
             color: AppColors.textSecondary,
             fontSize: 11,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w600,
           ),
           children: [
             TextSpan(text: '${trText(label)}: '),
@@ -1269,7 +1269,7 @@ class _PeriodMetricLine extends StatelessWidget {
               style: TextStyle(
                 color: color,
                 fontSize: 12,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ],
@@ -1308,7 +1308,7 @@ class _BreakdownSectionCard extends StatelessWidget {
                   trText(section.title),
                   style: TextStyle(
                     color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                     fontSize: 13,
                   ),
                 ),
@@ -1318,7 +1318,7 @@ class _BreakdownSectionCard extends StatelessWidget {
                 formatMxn(section.total),
                 style: TextStyle(
                   color: tone,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                   fontSize: 12,
                 ),
               ),
@@ -1332,7 +1332,7 @@ class _BreakdownSectionCard extends StatelessWidget {
             ),
             style: TextStyle(
               color: AppColors.textSecondary,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
               fontSize: 11,
             ),
           ),
@@ -1387,7 +1387,7 @@ class _BreakdownSectionItemTile extends StatelessWidget {
                   trText(item.label),
                   style: TextStyle(
                     color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                     fontSize: 12,
                   ),
                 ),
@@ -1397,7 +1397,7 @@ class _BreakdownSectionItemTile extends StatelessWidget {
                 formatMxn(item.amount),
                 style: TextStyle(
                   color: positive ? AppColors.success : AppColors.error,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                   fontSize: 11,
                 ),
               ),
@@ -1409,7 +1409,7 @@ class _BreakdownSectionItemTile extends StatelessWidget {
               trText(item.subtitle),
               style: TextStyle(
                 color: AppColors.textSecondary,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w500,
                 fontSize: 11,
                 height: 1.4,
               ),

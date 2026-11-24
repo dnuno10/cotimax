@@ -934,7 +934,7 @@ class _QuotePdfPreviewDialogState extends State<_QuotePdfPreviewDialog> {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
         children: [
@@ -951,7 +951,7 @@ class _QuotePdfPreviewDialogState extends State<_QuotePdfPreviewDialog> {
                         style: TextStyle(
                           color: AppColors.textPrimary,
                           fontSize: 16,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                       SizedBox(height: 2),
@@ -960,7 +960,7 @@ class _QuotePdfPreviewDialogState extends State<_QuotePdfPreviewDialog> {
                         style: TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 12,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                       SizedBox(height: 2),
@@ -969,7 +969,7 @@ class _QuotePdfPreviewDialogState extends State<_QuotePdfPreviewDialog> {
                         style: TextStyle(
                           color: AppColors.textMuted,
                           fontSize: 11,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
@@ -1207,7 +1207,7 @@ class _QuoteViewToggle extends StatelessWidget {
       padding: EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.border),
       ),
       child: Row(
@@ -1253,12 +1253,12 @@ class _QuoteViewButton extends StatelessWidget {
         backgroundColor: active ? AppColors.textPrimary : Colors.transparent,
         foregroundColor: foreground,
         padding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
       icon: Icon(icon, size: 16),
       label: Text(
         label,
-        style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12),
+        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
       ),
     );
   }
@@ -1343,7 +1343,7 @@ class _QuoteKanbanColumn extends StatelessWidget {
             color: highlighted
                 ? color.withValues(alpha: 0.08)
                 : AppColors.white,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: highlighted
                   ? color.withValues(alpha: 0.45)
@@ -1370,7 +1370,7 @@ class _QuoteKanbanColumn extends StatelessWidget {
                         _quoteStatusLabel(status),
                         style: TextStyle(
                           color: AppColors.textPrimary,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                           fontSize: 14,
                         ),
                       ),
@@ -1388,7 +1388,7 @@ class _QuoteKanbanColumn extends StatelessWidget {
                         '${items.length}',
                         style: TextStyle(
                           color: color,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                           fontSize: 11,
                         ),
                       ),
@@ -1408,7 +1408,7 @@ class _QuoteKanbanColumn extends StatelessWidget {
                             style: TextStyle(
                               color: AppColors.textSecondary,
                               fontSize: 12,
-                              fontWeight: FontWeight.w700,
+                              fontWeight: FontWeight.w600,
                               height: 1.4,
                             ),
                           ),
@@ -1460,15 +1460,9 @@ class _QuoteKanbanCard extends StatelessWidget {
         padding: EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: AppColors.white,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(color: AppColors.border),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.textPrimary.withValues(alpha: 0.08),
-              blurRadius: 16,
-              offset: Offset(0, 8),
-            ),
-          ],
+          boxShadow: AppColors.softShadow,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1485,7 +1479,7 @@ class _QuoteKanbanCard extends StatelessWidget {
                         style: TextStyle(
                           color: AppColors.textPrimary,
                           fontSize: 14,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                       SizedBox(height: 4),
@@ -1494,7 +1488,7 @@ class _QuoteKanbanCard extends StatelessWidget {
                         style: TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 12,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],
@@ -1611,7 +1605,7 @@ class _QuoteKanbanMetaRow extends StatelessWidget {
             style: TextStyle(
               color: AppColors.textSecondary,
               fontSize: 11,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ),
@@ -1620,7 +1614,7 @@ class _QuoteKanbanMetaRow extends StatelessWidget {
           style: TextStyle(
             color: valueColor ?? AppColors.textPrimary,
             fontSize: 12,
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.w700,
           ),
         ),
       ],
@@ -2868,7 +2862,7 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
                   trText('No se pudieron cargar las sugerencias de productos.'),
                   style: TextStyle(
                     color: AppColors.error,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
                 OutlinedButton.icon(
@@ -2942,7 +2936,7 @@ class _QuoteFormState extends ConsumerState<_QuoteForm> {
             style: TextButton.styleFrom(
               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               foregroundColor: AppColors.textPrimary,
-              textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+              textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
             ),
           ),
         ),
@@ -3700,7 +3694,7 @@ class _QuoteSection extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.border),
       ),
       child: Column(
@@ -3724,7 +3718,7 @@ class _QuoteSection extends StatelessWidget {
                           style: TextStyle(
                             color: AppColors.textPrimary,
                             fontSize: 16,
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),
@@ -3778,7 +3772,7 @@ class _QuoteFieldRow extends StatelessWidget {
                 style: TextStyle(
                   color: AppColors.textSecondary,
                   fontSize: 13,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),
@@ -3849,7 +3843,7 @@ class _QuoteCustomFieldRow extends StatelessWidget {
                 style: TextStyle(
                   color: AppColors.textSecondary,
                   fontSize: 13,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),
@@ -4082,7 +4076,7 @@ class _QuoteFieldColumn extends StatelessWidget {
             style: TextStyle(
               color: AppColors.textSecondary,
               fontSize: 13,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
             ),
           ),
           SizedBox(height: 8),
@@ -4254,7 +4248,7 @@ class _QuoteConceptAutocompleteState extends State<_QuoteConceptAutocomplete> {
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               color: AppColors.textPrimary,
-                              fontWeight: FontWeight.w700,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                           if (description.isNotEmpty) ...[
@@ -4306,7 +4300,7 @@ class _QuoteSummaryRow extends StatelessWidget {
               style: TextStyle(
                 color: AppColors.textPrimary,
                 fontSize: 14,
-                fontWeight: strong ? FontWeight.w800 : FontWeight.w600,
+                fontWeight: strong ? FontWeight.w700 : FontWeight.w500,
               ),
             ),
           ),
@@ -4315,7 +4309,7 @@ class _QuoteSummaryRow extends StatelessWidget {
             style: TextStyle(
               color: AppColors.textPrimary,
               fontSize: 14,
-              fontWeight: strong ? FontWeight.w800 : FontWeight.w600,
+              fontWeight: strong ? FontWeight.w700 : FontWeight.w500,
             ),
           ),
         ],
@@ -4348,7 +4342,7 @@ class _QuoteSwitchRow extends StatelessWidget {
               style: TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 13,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
