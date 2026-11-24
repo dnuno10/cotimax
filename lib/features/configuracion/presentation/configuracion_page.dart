@@ -399,107 +399,106 @@ class _ConfiguracionPageState extends ConsumerState<ConfiguracionPage> {
                       ),
                     );
               final settingsBody = Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (wideSettings) ...[
-                      Text(
-                        trText(_mainTabs[_mainTabIndex]),
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.4,
-                          color: AppColors.textPrimary,
-                        ),
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (wideSettings) ...[
+                    Text(
+                      trText(_mainTabs[_mainTabIndex]),
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.4,
+                        color: AppColors.textPrimary,
                       ),
-                      SizedBox(height: 20),
-                    ],
-                    if (_mainTabIndex == 0)
-                      _AccountManagementSection(
-                        empresa: empresa,
-                        usuario: usuario,
-                        tabIndex: _accountTabIndex,
-                        tabs: _accountTabs,
-                        onTabChanged: (index) =>
-                            setState(() => _accountTabIndex = index),
-                      ),
-                    if (_mainTabIndex == 1)
-                      _UserProfileSection(usuario: usuario),
-                    if (_mainTabIndex == 2)
-                      _CompanySettingsSection(
-                        key: ValueKey(
-                          'company-${empresa.updatedAt.microsecondsSinceEpoch}-${usuario.updatedAt.microsecondsSinceEpoch}-$_companyTabIndex',
-                        ),
-                        empresa: empresa,
-                        initialTabIndex: _companyTabIndex,
-                        onTabChanged: (index) =>
-                            setState(() => _companyTabIndex = index),
-                      ),
-                    if (_mainTabIndex == 3)
-                      _LocalizationSettingsSection(
-                        key: ValueKey(
-                          'localizacion-${empresa.updatedAt.microsecondsSinceEpoch}',
-                        ),
-                        empresa: empresa,
-                      ),
-                    if (_mainTabIndex == 4)
-                      _InvoiceDesignSection(
-                        empresa: empresa,
-                        tabIndex: _invoiceTabIndex,
-                        tabs: _invoiceTabs,
-                        invoiceDesign: _invoiceDesign,
-                        quoteDesign: _quoteDesign,
-                        creditDesign: _creditDesign,
-                        purchaseOrderDesign: _purchaseOrderDesign,
-                        pageOrientation: _pageOrientation,
-                        pageSize: _pageSize,
-                        fontSize: _fontSize,
-                        logoSizeMode: _logoSizeMode,
-                        logoSizeController: _logoSizeController,
-                        primaryColorController: _primaryColorController,
-                        secondaryColorController: _secondaryColorController,
-                        backgroundColorController: _backgroundColorController,
-                        neutralColorController: _neutralColorController,
-                        primaryFont: _primaryFont,
-                        secondaryFont: _secondaryFont,
-                        showPageNumber: _showPageNumber,
-                        onTabChanged: (index) =>
-                            setState(() => _invoiceTabIndex = index),
-                        onInvoiceDesignChanged: (value) =>
-                            setState(() => _invoiceDesign = value),
-                        onQuoteDesignChanged: (value) =>
-                            setState(() => _quoteDesign = value),
-                        onCreditDesignChanged: (value) =>
-                            setState(() => _creditDesign = value),
-                        onPurchaseOrderDesignChanged: (value) =>
-                            setState(() => _purchaseOrderDesign = value),
-                        onPageOrientationChanged: (value) =>
-                            setState(() => _pageOrientation = value),
-                        onPageSizeChanged: (value) =>
-                            setState(() => _pageSize = value),
-                        onFontSizeChanged: (value) =>
-                            setState(() => _fontSize = value),
-                        onLogoSizeModeChanged: (value) =>
-                            setState(() => _logoSizeMode = value),
-                        onPrimaryFontChanged: (value) =>
-                            setState(() => _primaryFont = value),
-                        onSecondaryFontChanged: (value) =>
-                            setState(() => _secondaryFont = value),
-                        onShowPageNumberChanged: (value) =>
-                            setState(() => _showPageNumber = value),
-                        isSaving: _isSavingDesign,
-                        onColorApplied: _refreshQuoteDesignPreview,
-                        onReset: _resetQuoteDesignDraft,
-                        onSave: () => _saveQuoteDesign(empresa),
-                      ),
-                    if (_mainTabIndex == 5)
-                      _TaxSettingsSection(
-                        key: ValueKey(
-                          'impuestos-${empresa.updatedAt.microsecondsSinceEpoch}',
-                        ),
-                        empresa: empresa,
-                      ),
+                    ),
+                    SizedBox(height: 20),
                   ],
-                );
+                  if (_mainTabIndex == 0)
+                    _AccountManagementSection(
+                      empresa: empresa,
+                      usuario: usuario,
+                      tabIndex: _accountTabIndex,
+                      tabs: _accountTabs,
+                      onTabChanged: (index) =>
+                          setState(() => _accountTabIndex = index),
+                    ),
+                  if (_mainTabIndex == 1) _UserProfileSection(usuario: usuario),
+                  if (_mainTabIndex == 2)
+                    _CompanySettingsSection(
+                      key: ValueKey(
+                        'company-${empresa.updatedAt.microsecondsSinceEpoch}-${usuario.updatedAt.microsecondsSinceEpoch}-$_companyTabIndex',
+                      ),
+                      empresa: empresa,
+                      initialTabIndex: _companyTabIndex,
+                      onTabChanged: (index) =>
+                          setState(() => _companyTabIndex = index),
+                    ),
+                  if (_mainTabIndex == 3)
+                    _LocalizationSettingsSection(
+                      key: ValueKey(
+                        'localizacion-${empresa.updatedAt.microsecondsSinceEpoch}',
+                      ),
+                      empresa: empresa,
+                    ),
+                  if (_mainTabIndex == 4)
+                    _InvoiceDesignSection(
+                      empresa: empresa,
+                      tabIndex: _invoiceTabIndex,
+                      tabs: _invoiceTabs,
+                      invoiceDesign: _invoiceDesign,
+                      quoteDesign: _quoteDesign,
+                      creditDesign: _creditDesign,
+                      purchaseOrderDesign: _purchaseOrderDesign,
+                      pageOrientation: _pageOrientation,
+                      pageSize: _pageSize,
+                      fontSize: _fontSize,
+                      logoSizeMode: _logoSizeMode,
+                      logoSizeController: _logoSizeController,
+                      primaryColorController: _primaryColorController,
+                      secondaryColorController: _secondaryColorController,
+                      backgroundColorController: _backgroundColorController,
+                      neutralColorController: _neutralColorController,
+                      primaryFont: _primaryFont,
+                      secondaryFont: _secondaryFont,
+                      showPageNumber: _showPageNumber,
+                      onTabChanged: (index) =>
+                          setState(() => _invoiceTabIndex = index),
+                      onInvoiceDesignChanged: (value) =>
+                          setState(() => _invoiceDesign = value),
+                      onQuoteDesignChanged: (value) =>
+                          setState(() => _quoteDesign = value),
+                      onCreditDesignChanged: (value) =>
+                          setState(() => _creditDesign = value),
+                      onPurchaseOrderDesignChanged: (value) =>
+                          setState(() => _purchaseOrderDesign = value),
+                      onPageOrientationChanged: (value) =>
+                          setState(() => _pageOrientation = value),
+                      onPageSizeChanged: (value) =>
+                          setState(() => _pageSize = value),
+                      onFontSizeChanged: (value) =>
+                          setState(() => _fontSize = value),
+                      onLogoSizeModeChanged: (value) =>
+                          setState(() => _logoSizeMode = value),
+                      onPrimaryFontChanged: (value) =>
+                          setState(() => _primaryFont = value),
+                      onSecondaryFontChanged: (value) =>
+                          setState(() => _secondaryFont = value),
+                      onShowPageNumberChanged: (value) =>
+                          setState(() => _showPageNumber = value),
+                      isSaving: _isSavingDesign,
+                      onColorApplied: _refreshQuoteDesignPreview,
+                      onReset: _resetQuoteDesignDraft,
+                      onSave: () => _saveQuoteDesign(empresa),
+                    ),
+                  if (_mainTabIndex == 5)
+                    _TaxSettingsSection(
+                      key: ValueKey(
+                        'impuestos-${empresa.updatedAt.microsecondsSinceEpoch}',
+                      ),
+                      empresa: empresa,
+                    ),
+                ],
+              );
               return SectionCard(
                 child: wideSettings
                     ? Row(
@@ -609,11 +608,7 @@ class _TopConfigTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CotimaxTabPill(
-      label: label,
-      selected: selected,
-      onTap: onTap,
-    );
+    return CotimaxTabPill(label: label, selected: selected, onTap: onTap);
   }
 }
 
@@ -915,7 +910,7 @@ class _GeneralAccountPanel extends ConsumerWidget {
                         empresa.nombreComercial,
                         style: TextStyle(
                           color: AppColors.textPrimary,
-                          fontSize: 22,
+                          fontSize: 20,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -1366,7 +1361,7 @@ class _CompanySettingsSectionState
             trText('Logo'),
             style: TextStyle(
               color: AppColors.textPrimary,
-              fontSize: 16,
+              fontSize: 15,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -1498,7 +1493,7 @@ class _CompanySettingsSectionState
           trText('Empresa'),
           style: TextStyle(
             color: AppColors.textPrimary,
-            fontSize: 18,
+            fontSize: 17,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -2755,7 +2750,8 @@ class _TaxDefaultSelector extends StatelessWidget {
             isExpanded: true,
             menuMaxHeight: 320,
             borderRadius: cotimaxMenuBorderRadius,
-            dropdownColor: AppColors.white,
+            dropdownColor: AppColors.muted,
+            elevation: 0,
             icon: cotimaxDropdownIcon,
             style: cotimaxDropdownTextStyle,
             decoration: cotimaxDropdownDecoration(),
@@ -2876,7 +2872,7 @@ class _ConfigSectionTitle extends StatelessWidget {
         trText(title),
         style: TextStyle(
           color: AppColors.textPrimary,
-          fontSize: 18,
+          fontSize: 17,
           fontWeight: FontWeight.w700,
         ),
       );
@@ -2890,7 +2886,7 @@ class _ConfigSectionTitle extends StatelessWidget {
           trText(title),
           style: TextStyle(
             color: AppColors.textPrimary,
-            fontSize: 18,
+            fontSize: 17,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -2932,7 +2928,7 @@ class _AccountMetricCard extends StatelessWidget {
             value.trim().isEmpty ? '-' : value,
             style: TextStyle(
               color: AppColors.textPrimary,
-              fontSize: 16,
+              fontSize: 15,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -3008,6 +3004,7 @@ class _DangerActionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
+      hoverDuration: const Duration(milliseconds: 240),
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(
@@ -3027,7 +3024,7 @@ class _DangerActionCard extends StatelessWidget {
               trText(label),
               style: TextStyle(
                 color: AppColors.error,
-                fontSize: 16,
+                fontSize: 15,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -3247,7 +3244,8 @@ class _SelectableFieldRow extends StatelessWidget {
             isExpanded: true,
             menuMaxHeight: 320,
             borderRadius: cotimaxMenuBorderRadius,
-            dropdownColor: AppColors.white,
+            dropdownColor: AppColors.muted,
+            elevation: 0,
             icon: cotimaxDropdownIcon,
             style: cotimaxDropdownTextStyle,
             decoration: cotimaxDropdownDecoration(),
@@ -3422,7 +3420,8 @@ class _DesignSelectRow extends StatelessWidget {
               isExpanded: true,
               menuMaxHeight: 320,
               borderRadius: cotimaxMenuBorderRadius,
-              dropdownColor: AppColors.white,
+              dropdownColor: AppColors.muted,
+              elevation: 0,
               icon: cotimaxDropdownIcon,
               style: cotimaxDropdownTextStyle,
               decoration: cotimaxDropdownDecoration(),
@@ -3497,7 +3496,8 @@ class _DesignDoubleInputRow extends StatelessWidget {
                     isExpanded: true,
                     menuMaxHeight: 320,
                     borderRadius: cotimaxMenuBorderRadius,
-                    dropdownColor: AppColors.white,
+                    dropdownColor: AppColors.muted,
+                    elevation: 0,
                     icon: cotimaxDropdownIcon,
                     style: cotimaxDropdownTextStyle,
                     decoration: cotimaxDropdownDecoration(),
@@ -3571,6 +3571,7 @@ class _DesignColorRow extends StatelessWidget {
           ),
           Expanded(
             child: InkWell(
+              hoverDuration: const Duration(milliseconds: 240),
               borderRadius: BorderRadius.circular(14),
               onTap: () async {
                 final nextValue = await showDialog<String>(
@@ -3791,7 +3792,7 @@ class _DesignToggleRow extends StatelessWidget {
               ],
             ),
           ),
-          Switch(
+          CotimaxSwitch(
             value: value,
             onChanged: interactive
                 ? (newValue) => onChanged?.call(newValue)

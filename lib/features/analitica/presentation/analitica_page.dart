@@ -358,7 +358,7 @@ class _AnalyticsSummaryEntry extends StatelessWidget {
           item.value,
           style: TextStyle(
             color: item.accent,
-            fontSize: 24,
+            fontSize: 28,
             fontWeight: FontWeight.w700,
             height: 1,
           ),
@@ -443,8 +443,11 @@ class _WeeklyPulseCard extends StatelessWidget {
                 gridData: FlGridData(
                   show: true,
                   drawVerticalLine: false,
-                  getDrawingHorizontalLine: (_) =>
-                      FlLine(color: AppColors.border, strokeWidth: 1),
+                  getDrawingHorizontalLine: (_) => FlLine(
+                    color: AppColors.border,
+                    strokeWidth: 1,
+                    dashArray: [3, 5],
+                  ),
                 ),
                 borderData: FlBorderData(show: false),
                 titlesData: FlTitlesData(
@@ -482,7 +485,7 @@ class _WeeklyPulseCard extends StatelessWidget {
                             rows[index].label,
                             style: TextStyle(
                               color: AppColors.textMuted,
-                              fontSize: 10,
+                              fontSize: 11,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -514,7 +517,7 @@ class _WeeklyPulseCard extends StatelessWidget {
                 lineTouchData: LineTouchData(
                   handleBuiltInTouches: true,
                   touchTooltipData: LineTouchTooltipData(
-                    getTooltipColor: (_) => AppColors.textPrimary,
+                    getTooltipColor: (_) => AppColors.ink,
                     getTooltipItems: (spots) => spots
                         .map(
                           (spot) => LineTooltipItem(
@@ -595,8 +598,11 @@ class _MonthlyBarCard extends StatelessWidget {
                 gridData: FlGridData(
                   show: true,
                   drawVerticalLine: false,
-                  getDrawingHorizontalLine: (_) =>
-                      FlLine(color: AppColors.border, strokeWidth: 1),
+                  getDrawingHorizontalLine: (_) => FlLine(
+                    color: AppColors.border,
+                    strokeWidth: 1,
+                    dashArray: [3, 5],
+                  ),
                 ),
                 borderData: FlBorderData(show: false),
                 titlesData: FlTitlesData(
@@ -634,7 +640,7 @@ class _MonthlyBarCard extends StatelessWidget {
                             rows[index].label,
                             style: TextStyle(
                               color: AppColors.textMuted,
-                              fontSize: 10,
+                              fontSize: 11,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -661,7 +667,7 @@ class _MonthlyBarCard extends StatelessWidget {
                 barTouchData: BarTouchData(
                   enabled: true,
                   touchTooltipData: BarTouchTooltipData(
-                    getTooltipColor: (_) => AppColors.textPrimary,
+                    getTooltipColor: (_) => AppColors.ink,
                     getTooltipItem: (group, groupIndex, rod, rodIndex) {
                       final labels = ['Ingresos', 'Gastos', 'Flujo'];
                       return BarTooltipItem(
@@ -773,8 +779,11 @@ class _ProjectionCard extends StatelessWidget {
                 gridData: FlGridData(
                   show: true,
                   drawVerticalLine: false,
-                  getDrawingHorizontalLine: (_) =>
-                      FlLine(color: AppColors.border, strokeWidth: 1),
+                  getDrawingHorizontalLine: (_) => FlLine(
+                    color: AppColors.border,
+                    strokeWidth: 1,
+                    dashArray: [3, 5],
+                  ),
                 ),
                 borderData: FlBorderData(show: false),
                 titlesData: FlTitlesData(
@@ -819,7 +828,7 @@ class _ProjectionCard extends StatelessWidget {
                             rows[index].label,
                             style: TextStyle(
                               color: AppColors.textMuted,
-                              fontSize: 10,
+                              fontSize: 11,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -850,7 +859,7 @@ class _ProjectionCard extends StatelessWidget {
                 lineTouchData: LineTouchData(
                   handleBuiltInTouches: true,
                   touchTooltipData: LineTouchTooltipData(
-                    getTooltipColor: (_) => AppColors.textPrimary,
+                    getTooltipColor: (_) => AppColors.ink,
                     getTooltipItems: (spots) => spots
                         .map(
                           (spot) => LineTooltipItem(
@@ -926,7 +935,8 @@ class _ProjectionRangeDropdown extends StatelessWidget {
       isExpanded: true,
       menuMaxHeight: 320,
       borderRadius: cotimaxMenuBorderRadius,
-      dropdownColor: AppColors.white,
+      dropdownColor: AppColors.muted,
+      elevation: 0,
       icon: cotimaxDropdownIcon,
       style: cotimaxDropdownTextStyle,
       decoration: cotimaxDropdownDecoration(
@@ -1434,7 +1444,7 @@ LineChartBarData _analyticsLine({
     ),
     isCurved: false,
     color: color,
-    barWidth: 2.5,
+    barWidth: 2,
     dotData: FlDotData(show: false),
     belowBarData: BarAreaData(
       show: fillOpacity > 0,

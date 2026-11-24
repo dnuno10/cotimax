@@ -705,16 +705,16 @@ class _ClienteFormState extends ConsumerState<_ClienteForm> {
           alignment: Alignment.centerLeft,
           child: CotimaxTabTrack(
             children: [
-            _ClientTabButton(
-              label: 'Crear',
-              selected: _tabIndex == 0,
-              onTap: () => setState(() => _tabIndex = 0),
-            ),
-            _ClientTabButton(
-              label: 'Configuración',
-              selected: _tabIndex == 1,
-              onTap: () => setState(() => _tabIndex = 1),
-            ),
+              _ClientTabButton(
+                label: 'Crear',
+                selected: _tabIndex == 0,
+                onTap: () => setState(() => _tabIndex = 0),
+              ),
+              _ClientTabButton(
+                label: 'Configuración',
+                selected: _tabIndex == 1,
+                onTap: () => setState(() => _tabIndex = 1),
+              ),
             ],
           ),
         ),
@@ -1244,11 +1244,7 @@ class _ClientTabButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CotimaxTabPill(
-      label: label,
-      selected: selected,
-      onTap: onTap,
-    );
+    return CotimaxTabPill(label: label, selected: selected, onTap: onTap);
   }
 }
 
@@ -1293,7 +1289,7 @@ class _ClientSection extends StatelessWidget {
                           trText(title),
                           style: TextStyle(
                             color: AppColors.textPrimary,
-                            fontSize: 16,
+                            fontSize: 15,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -1409,7 +1405,8 @@ class _ClientDropdownRow extends StatelessWidget {
               isExpanded: true,
               menuMaxHeight: 320,
               borderRadius: cotimaxMenuBorderRadius,
-              dropdownColor: AppColors.white,
+              dropdownColor: AppColors.muted,
+              elevation: 0,
               icon: cotimaxDropdownIcon,
               style: cotimaxDropdownTextStyle,
               decoration: cotimaxDropdownDecoration(),
@@ -1461,7 +1458,7 @@ class _ClientSwitchRow extends StatelessWidget {
               ),
             ),
           ),
-          Switch(value: value, onChanged: onChanged ?? (_) {}),
+          CotimaxSwitch(value: value, onChanged: onChanged ?? (_) {}),
         ],
       ),
     );

@@ -140,31 +140,8 @@ class AppColors {
   static Color get errorSoft => _currentPalette.errorSoft;
   static Color get hover => _currentPalette.hover;
 
-  /// Soft, diffuse shadow for cards (Muse / call-card style).
-  static List<BoxShadow> get softShadow => [
-    BoxShadow(
-      color: Colors.black.withValues(alpha: isDark ? 0.30 : 0.05),
-      blurRadius: 28,
-      offset: const Offset(0, 10),
-    ),
-    BoxShadow(
-      color: Colors.black.withValues(alpha: isDark ? 0.20 : 0.03),
-      blurRadius: 2,
-      offset: const Offset(0, 1),
-    ),
-  ];
-
-  /// Deeper shadow for popovers, dialogs and the command palette.
-  static List<BoxShadow> get floatingShadow => [
-    BoxShadow(
-      color: Colors.black.withValues(alpha: isDark ? 0.45 : 0.13),
-      blurRadius: 48,
-      offset: const Offset(0, 18),
-    ),
-    BoxShadow(
-      color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
-      blurRadius: 4,
-      offset: const Offset(0, 1),
-    ),
-  ];
+  /// Shadows are intentionally disabled (flat Muse look). Kept as empty
+  /// lists so existing `boxShadow:` call sites keep compiling.
+  static const List<BoxShadow> softShadow = [];
+  static const List<BoxShadow> floatingShadow = [];
 }

@@ -206,7 +206,7 @@ class _ReminderCalendarSection extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: AppColors.textPrimary,
-                  fontSize: 18,
+                  fontSize: 17,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -270,6 +270,7 @@ class _ReminderCalendarSection extends StatelessWidget {
                 DateUtils.isSameDay(normalizedDate, DateTime.now());
 
             return InkWell(
+              hoverDuration: const Duration(milliseconds: 240),
               borderRadius: BorderRadius.circular(16),
               onTap: normalizedDate == null
                   ? null
@@ -350,7 +351,7 @@ class _ReminderCalendarSection extends StatelessWidget {
                     trText('Recordatorios del día'),
                     style: TextStyle(
                       color: AppColors.textPrimary,
-                      fontSize: 16,
+                      fontSize: 15,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -691,7 +692,8 @@ class _RecordatorioFormState extends ConsumerState<_RecordatorioForm> {
                                   isExpanded: true,
                                   menuMaxHeight: 320,
                                   borderRadius: cotimaxMenuBorderRadius,
-                                  dropdownColor: AppColors.white,
+                                  dropdownColor: AppColors.muted,
+                                  elevation: 0,
                                   icon: cotimaxDropdownIcon,
                                   style: cotimaxDropdownTextStyle,
                                   decoration: cotimaxDropdownDecoration(),
@@ -742,7 +744,8 @@ class _RecordatorioFormState extends ConsumerState<_RecordatorioForm> {
                                   isExpanded: true,
                                   menuMaxHeight: 320,
                                   borderRadius: cotimaxMenuBorderRadius,
-                                  dropdownColor: AppColors.white,
+                                  dropdownColor: AppColors.muted,
+                                  elevation: 0,
                                   icon: cotimaxDropdownIcon,
                                   style: cotimaxDropdownTextStyle,
                                   decoration: cotimaxDropdownDecoration(),

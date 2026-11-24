@@ -536,6 +536,7 @@ class _FinanceIconPickerState extends State<FinanceIconPicker> {
       alignment: Alignment.centerLeft,
       child: IntrinsicWidth(
         child: InkWell(
+          hoverDuration: const Duration(milliseconds: 240),
           borderRadius: BorderRadius.circular(14),
           onTap: () => _openPickerDialog(context),
           child: Container(
@@ -673,7 +674,7 @@ class _FinanceIconDialogState extends State<_FinanceIconDialog> {
                                       trText('Seleccionar icono'),
                                       style: TextStyle(
                                         color: AppColors.textPrimary,
-                                        fontSize: 18,
+                                        fontSize: 17,
                                         fontWeight: FontWeight.w700,
                                       ),
                                     ),
@@ -778,6 +779,7 @@ class _FinanceIconDialogState extends State<_FinanceIconDialog> {
                           return Tooltip(
                             message: _displayFinanceIconLabel(option),
                             child: InkWell(
+                              hoverDuration: const Duration(milliseconds: 240),
                               borderRadius: BorderRadius.circular(14),
                               onTap: () =>
                                   Navigator.of(context).pop(option.key),

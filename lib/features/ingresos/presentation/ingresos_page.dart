@@ -1066,7 +1066,8 @@ class _IngresoFormState extends ConsumerState<_IngresoForm> {
                                   isExpanded: true,
                                   menuMaxHeight: 320,
                                   borderRadius: cotimaxMenuBorderRadius,
-                                  dropdownColor: AppColors.white,
+                                  dropdownColor: AppColors.muted,
+                                  elevation: 0,
                                   icon: cotimaxDropdownIcon,
                                   style: cotimaxDropdownTextStyle,
                                   decoration: cotimaxDropdownDecoration(),
@@ -1730,7 +1731,8 @@ class _LookupSelectField extends StatelessWidget {
           isExpanded: true,
           menuMaxHeight: 320,
           borderRadius: cotimaxMenuBorderRadius,
-          dropdownColor: AppColors.white,
+          dropdownColor: AppColors.muted,
+          elevation: 0,
           icon: cotimaxDropdownIcon,
           style: cotimaxDropdownTextStyle,
           decoration: cotimaxDropdownDecoration(hintText: hintText),
@@ -2188,7 +2190,7 @@ LineChartData _incomeChartData({
       show: true,
       drawVerticalLine: false,
       getDrawingHorizontalLine: (_) =>
-          FlLine(color: AppColors.border, strokeWidth: 1),
+          FlLine(color: AppColors.border, strokeWidth: 1, dashArray: [3, 5]),
     ),
     borderData: FlBorderData(show: false),
     titlesData: FlTitlesData(
@@ -2225,7 +2227,7 @@ LineChartData _incomeChartData({
                 labels[index],
                 style: TextStyle(
                   color: AppColors.textMuted,
-                  fontSize: 10,
+                  fontSize: 11,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -2239,7 +2241,7 @@ LineChartData _incomeChartData({
         spots: spots,
         isCurved: values.length > 2,
         color: color,
-        barWidth: 3,
+        barWidth: 2,
         dotData: FlDotData(
           show: singleValue,
           getDotPainter: (spot, percent, bar, index) => FlDotCirclePainter(
@@ -2258,7 +2260,7 @@ LineChartData _incomeChartData({
     lineTouchData: LineTouchData(
       handleBuiltInTouches: true,
       touchTooltipData: LineTouchTooltipData(
-        getTooltipColor: (_) => AppColors.textPrimary,
+        getTooltipColor: (_) => AppColors.ink,
         getTooltipItems: (spots) => spots
             .map(
               (spot) => LineTooltipItem(

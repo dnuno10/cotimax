@@ -640,16 +640,16 @@ class _ProductoFormState extends ConsumerState<_ProductoForm> {
           alignment: Alignment.centerLeft,
           child: CotimaxTabTrack(
             children: [
-            _ProductTabButton(
-              label: 'Crear',
-              selected: _tabIndex == 0,
-              onTap: () => setState(() => _tabIndex = 0),
-            ),
-            _ProductTabButton(
-              label: 'Materiales y consumibles',
-              selected: _tabIndex == 1,
-              onTap: () => setState(() => _tabIndex = 1),
-            ),
+              _ProductTabButton(
+                label: 'Crear',
+                selected: _tabIndex == 0,
+                onTap: () => setState(() => _tabIndex = 0),
+              ),
+              _ProductTabButton(
+                label: 'Materiales y consumibles',
+                selected: _tabIndex == 1,
+                onTap: () => setState(() => _tabIndex = 1),
+              ),
             ],
           ),
         ),
@@ -1642,11 +1642,7 @@ class _ProductTabButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CotimaxTabPill(
-      label: label,
-      selected: selected,
-      onTap: onTap,
-    );
+    return CotimaxTabPill(label: label, selected: selected, onTap: onTap);
   }
 }
 
@@ -1680,7 +1676,7 @@ class _ProductoSection extends StatelessWidget {
                     trText(title),
                     style: TextStyle(
                       color: AppColors.textPrimary,
-                      fontSize: 16,
+                      fontSize: 15,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -1821,7 +1817,8 @@ class _ProductoTypeFieldRow extends StatelessWidget {
           isExpanded: true,
           menuMaxHeight: 320,
           borderRadius: cotimaxMenuBorderRadius,
-          dropdownColor: AppColors.white,
+          dropdownColor: AppColors.muted,
+          elevation: 0,
           icon: cotimaxDropdownIcon,
           style: cotimaxDropdownTextStyle,
           decoration: cotimaxDropdownDecoration(),
@@ -1904,7 +1901,8 @@ class _ProductoDropdownFieldRow extends StatelessWidget {
           isExpanded: true,
           menuMaxHeight: 320,
           borderRadius: cotimaxMenuBorderRadius,
-          dropdownColor: AppColors.white,
+          dropdownColor: AppColors.muted,
+          elevation: 0,
           icon: cotimaxDropdownIcon,
           style: cotimaxDropdownTextStyle,
           decoration: cotimaxDropdownDecoration(),
@@ -2012,7 +2010,7 @@ class _ProductoSwitchRow extends StatelessWidget {
                       ),
                     ],
                     SizedBox(height: 8),
-                    Switch(value: value, onChanged: onChanged),
+                    CotimaxSwitch(value: value, onChanged: onChanged),
                   ],
                 )
               : Row(
@@ -2047,7 +2045,7 @@ class _ProductoSwitchRow extends StatelessWidget {
                       ),
                     ),
                     SizedBox(width: 8),
-                    Switch(value: value, onChanged: onChanged),
+                    CotimaxSwitch(value: value, onChanged: onChanged),
                   ],
                 ),
         );
@@ -2230,7 +2228,7 @@ class _ProfitMetric extends StatelessWidget {
           value,
           style: TextStyle(
             color: valueColor ?? AppColors.textPrimary,
-            fontSize: 16,
+            fontSize: 15,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -2310,7 +2308,8 @@ class _CompactDropdownRow extends StatelessWidget {
               isExpanded: true,
               menuMaxHeight: 320,
               borderRadius: cotimaxMenuBorderRadius,
-              dropdownColor: AppColors.white,
+              dropdownColor: AppColors.muted,
+              elevation: 0,
               icon: cotimaxDropdownIcon,
               style: cotimaxDropdownTextStyle,
               decoration: cotimaxDropdownDecoration(),
@@ -2386,7 +2385,8 @@ class _CompactSelectRow extends StatelessWidget {
                     isExpanded: true,
                     menuMaxHeight: 320,
                     borderRadius: cotimaxMenuBorderRadius,
-                    dropdownColor: AppColors.white,
+                    dropdownColor: AppColors.muted,
+                    elevation: 0,
                     icon: cotimaxDropdownIcon,
                     style: cotimaxDropdownTextStyle,
                     decoration: cotimaxDropdownDecoration(),

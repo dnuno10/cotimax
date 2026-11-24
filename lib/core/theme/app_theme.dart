@@ -10,7 +10,8 @@ class AppTheme {
   static ThemeData light() =>
       _buildTheme(AppColors.lightPalette, Brightness.light);
 
-  static ThemeData dark() => _buildTheme(AppColors.darkPalette, Brightness.dark);
+  static ThemeData dark() =>
+      _buildTheme(AppColors.darkPalette, Brightness.dark);
 
   static TextStyle _font({
     double? fontSize,
@@ -29,9 +30,10 @@ class AppTheme {
   static ThemeData _buildTheme(AppColorPalette p, Brightness brightness) {
     final isDark = brightness == Brightness.dark;
     final stadium = WidgetStatePropertyAll<OutlinedBorder>(StadiumBorder());
-    final floatingShadowColor = Colors.black.withValues(
-      alpha: isDark ? 0.5 : 0.16,
-    );
+    // Flat UI: no elevation shadows anywhere.
+    final floatingShadowColor = Colors.transparent;
+    final hairline = BorderSide(color: p.border);
+    const motion = Duration(milliseconds: 260);
 
     final textTheme = GoogleFonts.interTextTheme(
       isDark ? ThemeData.dark().textTheme : ThemeData.light().textTheme,
@@ -128,6 +130,7 @@ class AppTheme {
       textTheme: baseText,
       scaffoldBackgroundColor: p.background,
       canvasColor: p.container,
+      shadowColor: Colors.transparent,
       splashFactory: InkRipple.splashFactory,
       splashColor: p.textPrimary.withValues(alpha: 0.04),
       highlightColor: Colors.transparent,
@@ -219,6 +222,9 @@ class AppTheme {
       // Primary CTA: solid blue pill (Muse "Generate").
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ButtonStyle(
+          animationDuration: motion,
+          elevation: WidgetStatePropertyAll(0),
+          shadowColor: WidgetStatePropertyAll(Colors.transparent),
           backgroundColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.disabled)) {
               return p.primary.withValues(alpha: 0.40);
@@ -233,26 +239,27 @@ class AppTheme {
           }),
           foregroundColor: WidgetStatePropertyAll(Colors.white),
           iconColor: WidgetStatePropertyAll(Colors.white),
-          elevation: WidgetStatePropertyAll(0),
-          shadowColor: WidgetStatePropertyAll(Colors.transparent),
           padding: buttonPadding,
           minimumSize: WidgetStatePropertyAll(Size(0, 44)),
           shape: stadium,
           textStyle: buttonText,
-          animationDuration: Duration(milliseconds: 220),
           overlayColor: WidgetStatePropertyAll(Colors.transparent),
         ),
       ),
       // Secondary: soft gray pill, no border (Muse "Edit").
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: ButtonStyle(
+          animationDuration: motion,
           side: WidgetStatePropertyAll(BorderSide.none),
           backgroundColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.disabled)) {
               return p.muted.withValues(alpha: 0.6);
             }
             if (states.contains(WidgetState.hovered)) {
-              return Color.alphaBlend(p.textPrimary.withValues(alpha: 0.03), p.muted);
+              return Color.alphaBlend(
+                p.textPrimary.withValues(alpha: 0.03),
+                p.muted,
+              );
             }
             return p.muted;
           }),
@@ -270,6 +277,7 @@ class AppTheme {
       ),
       textButtonTheme: TextButtonThemeData(
         style: ButtonStyle(
+          animationDuration: motion,
           foregroundColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.disabled)) return p.textMuted;
             return p.textPrimary;
@@ -290,6 +298,7 @@ class AppTheme {
       // Filled: ink pill (dark play / send button).
       filledButtonTheme: FilledButtonThemeData(
         style: ButtonStyle(
+          animationDuration: motion,
           backgroundColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.disabled)) {
               return p.ink.withValues(alpha: 0.35);
@@ -302,13 +311,12 @@ class AppTheme {
           padding: buttonPadding,
           minimumSize: WidgetStatePropertyAll(Size(0, 44)),
           textStyle: buttonText,
-          overlayColor: WidgetStatePropertyAll(
-            p.onInk.withValues(alpha: 0.08),
-          ),
+          overlayColor: WidgetStatePropertyAll(p.onInk.withValues(alpha: 0.08)),
         ),
       ),
       iconButtonTheme: IconButtonThemeData(
         style: ButtonStyle(
+          animationDuration: motion,
           iconColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.disabled)) {
               return p.textMuted.withValues(alpha: 0.6);
@@ -360,8 +368,9 @@ class AppTheme {
       dialogTheme: DialogThemeData(
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppSpacing.dialogRadius),
+          side: hairline,
         ),
-        elevation: 24,
+        elevation: 0,
         shadowColor: floatingShadowColor,
         surfaceTintColor: Colors.transparent,
         backgroundColor: p.container,
@@ -383,7 +392,7 @@ class AppTheme {
         color: p.container,
         surfaceTintColor: Colors.transparent,
         shadowColor: floatingShadowColor,
-        elevation: 12,
+        elevation: 0,
         position: PopupMenuPosition.under,
         menuPadding: EdgeInsets.all(6),
         textStyle: _font(
@@ -398,13 +407,17 @@ class AppTheme {
             color: p.textPrimary,
           ),
         ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: hairline,
+        ),
       ),
       dropdownMenuTheme: DropdownMenuThemeData(
         menuStyle: MenuStyle(
           backgroundColor: WidgetStatePropertyAll(p.container),
           surfaceTintColor: WidgetStatePropertyAll(Colors.transparent),
-          elevation: WidgetStatePropertyAll(12),
+          elevation: WidgetStatePropertyAll(0),
+          side: WidgetStatePropertyAll(hairline),
           shadowColor: WidgetStatePropertyAll(floatingShadowColor),
           shape: WidgetStatePropertyAll(
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
@@ -461,7 +474,7 @@ class AppTheme {
       drawerTheme: DrawerThemeData(
         backgroundColor: p.container,
         surfaceTintColor: Colors.transparent,
-        elevation: 24,
+        elevation: 0,
         shadowColor: floatingShadowColor,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.horizontal(
@@ -539,7 +552,8 @@ class AppTheme {
         thumbColor: p.success,
       ),
       tooltipTheme: TooltipThemeData(
-        waitDuration: Duration(milliseconds: 350),
+        waitDuration: Duration(milliseconds: 500),
+        exitDuration: Duration(milliseconds: 120),
         padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
           color: p.ink,
@@ -556,7 +570,8 @@ class AppTheme {
           backgroundColor: WidgetStatePropertyAll(p.container),
           surfaceTintColor: WidgetStatePropertyAll(Colors.transparent),
           shadowColor: WidgetStatePropertyAll(floatingShadowColor),
-          elevation: WidgetStatePropertyAll(12),
+          elevation: WidgetStatePropertyAll(0),
+          side: WidgetStatePropertyAll(hairline),
           padding: WidgetStatePropertyAll(EdgeInsets.all(6)),
           shape: WidgetStatePropertyAll(
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
@@ -572,13 +587,7 @@ class AppTheme {
         indicator: BoxDecoration(
           color: p.container,
           borderRadius: BorderRadius.circular(999),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 8,
-              offset: Offset(0, 2),
-            ),
-          ],
+          border: Border.all(color: p.border),
         ),
         overlayColor: WidgetStatePropertyAll(Colors.transparent),
         labelStyle: _font(fontWeight: FontWeight.w600, fontSize: 14),
@@ -587,10 +596,11 @@ class AppTheme {
       datePickerTheme: DatePickerThemeData(
         backgroundColor: p.container,
         surfaceTintColor: Colors.transparent,
-        elevation: 24,
+        elevation: 0,
         shadowColor: floatingShadowColor,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppSpacing.dialogRadius),
+          side: hairline,
         ),
         headerBackgroundColor: p.container,
         headerForegroundColor: p.textPrimary,
@@ -607,9 +617,7 @@ class AppTheme {
         ),
       ),
       scrollbarTheme: ScrollbarThemeData(
-        thumbColor: WidgetStatePropertyAll(
-          p.textMuted.withValues(alpha: 0.45),
-        ),
+        thumbColor: WidgetStatePropertyAll(p.textMuted.withValues(alpha: 0.45)),
         radius: Radius.circular(999),
         thickness: WidgetStatePropertyAll(6),
       ),

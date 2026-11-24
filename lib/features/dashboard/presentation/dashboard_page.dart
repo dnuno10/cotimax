@@ -711,7 +711,7 @@ class _IngresosPanel extends StatelessWidget {
                   text: formatMxn(totalIngresos),
                   style: TextStyle(
                     color: AppColors.textPrimary,
-                    fontSize: 24,
+                    fontSize: 28,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -825,7 +825,7 @@ class _GastosImpactPanel extends StatelessWidget {
                   text: formatMxn(totalGastos),
                   style: TextStyle(
                     color: AppColors.textPrimary,
-                    fontSize: 24,
+                    fontSize: 28,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -1383,7 +1383,7 @@ class _KpiCard extends StatelessWidget {
             value,
             style: TextStyle(
               color: AppColors.textPrimary,
-              fontSize: 26,
+              fontSize: 28,
               fontWeight: FontWeight.w700,
               height: 1,
             ),
@@ -1436,7 +1436,7 @@ class _KpiCard extends StatelessWidget {
                             ),
                             isCurved: true,
                             color: accent,
-                            barWidth: 2.5,
+                            barWidth: 2,
                             dotData: FlDotData(show: false),
                             belowBarData: BarAreaData(
                               show: true,
@@ -1447,7 +1447,7 @@ class _KpiCard extends StatelessWidget {
                         lineTouchData: LineTouchData(
                           handleBuiltInTouches: true,
                           touchTooltipData: LineTouchTooltipData(
-                            getTooltipColor: (_) => AppColors.textPrimary,
+                            getTooltipColor: (_) => AppColors.ink,
                             getTooltipItems: (spots) => spots
                                 .map(
                                   (spot) => LineTooltipItem(
@@ -2225,8 +2225,11 @@ class _TopProductsUtilityPanel extends StatelessWidget {
                   gridData: FlGridData(
                     show: true,
                     drawVerticalLine: false,
-                    getDrawingHorizontalLine: (_) =>
-                        FlLine(color: AppColors.border, strokeWidth: 1),
+                    getDrawingHorizontalLine: (_) => FlLine(
+                      color: AppColors.border,
+                      strokeWidth: 1,
+                      dashArray: [3, 5],
+                    ),
                   ),
                   borderData: FlBorderData(show: false),
                   titlesData: FlTitlesData(
@@ -2290,7 +2293,7 @@ class _TopProductsUtilityPanel extends StatelessWidget {
                   barTouchData: BarTouchData(
                     enabled: true,
                     touchTooltipData: BarTouchTooltipData(
-                      getTooltipColor: (_) => AppColors.textPrimary,
+                      getTooltipColor: (_) => AppColors.ink,
                       getTooltipItem: (group, groupIndex, rod, rodIndex) {
                         return BarTooltipItem(
                           formatMxn(rod.toY),
@@ -2468,7 +2471,7 @@ class _ClientMetricTag extends StatelessWidget {
             style: TextStyle(
               color: AppColors.textMuted,
               fontWeight: FontWeight.w600,
-              fontSize: 10,
+              fontSize: 11,
             ),
           ),
           SizedBox(height: 3),
@@ -2681,7 +2684,7 @@ LineChartData _lineChartData({
       show: true,
       drawVerticalLine: false,
       getDrawingHorizontalLine: (_) =>
-          FlLine(color: AppColors.border, strokeWidth: 1),
+          FlLine(color: AppColors.border, strokeWidth: 1, dashArray: [3, 5]),
     ),
     borderData: FlBorderData(show: false),
     titlesData: FlTitlesData(
@@ -2718,7 +2721,7 @@ LineChartData _lineChartData({
                 labels[index],
                 style: TextStyle(
                   color: AppColors.textMuted,
-                  fontSize: 10,
+                  fontSize: 11,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -2735,7 +2738,7 @@ LineChartData _lineChartData({
         ),
         isCurved: true,
         color: color,
-        barWidth: 3,
+        barWidth: 2,
         dotData: FlDotData(show: false),
         belowBarData: BarAreaData(
           show: true,
@@ -2746,7 +2749,7 @@ LineChartData _lineChartData({
     lineTouchData: LineTouchData(
       handleBuiltInTouches: true,
       touchTooltipData: LineTouchTooltipData(
-        getTooltipColor: (_) => AppColors.textPrimary,
+        getTooltipColor: (_) => AppColors.ink,
         getTooltipItems: (spots) => spots
             .map(
               (spot) => LineTooltipItem(

@@ -169,18 +169,12 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
             Positioned(
               top: -80,
               left: -80,
-              child: _WorkspaceGlow(
-                size: 220,
-                color: Colors.transparent,
-              ),
+              child: _WorkspaceGlow(size: 220, color: Colors.transparent),
             ),
             Positioned(
               right: -70,
               bottom: -40,
-              child: _WorkspaceGlow(
-                size: 240,
-                color: Colors.transparent,
-              ),
+              child: _WorkspaceGlow(size: 240, color: Colors.transparent),
             ),
             SafeArea(
               child: Center(
@@ -442,7 +436,7 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
             tr('Nueva empresa', 'New company'),
             style: TextStyle(
               color: AppColors.textPrimary,
-              fontSize: 18,
+              fontSize: 17,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -552,7 +546,7 @@ class _WorkspaceSetupPageState extends ConsumerState<WorkspaceSetupPage> {
             tr('Código de invitación', 'Invitation code'),
             style: TextStyle(
               color: AppColors.textPrimary,
-              fontSize: 18,
+              fontSize: 17,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -628,6 +622,7 @@ class _WorkspaceModeButton extends StatelessWidget {
     final foreground = selected ? AppColors.white : AppColors.textPrimary;
 
     return InkWell(
+      hoverDuration: const Duration(milliseconds: 240),
       onTap: onTap,
       borderRadius: BorderRadius.circular(18),
       child: AnimatedContainer(

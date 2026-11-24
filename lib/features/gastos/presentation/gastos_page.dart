@@ -1223,7 +1223,8 @@ class _GastoFormState extends ConsumerState<_GastoForm> {
                                       isExpanded: true,
                                       menuMaxHeight: 320,
                                       borderRadius: cotimaxMenuBorderRadius,
-                                      dropdownColor: AppColors.white,
+                                      dropdownColor: AppColors.muted,
+                                      elevation: 0,
                                       icon: cotimaxDropdownIcon,
                                       style: cotimaxDropdownTextStyle,
                                       decoration: cotimaxDropdownDecoration(
@@ -1893,7 +1894,8 @@ class _CategoryLookupField extends StatelessWidget {
           isExpanded: true,
           menuMaxHeight: 320,
           borderRadius: cotimaxMenuBorderRadius,
-          dropdownColor: AppColors.white,
+          dropdownColor: AppColors.muted,
+          elevation: 0,
           icon: cotimaxDropdownIcon,
           style: cotimaxDropdownTextStyle,
           decoration: cotimaxDropdownDecoration(hintText: hintText),
@@ -2443,7 +2445,7 @@ LineChartData _expenseLineChartData({
       show: true,
       drawVerticalLine: false,
       getDrawingHorizontalLine: (_) =>
-          FlLine(color: AppColors.border, strokeWidth: 1),
+          FlLine(color: AppColors.border, strokeWidth: 1, dashArray: [3, 5]),
     ),
     borderData: FlBorderData(show: false),
     titlesData: FlTitlesData(
@@ -2480,7 +2482,7 @@ LineChartData _expenseLineChartData({
                 labels[index],
                 style: TextStyle(
                   color: AppColors.textMuted,
-                  fontSize: 10,
+                  fontSize: 11,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -2494,7 +2496,7 @@ LineChartData _expenseLineChartData({
         spots: spots,
         isCurved: values.length > 2,
         color: AppColors.accent,
-        barWidth: 3,
+        barWidth: 2,
         dotData: FlDotData(
           show: singleValue,
           getDotPainter: (spot, percent, bar, index) => FlDotCirclePainter(
@@ -2513,7 +2515,7 @@ LineChartData _expenseLineChartData({
     lineTouchData: LineTouchData(
       handleBuiltInTouches: true,
       touchTooltipData: LineTouchTooltipData(
-        getTooltipColor: (_) => AppColors.textPrimary,
+        getTooltipColor: (_) => AppColors.ink,
         getTooltipItems: (spots) => spots
             .map(
               (spot) => LineTooltipItem(

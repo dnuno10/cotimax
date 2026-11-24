@@ -104,18 +104,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           Positioned(
             top: -80,
             left: -80,
-            child: _Glow(
-              size: 220,
-              color: Colors.transparent,
-            ),
+            child: _Glow(size: 220, color: Colors.transparent),
           ),
           Positioned(
             right: -70,
             bottom: -40,
-            child: _Glow(
-              size: 240,
-              color: Colors.transparent,
-            ),
+            child: _Glow(size: 240, color: Colors.transparent),
           ),
           SafeArea(
             child: Center(
@@ -127,7 +121,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     padding: EdgeInsets.all(28),
                     decoration: BoxDecoration(
                       color: AppColors.container,
-                      borderRadius: BorderRadius.circular(AppSpacing.dialogRadius),
+                      borderRadius: BorderRadius.circular(
+                        AppSpacing.dialogRadius,
+                      ),
                       border: Border.all(color: AppColors.border),
                       boxShadow: AppColors.floatingShadow,
                     ),

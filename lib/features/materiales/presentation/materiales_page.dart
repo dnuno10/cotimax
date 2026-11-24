@@ -612,16 +612,16 @@ class _MaterialFormState extends ConsumerState<_MaterialForm> {
           alignment: Alignment.centerLeft,
           child: CotimaxTabTrack(
             children: [
-            _MaterialTabButton(
-              label: 'Crear',
-              selected: _tabIndex == 0,
-              onTap: () => setState(() => _tabIndex = 0),
-            ),
-            _MaterialTabButton(
-              label: 'Productos relacionados',
-              selected: _tabIndex == 1,
-              onTap: () => setState(() => _tabIndex = 1),
-            ),
+              _MaterialTabButton(
+                label: 'Crear',
+                selected: _tabIndex == 0,
+                onTap: () => setState(() => _tabIndex = 0),
+              ),
+              _MaterialTabButton(
+                label: 'Productos relacionados',
+                selected: _tabIndex == 1,
+                onTap: () => setState(() => _tabIndex = 1),
+              ),
             ],
           ),
         ),
@@ -691,7 +691,8 @@ class _MaterialFormState extends ConsumerState<_MaterialForm> {
               isExpanded: true,
               menuMaxHeight: 360,
               borderRadius: cotimaxMenuBorderRadius,
-              dropdownColor: AppColors.white,
+              dropdownColor: AppColors.muted,
+              elevation: 0,
               icon: cotimaxDropdownIcon,
               style: cotimaxDropdownTextStyle,
               decoration: cotimaxDropdownDecoration(),
@@ -723,7 +724,8 @@ class _MaterialFormState extends ConsumerState<_MaterialForm> {
               isExpanded: true,
               menuMaxHeight: 360,
               borderRadius: cotimaxMenuBorderRadius,
-              dropdownColor: AppColors.white,
+              dropdownColor: AppColors.muted,
+              elevation: 0,
               icon: cotimaxDropdownIcon,
               style: cotimaxDropdownTextStyle,
               decoration: cotimaxDropdownDecoration(),
@@ -817,7 +819,8 @@ class _MaterialFormState extends ConsumerState<_MaterialForm> {
                   isExpanded: true,
                   menuMaxHeight: 320,
                   borderRadius: cotimaxMenuBorderRadius,
-                  dropdownColor: AppColors.white,
+                  dropdownColor: AppColors.muted,
+                  elevation: 0,
                   icon: cotimaxDropdownIcon,
                   style: cotimaxDropdownTextStyle,
                   decoration: cotimaxDropdownDecoration(
@@ -1089,11 +1092,7 @@ class _MaterialTabButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CotimaxTabPill(
-      label: label,
-      selected: selected,
-      onTap: onTap,
-    );
+    return CotimaxTabPill(label: label, selected: selected, onTap: onTap);
   }
 }
 
@@ -1136,7 +1135,7 @@ class _MaterialSection extends StatelessWidget {
                           trText(title),
                           style: TextStyle(
                             color: AppColors.textPrimary,
-                            fontSize: 16,
+                            fontSize: 15,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -1250,7 +1249,7 @@ class _MaterialSwitchRow extends StatelessWidget {
               ),
             ),
           ),
-          Switch(value: value, onChanged: onChanged),
+          CotimaxSwitch(value: value, onChanged: onChanged),
         ],
       ),
     );

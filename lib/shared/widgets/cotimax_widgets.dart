@@ -20,7 +20,11 @@ import 'package:intl/intl.dart';
 
 List<(String label, IconData icon, String path)> get appNavEntries => [
   (tr('Inicio', 'Home'), Icons.home_outlined, RoutePaths.dashboard),
-  (tr('Clientes', 'Clients'), Icons.people_outline_rounded, RoutePaths.clientes),
+  (
+    tr('Clientes', 'Clients'),
+    Icons.people_outline_rounded,
+    RoutePaths.clientes,
+  ),
   (
     tr('Proveedores', 'Suppliers'),
     Icons.local_shipping_outlined,
@@ -41,36 +45,20 @@ List<(String label, IconData icon, String path)> get appNavEntries => [
     Icons.request_quote_outlined,
     RoutePaths.cotizaciones,
   ),
-  (
-    tr('Ingresos', 'Income'),
-    Icons.trending_up_rounded,
-    RoutePaths.ingresos,
-  ),
-  (
-    tr('Gastos', 'Expenses'),
-    Icons.trending_down_rounded,
-    RoutePaths.gastos,
-  ),
+  (tr('Ingresos', 'Income'), Icons.trending_up_rounded, RoutePaths.ingresos),
+  (tr('Gastos', 'Expenses'), Icons.trending_down_rounded, RoutePaths.gastos),
   (
     tr('Recordatorios', 'Reminders'),
     Icons.event_outlined,
     RoutePaths.recordatorios,
   ),
-  (
-    tr('Analítica', 'Analytics'),
-    Icons.insights_outlined,
-    RoutePaths.analitica,
-  ),
+  (tr('Analítica', 'Analytics'), Icons.insights_outlined, RoutePaths.analitica),
   (
     tr('Configuración', 'Settings'),
     Icons.settings_outlined,
     RoutePaths.configuracion,
   ),
-  (
-    tr('Usuarios', 'Users'),
-    Icons.group_outlined,
-    RoutePaths.usuarios,
-  ),
+  (tr('Usuarios', 'Users'), Icons.group_outlined, RoutePaths.usuarios),
 ];
 
 const primaryNavIndexes = <int>[0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
@@ -111,7 +99,7 @@ String initialsFromName(String name) {
   return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
 }
 
-const _microInteractionDuration = Duration(milliseconds: 220);
+const _microInteractionDuration = Duration(milliseconds: 260);
 const _microInteractionCurve = Curves.easeOutCubic;
 TextStyle get cotimaxDropdownTextStyle => TextStyle(
   color: AppColors.textPrimary,
@@ -472,7 +460,7 @@ class AmountBadge extends StatelessWidget {
         formatMxn(amount),
         style: TextStyle(
           color: color,
-          fontSize: 12.5,
+          fontSize: 12,
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -503,7 +491,7 @@ class AppShell extends StatefulWidget {
 }
 
 class _AppShellState extends State<AppShell> {
-  bool _sidebarExpanded = false;
+  bool _sidebarExpanded = true;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   void _openCommandPalette() {
@@ -537,13 +525,13 @@ class _AppShellState extends State<AppShell> {
               child: TweenAnimationBuilder<double>(
                 key: ValueKey(widget.location),
                 tween: Tween(begin: 0.0, end: 1.0),
-                duration: Duration(milliseconds: 260),
+                duration: Duration(milliseconds: 360),
                 curve: Curves.easeOutCubic,
                 builder: (context, value, child) {
                   return Opacity(
                     opacity: value,
                     child: Transform.translate(
-                      offset: Offset(0, 8 * (1 - value)),
+                      offset: Offset(0, 6 * (1 - value)),
                       child: child,
                     ),
                   );
@@ -644,35 +632,6 @@ String _navLabelForPath(String path) {
   return '';
 }
 
-
-/// Round brand orb shown at the top of the rail (Muse avatar style).
-class _BrandOrb extends StatelessWidget {
-  const _BrandOrb({this.size = 46});
-
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      padding: EdgeInsets.all(size * 0.18),
-      decoration: BoxDecoration(
-        color: AppColors.container,
-        shape: BoxShape.circle,
-        border: Border.all(color: AppColors.border),
-        boxShadow: AppColors.softShadow,
-      ),
-      child: ClipOval(
-        child: Image.asset(
-          'assets/img/cotimax-favicon.png',
-          fit: BoxFit.contain,
-        ),
-      ),
-    );
-  }
-}
-
 class SidebarNavigation extends ConsumerWidget {
   SidebarNavigation({
     required this.activePath,
@@ -744,95 +703,133 @@ class SidebarNavigation extends ConsumerWidget {
       closeAfterTap: mobile,
     );
 
+    final railWidth = compact ? 84.0 : 264.0;
     return AnimatedContainer(
-      duration: Duration(milliseconds: 240),
-      curve: Curves.easeOutCubic,
-      width: mobile
-          ? double.infinity
-          : compact
-          ? 84
-          : 264,
+      duration: Duration(milliseconds: 320),
+      curve: Curves.easeInOutCubic,
+      width: mobile ? double.infinity : railWidth,
+      clipBehavior: Clip.hardEdge,
       decoration: BoxDecoration(
         color: mobile ? AppColors.container : AppColors.rail,
         border: mobile
             ? null
             : Border(right: BorderSide(color: AppColors.border)),
       ),
-      child: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: compact ? 0 : 14,
-            vertical: 18,
-          ),
-          child: Column(
-            crossAxisAlignment: compact
-                ? CrossAxisAlignment.center
-                : CrossAxisAlignment.stretch,
-            children: [
-              if (compact)
-                Tooltip(
-                  message: 'Cotimax',
-                  child: InkWell(
-                    customBorder: CircleBorder(),
-                    onTap: onToggleCollapsed,
-                    child: _BrandOrb(),
-                  ),
-                )
-              else
-                Row(
-                  children: [
-                    _BrandOrb(size: 40),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Cotimax',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.3,
-                          color: AppColors.textPrimary,
+      child: _SidebarViewport(
+        width: mobile ? null : railWidth,
+        child: SafeArea(
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: compact ? 0 : 14,
+              vertical: 18,
+            ),
+            child: Column(
+              crossAxisAlignment: compact
+                  ? CrossAxisAlignment.center
+                  : CrossAxisAlignment.stretch,
+              children: [
+                if (compact)
+                  Tooltip(
+                    message: trText('Expandir menú'),
+                    child: InkWell(
+                      hoverDuration: const Duration(milliseconds: 240),
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: onToggleCollapsed,
+                      child: Padding(
+                        padding: EdgeInsets.all(8),
+                        child: Image.asset(
+                          'assets/img/cotimax-favicon.png',
+                          width: 30,
+                          height: 30,
+                          fit: BoxFit.contain,
                         ),
                       ),
                     ),
-                    if (!mobile)
-                      IconButton(
-                        tooltip: trText('Contraer menú'),
-                        onPressed: onToggleCollapsed,
-                        icon: Icon(CupertinoIcons.sidebar_left, size: 20),
-                      ),
-                  ],
-                ),
-              SizedBox(height: compact ? 28 : 24),
-              Expanded(
-                child: ScrollConfiguration(
-                  behavior: ScrollConfiguration.of(
-                    context,
-                  ).copyWith(scrollbars: false),
-                  child: ListView(
-                    padding: EdgeInsets.zero,
-                    children: [
-                      if (!compact) _SidebarSectionLabel('Comercial'),
-                      ...primaryNavIndexes.map(navItem),
-                      Padding(
-                        padding: EdgeInsets.symmetric(
-                          vertical: 10,
-                          horizontal: compact ? 22 : 8,
+                  )
+                else
+                  Padding(
+                    padding: EdgeInsets.only(left: 10),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Image.asset(
+                              'assets/img/cotimax-logo.png',
+                              height: 30,
+                              fit: BoxFit.contain,
+                            ),
+                          ),
                         ),
-                        child: Container(height: 1, color: AppColors.border),
-                      ),
-                      if (!compact) _SidebarSectionLabel('Administración'),
-                      ...secondaryNavIndexes.map(navItem),
-                      SizedBox(height: 6),
-                      _QuickCreateButton(compact: compact, closeAfterTap: mobile),
-                    ],
+                        if (!mobile)
+                          IconButton(
+                            tooltip: trText('Contraer menú'),
+                            onPressed: onToggleCollapsed,
+                            icon: Icon(CupertinoIcons.sidebar_left, size: 20),
+                          ),
+                      ],
+                    ),
+                  ),
+                SizedBox(height: compact ? 28 : 24),
+                Expanded(
+                  child: ScrollConfiguration(
+                    behavior: ScrollConfiguration.of(
+                      context,
+                    ).copyWith(scrollbars: false),
+                    child: ListView(
+                      padding: EdgeInsets.zero,
+                      children: [
+                        if (!compact) _SidebarSectionLabel('Comercial'),
+                        ...primaryNavIndexes.map(navItem),
+                        Padding(
+                          padding: EdgeInsets.symmetric(
+                            vertical: 10,
+                            horizontal: compact ? 22 : 8,
+                          ),
+                          child: Container(height: 1, color: AppColors.border),
+                        ),
+                        if (!compact) _SidebarSectionLabel('Administración'),
+                        ...secondaryNavIndexes.map(navItem),
+                        SizedBox(height: 6),
+                        _QuickCreateButton(
+                          compact: compact,
+                          closeAfterTap: mobile,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              SizedBox(height: 8),
-              accountMenu,
-            ],
+                SizedBox(height: 8),
+                accountMenu,
+              ],
+            ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Lays the sidebar out at its target width immediately while the outer
+/// container animates, so labels never reflow or overflow mid-transition.
+class _SidebarViewport extends StatelessWidget {
+  const _SidebarViewport({required this.child, this.width});
+
+  final Widget child;
+  final double? width;
+
+  @override
+  Widget build(BuildContext context) {
+    if (width == null) return child;
+    return OverflowBox(
+      alignment: Alignment.topLeft,
+      minWidth: width,
+      maxWidth: width,
+      child: AnimatedSwitcher(
+        duration: Duration(milliseconds: 220),
+        switchInCurve: Curves.easeOutCubic,
+        switchOutCurve: Curves.easeInCubic,
+        child: KeyedSubtree(key: ValueKey(width), child: child),
       ),
     );
   }
@@ -964,7 +961,7 @@ class _AccountMenuButton extends StatelessWidget {
                         roleLabel,
                         style: TextStyle(
                           color: AppColors.textSecondary,
-                          fontSize: 12.5,
+                          fontSize: 12,
                         ),
                       ),
                   ],
@@ -1026,7 +1023,7 @@ class _AccountMenuButton extends StatelessWidget {
                           style: TextStyle(
                             color: AppColors.textPrimary,
                             fontWeight: FontWeight.w600,
-                            fontSize: 13.5,
+                            fontSize: 13,
                           ),
                         ),
                         if (roleLabel.isNotEmpty)
@@ -1304,7 +1301,7 @@ class Topbar extends ConsumerWidget {
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: AppColors.textMuted,
-                          fontSize: 14.5,
+                          fontSize: 14,
                         ),
                       ),
                     ),
@@ -1560,7 +1557,7 @@ class KpiStatCard extends StatelessWidget {
             label,
             style: TextStyle(
               color: AppColors.textSecondary,
-              fontSize: 13.5,
+              fontSize: 13,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -1750,7 +1747,9 @@ class SectionCard extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppColors.muted,
               borderRadius: BorderRadius.circular(11),
-              border: Border.all(color: AppColors.border.withValues(alpha: 0.6)),
+              border: Border.all(
+                color: AppColors.border.withValues(alpha: 0.6),
+              ),
             ),
             child: Icon(titleIcon, size: 15, color: AppColors.textPrimary),
           ),
@@ -1852,6 +1851,27 @@ class MusePanel extends StatelessWidget {
 
 enum MusePanelTone { neutral, success, error }
 
+/// iOS-style switch with the smooth native Cupertino spring animation.
+class CotimaxSwitch extends StatelessWidget {
+  const CotimaxSwitch({required this.value, this.onChanged, super.key});
+
+  final bool value;
+  final ValueChanged<bool>? onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Transform.scale(
+      scale: 0.82,
+      child: CupertinoSwitch(
+        value: value,
+        onChanged: onChanged,
+        activeTrackColor: AppColors.success,
+        inactiveTrackColor: AppColors.mutedStrong,
+      ),
+    );
+  }
+}
+
 /// Pill-shaped tab (Muse settings list / segmented selection).
 class CotimaxTabPill extends StatelessWidget {
   const CotimaxTabPill({
@@ -1872,6 +1892,7 @@ class CotimaxTabPill extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
+        hoverDuration: const Duration(milliseconds: 240),
         onTap: onTap,
         borderRadius: BorderRadius.circular(999),
         child: AnimatedContainer(
@@ -1884,15 +1905,6 @@ class CotimaxTabPill extends StatelessWidget {
             border: Border.all(
               color: selected ? AppColors.border : Colors.transparent,
             ),
-            boxShadow: selected
-                ? [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.06),
-                      blurRadius: 8,
-                      offset: Offset(0, 2),
-                    ),
-                  ]
-                : null,
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -1947,8 +1959,6 @@ class CotimaxTabTrack extends StatelessWidget {
   }
 }
 
-
-
 class SearchField extends StatelessWidget {
   SearchField({
     required this.hint,
@@ -1985,7 +1995,7 @@ class SearchField extends StatelessWidget {
       readOnly: readOnly,
       onTap: onTap,
       showCursor: !readOnly,
-      style: TextStyle(fontSize: 14.5, color: AppColors.textPrimary),
+      style: TextStyle(fontSize: 14, color: AppColors.textPrimary),
       decoration: InputDecoration(
         prefixIcon: Padding(
           padding: EdgeInsets.only(left: 16, right: 8),
@@ -2130,7 +2140,7 @@ class EmptyStateWidget extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
-                    fontSize: 19,
+                    fontSize: 20,
                     letterSpacing: -0.2,
                     color: AppColors.textPrimary,
                   ),
@@ -2141,7 +2151,7 @@ class EmptyStateWidget extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: AppColors.textSecondary,
-                    fontSize: 14.5,
+                    fontSize: 14,
                     height: 1.45,
                   ),
                 ),
@@ -2211,7 +2221,7 @@ class ErrorStateWidget extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
-                    fontSize: 19,
+                    fontSize: 20,
                     color: AppColors.textPrimary,
                   ),
                 ),
@@ -2221,7 +2231,7 @@ class ErrorStateWidget extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: AppColors.textSecondary,
-                    fontSize: 14.5,
+                    fontSize: 14,
                     height: 1.45,
                   ),
                 ),
@@ -2233,7 +2243,7 @@ class ErrorStateWidget extends StatelessWidget {
                       details!,
                       style: TextStyle(
                         color: AppColors.textSecondary,
-                        fontSize: 12.5,
+                        fontSize: 12,
                         height: 1.4,
                       ),
                     ),
@@ -2591,7 +2601,7 @@ class ModalBase extends StatelessWidget {
                       trText(title),
                       style: TextStyle(
                         fontWeight: FontWeight.w700,
-                        fontSize: 24,
+                        fontSize: 28,
                         letterSpacing: -0.4,
                         color: AppColors.textPrimary,
                       ),
@@ -2733,6 +2743,7 @@ class DatePickerField extends StatelessWidget {
     return FormFieldWrapper(
       label: label,
       child: InkWell(
+        hoverDuration: const Duration(milliseconds: 240),
         onTap: onTap,
         child: InputDecorator(
           decoration: InputDecoration(),
@@ -2842,7 +2853,8 @@ class SelectField<T> extends StatelessWidget {
         isExpanded: true,
         menuMaxHeight: 320,
         borderRadius: cotimaxMenuBorderRadius,
-        dropdownColor: AppColors.white,
+        dropdownColor: AppColors.muted,
+        elevation: 0,
         icon: cotimaxDropdownIcon,
         style: cotimaxDropdownTextStyle,
         decoration: cotimaxDropdownDecoration(),
@@ -3318,7 +3330,7 @@ class TableSelectionToolbar extends StatelessWidget {
               label,
               style: TextStyle(
                 color: AppColors.onInk,
-                fontSize: 13.5,
+                fontSize: 13,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -3362,6 +3374,7 @@ class _InkToolbarButton extends StatelessWidget {
       color: AppColors.onInk.withValues(alpha: 0.10),
       shape: StadiumBorder(),
       child: InkWell(
+        hoverDuration: const Duration(milliseconds: 240),
         onTap: onTap,
         customBorder: StadiumBorder(),
         child: Padding(
@@ -3420,7 +3433,7 @@ class _InlineEmptyTableState extends StatelessWidget {
             style: TextStyle(
               color: AppColors.textPrimary,
               fontWeight: FontWeight.w600,
-              fontSize: 15.5,
+              fontSize: 15,
             ),
           ),
           SizedBox(height: 4),
@@ -3429,7 +3442,7 @@ class _InlineEmptyTableState extends StatelessWidget {
             textAlign: TextAlign.center,
             style: TextStyle(
               color: AppColors.textSecondary,
-              fontSize: 13.5,
+              fontSize: 13,
               height: 1.45,
             ),
           ),
@@ -3533,6 +3546,7 @@ class _MobileBottomNavigation extends ConsumerWidget {
               return Padding(
                 padding: EdgeInsets.only(right: 4),
                 child: InkWell(
+                  hoverDuration: const Duration(milliseconds: 240),
                   borderRadius: BorderRadius.circular(999),
                   onTap: () {
                     if (!context.mounted) return;
@@ -3556,7 +3570,7 @@ class _MobileBottomNavigation extends ConsumerWidget {
                             entry.$1,
                             style: TextStyle(
                               color: AppColors.textPrimary,
-                              fontSize: 13.5,
+                              fontSize: 13,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -3630,7 +3644,6 @@ class _HoverCircleButtonState extends State<_HoverCircleButton> {
     );
   }
 }
-
 
 class ToastHelper {
   static void show(
@@ -3829,6 +3842,7 @@ class _ToastCard extends StatelessWidget {
                 ),
                 SizedBox(width: 8),
                 InkWell(
+                  hoverDuration: const Duration(milliseconds: 240),
                   onTap: onClose,
                   customBorder: CircleBorder(),
                   child: Padding(
@@ -3928,14 +3942,14 @@ class _CommandPaletteDialogState extends State<_CommandPaletteDialog> {
                         _selectEntry(matches.first);
                       },
                       style: TextStyle(
-                        fontSize: 19,
+                        fontSize: 20,
                         color: AppColors.textPrimary,
                       ),
                       decoration: InputDecoration(
                         filled: false,
                         hintText: trText('Buscar'),
                         hintStyle: TextStyle(
-                          fontSize: 19,
+                          fontSize: 20,
                           color: AppColors.textMuted,
                         ),
                         border: noBorder,
@@ -3981,7 +3995,7 @@ class _CommandPaletteDialogState extends State<_CommandPaletteDialog> {
                             style: TextStyle(
                               color: AppColors.textSecondary,
                               fontWeight: FontWeight.w500,
-                              fontSize: 13.5,
+                              fontSize: 13,
                             ),
                           ),
                         ),
@@ -4096,7 +4110,6 @@ class _CommandPaletteTileState extends State<_CommandPaletteTile> {
     );
   }
 }
-
 
 enum _CommandPaletteKind { action, module, cliente, cotizacion, producto }
 
@@ -4360,7 +4373,7 @@ class SummaryCards extends StatelessWidget {
                 item.$1,
                 style: TextStyle(
                   color: AppColors.textSecondary,
-                  fontSize: 13.5,
+                  fontSize: 13,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -4369,7 +4382,7 @@ class SummaryCards extends StatelessWidget {
                 item.$2,
                 style: TextStyle(
                   fontWeight: FontWeight.w700,
-                  fontSize: 26,
+                  fontSize: 28,
                   letterSpacing: -0.5,
                   color: AppColors.textPrimary,
                 ),

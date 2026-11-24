@@ -443,7 +443,9 @@ class _ProveedorFormState extends ConsumerState<_ProveedorForm> {
         Align(
           alignment: Alignment.centerLeft,
           child: CotimaxTabTrack(
-            children: const [_ProviderTabButton(label: 'Crear', selected: true)],
+            children: const [
+              _ProviderTabButton(label: 'Crear', selected: true),
+            ],
           ),
         ),
         SizedBox(height: 16),
@@ -684,10 +686,7 @@ class _ProviderTabButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CotimaxTabPill(
-      label: label,
-      selected: selected,
-    );
+    return CotimaxTabPill(label: label, selected: selected);
   }
 }
 
@@ -732,7 +731,7 @@ class _ProviderSection extends StatelessWidget {
                           trText(title),
                           style: TextStyle(
                             color: AppColors.textPrimary,
-                            fontSize: 16,
+                            fontSize: 15,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -827,7 +826,7 @@ class _ProviderSwitchRow extends StatelessWidget {
               ),
             ),
           ),
-          Switch(value: value, onChanged: onChanged),
+          CotimaxSwitch(value: value, onChanged: onChanged),
         ],
       ),
     );

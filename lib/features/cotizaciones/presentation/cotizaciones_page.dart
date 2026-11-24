@@ -692,7 +692,8 @@ class _CotizacionesPageState extends ConsumerState<CotizacionesPage> {
                       isExpanded: true,
                       menuMaxHeight: 320,
                       borderRadius: cotimaxMenuBorderRadius,
-                      dropdownColor: AppColors.white,
+                      dropdownColor: AppColors.muted,
+                      elevation: 0,
                       icon: cotimaxDropdownIcon,
                       style: cotimaxDropdownTextStyle,
                       decoration: cotimaxDropdownDecoration(
@@ -3717,7 +3718,7 @@ class _QuoteSection extends StatelessWidget {
                           trText(title),
                           style: TextStyle(
                             color: AppColors.textPrimary,
-                            fontSize: 16,
+                            fontSize: 15,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -3904,7 +3905,8 @@ class _QuoteInlineDropdownField extends StatelessWidget {
       isExpanded: true,
       menuMaxHeight: 320,
       borderRadius: cotimaxMenuBorderRadius,
-      dropdownColor: AppColors.white,
+      dropdownColor: AppColors.muted,
+      elevation: 0,
       icon: cotimaxDropdownIcon,
       style: cotimaxDropdownTextStyle,
       decoration: cotimaxDropdownDecoration(hintText: hintText),
@@ -4216,7 +4218,7 @@ class _QuoteConceptAutocompleteState extends State<_QuoteConceptAutocomplete> {
         return Align(
           alignment: Alignment.topLeft,
           child: Material(
-            elevation: 10,
+            elevation: 0,
             color: AppColors.white,
             borderRadius: cotimaxMenuBorderRadius,
             child: ConstrainedBox(
@@ -4233,6 +4235,7 @@ class _QuoteConceptAutocompleteState extends State<_QuoteConceptAutocomplete> {
                   final option = matches[index];
                   final description = option.descripcion.trim();
                   return InkWell(
+                    hoverDuration: const Duration(milliseconds: 240),
                     onTap: () => onSelected(option),
                     child: Padding(
                       padding: EdgeInsets.symmetric(
@@ -4346,7 +4349,7 @@ class _QuoteSwitchRow extends StatelessWidget {
               ),
             ),
           ),
-          Switch(value: value, onChanged: onChanged),
+          CotimaxSwitch(value: value, onChanged: onChanged),
         ],
       ),
     );
