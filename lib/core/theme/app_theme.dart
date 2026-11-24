@@ -131,7 +131,7 @@ class AppTheme {
       splashFactory: InkRipple.splashFactory,
       splashColor: p.textPrimary.withValues(alpha: 0.04),
       highlightColor: Colors.transparent,
-      hoverColor: p.textPrimary.withValues(alpha: 0.04),
+      hoverColor: p.hover,
       focusColor: p.primary.withValues(alpha: 0.10),
       dividerColor: p.border,
       fontFamily: GoogleFonts.inter().fontFamily,
@@ -169,7 +169,7 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: p.muted,
-        hoverColor: p.mutedStrong.withValues(alpha: 0.4),
+        hoverColor: Colors.transparent,
         hintStyle: _font(
           color: p.textMuted,
           fontSize: 14,
@@ -225,7 +225,7 @@ class AppTheme {
             }
             if (states.contains(WidgetState.hovered)) {
               return Color.alphaBlend(
-                Colors.black.withValues(alpha: 0.08),
+                Colors.black.withValues(alpha: 0.05),
                 p.primary,
               );
             }
@@ -239,9 +239,8 @@ class AppTheme {
           minimumSize: WidgetStatePropertyAll(Size(0, 44)),
           shape: stadium,
           textStyle: buttonText,
-          overlayColor: WidgetStatePropertyAll(
-            Colors.white.withValues(alpha: 0.06),
-          ),
+          animationDuration: Duration(milliseconds: 220),
+          overlayColor: WidgetStatePropertyAll(Colors.transparent),
         ),
       ),
       // Secondary: soft gray pill, no border (Muse "Edit").
@@ -252,7 +251,9 @@ class AppTheme {
             if (states.contains(WidgetState.disabled)) {
               return p.muted.withValues(alpha: 0.6);
             }
-            if (states.contains(WidgetState.hovered)) return p.mutedStrong;
+            if (states.contains(WidgetState.hovered)) {
+              return Color.alphaBlend(p.textPrimary.withValues(alpha: 0.03), p.muted);
+            }
             return p.muted;
           }),
           foregroundColor: WidgetStateProperty.resolveWith((states) {
@@ -275,7 +276,7 @@ class AppTheme {
           }),
           iconColor: WidgetStatePropertyAll(p.textPrimary),
           backgroundColor: WidgetStateProperty.resolveWith((states) {
-            if (states.contains(WidgetState.hovered)) return p.muted;
+            if (states.contains(WidgetState.hovered)) return p.hover;
             return Colors.transparent;
           }),
           overlayColor: WidgetStatePropertyAll(Colors.transparent),
@@ -321,7 +322,7 @@ class AppTheme {
             return p.textPrimary;
           }),
           backgroundColor: WidgetStateProperty.resolveWith((states) {
-            if (states.contains(WidgetState.hovered)) return p.muted;
+            if (states.contains(WidgetState.hovered)) return p.hover;
             return Colors.transparent;
           }),
           overlayColor: WidgetStatePropertyAll(Colors.transparent),
@@ -438,7 +439,7 @@ class AppTheme {
           if (states.contains(WidgetState.selected)) {
             return p.primary.withValues(alpha: 0.06);
           }
-          if (states.contains(WidgetState.hovered)) return p.muted;
+          if (states.contains(WidgetState.hovered)) return p.hover;
           return Colors.transparent;
         }),
         headingRowHeight: 44,

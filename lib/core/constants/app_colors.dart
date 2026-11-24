@@ -21,6 +21,7 @@ class AppColorPalette {
     required this.rail,
     required this.successSoft,
     required this.errorSoft,
+    required this.hover,
   });
 
   final Color primary;
@@ -56,6 +57,9 @@ class AppColorPalette {
 
   /// Rose tint used for destructive panels.
   final Color errorSoft;
+
+  /// Very soft hover fill for navigable elements.
+  final Color hover;
 }
 
 /// Muse-inspired palette: near-white surfaces, ink text, soft gray pills,
@@ -65,7 +69,7 @@ class AppColors {
     primary: Color(0xFF2257C9),
     accent: Color(0xFFD6516A),
     white: Color(0xFFFFFFFF),
-    background: Color(0xFFFAFAFA),
+    background: Color(0xFFFFFFFF),
     container: Color(0xFFFFFFFF),
     border: Color(0xFFE8E8EA),
     textPrimary: Color(0xFF1C1C1E),
@@ -78,9 +82,10 @@ class AppColors {
     mutedStrong: Color(0xFFEAEAED),
     ink: Color(0xFF1A1A1C),
     onInk: Color(0xFFFFFFFF),
-    rail: Color(0xFFF6F6F7),
+    rail: Color(0xFFFFFFFF),
     successSoft: Color(0xFFEFF7F2),
     errorSoft: Color(0xFFFBEEF1),
+    hover: Color(0xFFF7F7F8),
   );
 
   static const AppColorPalette darkPalette = AppColorPalette(
@@ -103,6 +108,7 @@ class AppColors {
     rail: Color(0xFF18181B),
     successSoft: Color(0xFF1C2C23),
     errorSoft: Color(0xFF2E1D22),
+    hover: Color(0xFF212124),
   );
 
   static AppColorPalette _currentPalette = lightPalette;
@@ -132,6 +138,7 @@ class AppColors {
   static Color get rail => _currentPalette.rail;
   static Color get successSoft => _currentPalette.successSoft;
   static Color get errorSoft => _currentPalette.errorSoft;
+  static Color get hover => _currentPalette.hover;
 
   /// Soft, diffuse shadow for cards (Muse / call-card style).
   static List<BoxShadow> get softShadow => [

@@ -111,7 +111,7 @@ String initialsFromName(String name) {
   return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
 }
 
-const _microInteractionDuration = Duration(milliseconds: 180);
+const _microInteractionDuration = Duration(milliseconds: 220);
 const _microInteractionCurve = Curves.easeOutCubic;
 TextStyle get cotimaxDropdownTextStyle => TextStyle(
   color: AppColors.textPrimary,
@@ -1120,10 +1120,10 @@ class _RailIconSurfaceState extends State<_RailIconSurface> {
   @override
   Widget build(BuildContext context) {
     final background = widget.selected
-        ? AppColors.mutedStrong
-        : _hovered
         ? AppColors.muted
-        : Colors.transparent;
+        : _hovered
+        ? AppColors.hover
+        : AppColors.hover.withValues(alpha: 0);
     final surface = MouseRegion(
       cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _hovered = true),
@@ -1204,9 +1204,7 @@ class _TopbarPillState extends State<_TopbarPill> {
               : EdgeInsets.symmetric(horizontal: 16),
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: _hovered
-                ? Color.alphaBlend(AppColors.muted, AppColors.container)
-                : AppColors.container,
+            color: _hovered ? AppColors.hover : AppColors.container,
             borderRadius: BorderRadius.circular(999),
             border: Border.all(color: AppColors.border.withValues(alpha: 0.7)),
             boxShadow: AppColors.softShadow,
@@ -2606,7 +2604,7 @@ class ModalBase extends StatelessWidget {
                       size: 38,
                       iconSize: 19,
                       baseColor: AppColors.muted,
-                      hoverColor: AppColors.mutedStrong,
+                      hoverColor: AppColors.hover,
                       baseIconColor: AppColors.textPrimary,
                       hoverIconColor: AppColors.textPrimary,
                     ),
@@ -3006,7 +3004,7 @@ class RowActionMenu extends StatelessWidget {
         size: 34,
         iconSize: 20,
         baseColor: Colors.transparent,
-        hoverColor: AppColors.muted,
+        hoverColor: AppColors.hover,
         baseIconColor: AppColors.textSecondary,
         hoverIconColor: AppColors.textPrimary,
       ),
@@ -3477,9 +3475,8 @@ class _NavItem extends ConsumerWidget {
     if (compact) {
       return Tooltip(
         message: entry.$1,
-        preferBelow: false,
-        verticalOffset: 0,
-        margin: EdgeInsets.only(left: 70),
+        waitDuration: Duration(milliseconds: 600),
+        verticalOffset: 30,
         child: surface,
       );
     }
@@ -3546,8 +3543,8 @@ class _MobileBottomNavigation extends ConsumerWidget {
                     padding: EdgeInsets.symmetric(horizontal: 14),
                     decoration: BoxDecoration(
                       color: selected
-                          ? AppColors.mutedStrong
-                          : Colors.transparent,
+                          ? AppColors.muted
+                          : AppColors.muted.withValues(alpha: 0),
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Row(
@@ -3608,7 +3605,7 @@ class _HoverCircleButtonState extends State<_HoverCircleButton> {
   @override
   Widget build(BuildContext context) {
     final surface = AnimatedContainer(
-      duration: Duration(milliseconds: 140),
+      duration: _microInteractionDuration,
       curve: _microInteractionCurve,
       width: widget.size,
       height: widget.size,
@@ -4046,9 +4043,11 @@ class _CommandPaletteTileState extends State<_CommandPaletteTile> {
           duration: _microInteractionDuration,
           padding: EdgeInsets.symmetric(horizontal: 14, vertical: 11),
           decoration: BoxDecoration(
-            color: (_hovered || widget.highlighted)
+            color: widget.highlighted
                 ? AppColors.muted
-                : Colors.transparent,
+                : _hovered
+                ? AppColors.hover
+                : AppColors.hover.withValues(alpha: 0),
             borderRadius: BorderRadius.circular(16),
           ),
           child: Row(

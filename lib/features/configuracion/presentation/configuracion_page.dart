@@ -561,15 +561,16 @@ class _SettingsNavTileState extends State<_SettingsNavTile> {
       child: GestureDetector(
         onTap: widget.onTap,
         child: AnimatedContainer(
-          duration: Duration(milliseconds: 160),
+          duration: Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
           height: 46,
           padding: EdgeInsets.symmetric(horizontal: 14),
           decoration: BoxDecoration(
             color: widget.selected
                 ? AppColors.muted
                 : _hovered
-                ? AppColors.muted.withValues(alpha: 0.6)
-                : Colors.transparent,
+                ? AppColors.hover
+                : AppColors.hover.withValues(alpha: 0),
             borderRadius: BorderRadius.circular(14),
           ),
           child: Row(
